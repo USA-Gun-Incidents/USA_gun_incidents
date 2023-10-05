@@ -1,4 +1,5 @@
 # USA_gun_incidents
-jupyter nbconvert --to script 'xxx.ipynb’
-
-prova
+Remember to run the following command before commiting:
+```bash
+./ipynb_to_py.sh
+```
