@@ -1,0 +1,8 @@
+-   repo: local
+    hooks:
+    -   id: jupytext
+        name: jupytext
+        entry: jupytext --sync --pipe black prova.ipynb
+        language: conda
+        always_run: true
+        pass_filenames: false
