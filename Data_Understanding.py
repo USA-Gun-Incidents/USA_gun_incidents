@@ -1,5 +1,5 @@
 # %% [markdown]
-# 
+# Data Understanding con i Bro
 
 # %%
 #librerie utili ed eventuali
@@ -7,7 +7,7 @@
 import math
 import numpy as np
 import pandas as pd
-#import scipy.stats as stats
+import scipy.stats as stats
 import matplotlib.pyplot as plt
 
 from collections import defaultdict
@@ -49,6 +49,13 @@ inc_dup.info()
     
 
 # %%
-inc_dup.drop()
+plt.scatter(inc_no_dup['longitude'], inc_no_dup['latitude'], color='g', label='NOT duplicated')
+
+plt.scatter(inc_dup['longitude'], inc_dup['latitude'], color='r',label='duplicated')
+plt.xlabel('longitude')
+plt.ylabel('latitude')
+plt.title('position pattern')
+plt.legend()
+plt.show()
 
 
