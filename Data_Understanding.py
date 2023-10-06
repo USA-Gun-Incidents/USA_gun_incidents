@@ -2,29 +2,36 @@
 # Data Understanding con i Bro
 
 # %%
-#librerie utili ed eventuali
-#%matplotlib inline
+#lib
 import math
 import numpy as np
 import pandas as pd
 import scipy.stats as stats
 import matplotlib.pyplot as plt
+import geopy
+%matplotlib inline
 
 from collections import defaultdict
 
 # %%
-#carico il dataset, forse male? forse bene? boh!
+#the dataset is probably read right
 inc = pd.read_csv('gun-data\data\incidents.csv', sep=',') 
-#tipi feaetures dei pattern
 inc.info()
 
 # %%
-inc.head()
+inc.nunique()
+
+# %% [markdown]
+# Firts we check the data consistecy, about the states, city and lat-long. 
+# Then we can use only lat and long to refer to the position of the incident
 
 # %%
-#in realtà sembra caricato bene
-#godo
+for col in inc:
+    dummy = inc[col].unique()
+    print( [ col, dummy, len(dummy)] )
 
+
+# %%
 #eliminiamo duplicati
 inc_no_dup = inc.drop_duplicates()
 #inc_dup = pd.DataFrame(columns=inc.columns)
@@ -35,8 +42,7 @@ inc_dup = []
 #print(inc.columns)
 #print(inc.index)
 
-for if_dup, x in zip(inc.duplicated(keep=False), inc.to_records()): #serie di booleani che indicano se un elemento è o meno duplicato
-
+for if_dup, x in zip(inc.duplicated(), inc.to_records()): #serie di booleani che indicano se un elemento è o meno duplicato
     #se è duplicata la inserisco
     if if_dup:
         #il primo elemeto della tupla è l'indice da rimuovere 
@@ -46,11 +52,8 @@ for if_dup, x in zip(inc.duplicated(keep=False), inc.to_records()): #serie di bo
 inc_dup = pd.DataFrame(data=inc_dup, columns=inc.columns)
 #stampa info
 inc_dup.info()
-    
 
-# %%
 plt.scatter(inc_no_dup['longitude'], inc_no_dup['latitude'], color='g', label='NOT duplicated')
-
 plt.scatter(inc_dup['longitude'], inc_dup['latitude'], color='r',label='duplicated')
 plt.xlabel('longitude')
 plt.ylabel('latitude')
