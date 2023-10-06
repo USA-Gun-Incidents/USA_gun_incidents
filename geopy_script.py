@@ -82,7 +82,7 @@ try:
                 
                 er = 10
 
-            #let's try again up to 2 times
+            #let's try again up to 3 times
             except Exception as e:
                 print('ERR: ' + str(er))
                 time.sleep(PAUSES[er])
