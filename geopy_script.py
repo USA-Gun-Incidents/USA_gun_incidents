@@ -33,7 +33,7 @@ start = int(CONFIG.readline())
 CONFIG.close()
 
 #seconds before retrying the request
-PAUSES = [0.1, 1, 4]
+PAUSES = [0.5, 1, 3]
 if type(start) is not int:
     print('ERRORE CONFIG')
     exit()
@@ -65,13 +65,21 @@ try:
         while er < 3:
             try:
                 #request
-                location = geolocator.reverse(str(row['latitude']) + ' ' + str(row['longitude'])).raw
+                lat = row['latitude']
+                long = row['longitude']
+                if not pd.isna(lat) and not pd.isna(long):
+                    location = geolocator.reverse(str(row['latitude']) + ' ' + str(row['longitude'])).raw
+                else:
+                    er = 10
+                    raise Exception('ultra lazy solution')
+                 
                 json.dump([index, location], OUT_FILE)
                 OUT_FILE.write('\n')
 
                 stats_d['total_r'] += 1
                 stats_d['partial_r'] += 1
 
+                #stamp ping pong
                 dummy = random.randrange(0, 100)
                 if dummy < 2:
                     print('SUPER PING PONG')
@@ -80,19 +88,21 @@ try:
                 else:
                     print('pong')
                 
-                er = 10
+                er = 100
 
             #let's try again up to 3 times
             except Exception as e:
                 print('ERR: ' + str(er))
-                time.sleep(PAUSES[er])
-                er += 1
+
                 if er >= 3:
+
                     stats_d['total_ef'] += 1
                     stats_d['partial_ef'] += 1
                     ERR_FILE.write('date: ' + str(datetime.now()) + ' index: ' + str(index) + ' coord: ' + str(row['latitude']) + ' ' + str(row['longitude']) + ' err: ' + str(e) + '\n')
                     ERR_FILE.flush()
                 else:
+                    time.sleep(PAUSES[er])
+                    er += 1
                     stats_d['total_em'] += 1
                     stats_d['partial_em'] += 1
         
