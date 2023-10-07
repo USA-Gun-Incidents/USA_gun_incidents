@@ -2,20 +2,21 @@
 # Data Understanding con i Bro
 
 # %%
+%matplotlib inline
+
 #lib
 import math
 import numpy as np
 import pandas as pd
 import scipy.stats as stats
 import matplotlib.pyplot as plt
-import geopy
-%matplotlib inline
+
 
 from collections import defaultdict
 
 # %%
 #the dataset is probably read right
-inc = pd.read_csv('gun-data\data\incidents.csv', sep=',') 
+inc = pd.read_csv('data/incidents.csv', sep=',') 
 inc.info()
 
 # %%
@@ -30,10 +31,9 @@ for col in inc:
     dummy = inc[col].unique()
     print( [ col, dummy, len(dummy)] )
 
-
 # %%
 #eliminiamo duplicati
-inc_no_dup = inc.drop_duplicates()
+inc_no_dup = inc.drop_duplicates(subset=['date', 'latitude', 'longitude'])
 #inc_dup = pd.DataFrame(columns=inc.columns)
 #inc_dup.info()
 
@@ -60,5 +60,8 @@ plt.ylabel('latitude')
 plt.title('position pattern')
 plt.legend()
 plt.show()
+
+# %%
+inc_no_dup.groupby(['congressional_district', 'state_house_district']).size().head(40) #fyuavbei9diuhgybhihgyv
 
 
