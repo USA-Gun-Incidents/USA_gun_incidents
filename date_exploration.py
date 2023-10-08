@@ -91,14 +91,14 @@ def get_box_plot_data(labels, bp):
         dict1['median'] = mdates.num2date(bp['medians'][i].get_ydata()[1])
         dict1['upper_quartile'] = mdates.num2date(bp['boxes'][i].get_ydata()[2])
         dict1['upper_whisker'] = mdates.num2date(bp['whiskers'][(i*2)+1].get_ydata()[1])
-        dict1['fliers'] = len(boxplot['fliers'][0].get_ydata())
+        
+        dict1['fliers'] = len(bp['fliers'][i].get_ydata())
         rows_list.append(dict1)
-
-        bp
 
     return pd.DataFrame(rows_list)
 
 
+# %%
 ticks = []
 labels = []
 for i in range(2012, 2032):
@@ -117,16 +117,36 @@ dates_data
 print(type(inc['date']))
 
 # %%
-inc_cleaned = inc.dropna(axis=0).copy()
+#inc_cleaned = inc.dropna(axis=0).copy()
+inc_cleaned = inc.copy()
 t = inc_cleaned.dtypes
 for i, c in enumerate(inc_cleaned.columns):
     if t[i] == 'object':
         inc_cleaned.insert(len(inc_cleaned.columns), value=inc_cleaned[c].astype("category").cat.codes, column=c + ' codes')
         inc_cleaned.drop(c, axis=1, inplace=True)
-        #inc_cleaned[c] = inc_cleaned[c].astype("category").cat.codes
+inc_cleaned['date'] = mdates.date2num(inc_cleaned['date'])
 
+inc_cleaned.info()
+
+# %% [markdown]
+# in order to calculate the correlation I convert all the data stored as objects into categories, and replace the value with the associated code (it would be better not to do this for numbers but there are errors)
+
+# %%
 corr = inc_cleaned.corr()
 corr.style.background_gradient(cmap='coolwarm')
+
+# %% [markdown]
+# computing the scatter matrix among the features most correlated with the date
+
+# %%
+corr['date']=corr['date'].apply(lambda x: abs(x))
+corr_dummy = corr.sort_values('date', ascending=False, axis=0).head(6)
+inc_cleaned[corr_dummy.index]
+scatter_axes = pd.plotting.scatter_matrix(inc_cleaned[corr_dummy.index], figsize=(10,10), alpha=0.2)
+for ax in scatter_axes.flatten():
+    ax.xaxis.label.set_rotation(90)
+    ax.yaxis.label.set_rotation(0)
+    ax.yaxis.label.set_ha('right')
 
 # %% [markdown]
 # All the dates are correct, both from a syntactic point of view, in fact they do not present null values ​​or illegible values. Looking at the graph we notice that there are incorrect values, greater than the maximum
@@ -213,6 +233,8 @@ boxplot = plt.boxplot(x=dates_num, labels=ylabels)
 plt.yticks(ticks, labels)
 plt.grid()
 
+dates_data = get_box_plot_data(ylabels, boxplot)
+
 
 # %% [markdown]
 # Of the three methods used for error correction, only the third is satisfactory for two reasons:
@@ -222,3 +244,6 @@ plt.grid()
 # -Since the date of the incidents is not related in any way to other fields of the dataset, and failing to identify the cause that generated the errors, replacing the dates with random ones from the dataset does not introduce particular inconsistencies
 
 
+
+# %%
+dates_data
