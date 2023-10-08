@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Simple data preprocessing and cleaning
 
 # %%
-%matplotlib inline
+# %matplotlib inline
 
 #lib
 import math
@@ -34,7 +35,7 @@ inc['date'] = inc.apply(lambda row : pd.to_datetime(row['date'], format="%Y-%m-%
 
 # %% [markdown]
 # # Checking semantic and syntactic concistency
-# 
+#
 
 # %%
 print(type(inc['date'][0]))
@@ -129,8 +130,8 @@ corr.style.background_gradient(cmap='coolwarm')
 
 # %% [markdown]
 # All the dates are correct, both from a syntactic point of view, in fact they do not present null values ​​or illegible values. Looking at the graph we notice that there are incorrect values, greater than the maximum
-# 
-# 
+#
+#
 # Finally, we find no correlation of any kind between data and other values ​​in the dataset
 
 # %% [markdown]
@@ -215,9 +216,9 @@ plt.grid()
 
 # %% [markdown]
 # Of the three methods used for error correction, only the third is satisfactory for two reasons:
-# 
-# -Is the one that preserves the distribution the most, since the values ​​are more than 23K, they cannot be replaced with equal values, and sampling at random preserve the curve
-# 
+#
+# -Is the one that preserves the distribution the most thank's to the rendom sampling approach, and since the values ​​are more than 23K they cannot be replaced with equal values
+#
 # -Since the date of the incidents is not related in any way to other fields of the dataset, and failing to identify the cause that generated the errors, replacing the dates with random ones from the dataset does not introduce particular inconsistencies
 
 
