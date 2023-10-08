@@ -1,8 +1,5 @@
 # %% [markdown]
-# Studio date
-
-# %% [markdown]
-# Semantic and syntactic checking of the data field, followed by error correction
+# # Simple data preprocessing and cleaning
 
 # %%
 %matplotlib inline
@@ -16,6 +13,9 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import random
 
+# %% [markdown]
+# removing duplicated rows
+
 # %%
 #the dataset is probably read right
 inc = pd.read_csv('data/incidents.csv', sep=',') 
@@ -28,12 +28,13 @@ for col in inc:
     dummy = inc[col].unique()
     print( [ col, dummy, len(dummy)] )
 
-# %% [markdown]
-# Syntax and data semantics check 
-
 # %%
 inc.drop('notes', axis=1, inplace=True)
 inc['date'] = inc.apply(lambda row : pd.to_datetime(row['date'], format="%Y-%m-%d"), axis = 1)
+
+# %% [markdown]
+# # Checking semantic and syntactic concistency
+# 
 
 # %%
 print(type(inc['date'][0]))
@@ -57,7 +58,7 @@ equal_freq_bins2=inc['date'].sort_values().quantile(np.arange(0,1, 1/n_bin_2)).t
 
 fig, axs = plt.subplots(4, sharex=True, sharey=True)
 fig.set_figwidth(14)
-fig.set_figheight(5)
+fig.set_figheight(6)
 fig.suptitle('Dates distribution')
 
 colors_palette = iter(mcolors.TABLEAU_COLORS)
@@ -89,6 +90,7 @@ def get_box_plot_data(labels, bp):
         dict1['median'] = mdates.num2date(bp['medians'][i].get_ydata()[1])
         dict1['upper_quartile'] = mdates.num2date(bp['boxes'][i].get_ydata()[2])
         dict1['upper_whisker'] = mdates.num2date(bp['whiskers'][(i*2)+1].get_ydata()[1])
+        dict1['fliers'] = len(boxplot['fliers'][0].get_ydata())
         rows_list.append(dict1)
 
         bp
@@ -102,12 +104,16 @@ for i in range(2012, 2032):
     ticks.append(mdates.date2num(pd.to_datetime(str(i) + '-01-01', format="%Y-%m-%d")))
     labels.append(str(i))
 
-boxplot = plt.boxplot(x=mdates.date2num(inc['date']))
+boxplot = plt.boxplot(x=mdates.date2num(inc['date']), labels=['dates'])
+print()
 plt.yticks(ticks, labels)
 plt.grid()
-dates_data = get_box_plot_data('a', boxplot)
+dates_data = get_box_plot_data(['dates'], boxplot)
 dates_data
 
+
+# %%
+print(type(inc['date']))
 
 # %%
 inc_cleaned = inc.dropna(axis=0).copy()
@@ -122,11 +128,17 @@ corr = inc_cleaned.corr()
 corr.style.background_gradient(cmap='coolwarm')
 
 # %% [markdown]
-# Syntax and semantic check after applying different techniques
+# All the dates are correct, both from a syntactic point of view, in fact they do not present null values ​​or illegible values. Looking at the graph we notice that there are incorrect values, greater than the maximum
+# 
+# 
+# Finally, we find no correlation of any kind between data and other values ​​in the dataset
+
+# %% [markdown]
+# # Error correction and distribution analysis
 
 # %%
-
 #let's try to remove 10 years from the wrong dates, considering the error, a typo
+actual_index = inc.index.tolist()
 
 def subtract_ten_if(x):
         if x['date'] > dates_data['upper_whisker'][0].to_datetime64(): 
@@ -136,7 +148,7 @@ def subtract_ten_if(x):
 def replace_with_random(x):
         ret = x['date']
         while ret > dates_data['upper_whisker'][0].to_datetime64(): 
-                ret = inc['date'][random.randrange(0, len(inc))]
+                ret = inc['date'][random.choice(actual_index)]
         return ret
 
 def replace_with_median(x):
@@ -201,7 +213,11 @@ plt.yticks(ticks, labels)
 plt.grid()
 
 
-# %%
-inc.max_age_participants
+# %% [markdown]
+# Of the three methods used for error correction, only the third is satisfactory for two reasons:
+# 
+# -Is the one that preserves the distribution the most, since the values ​​are more than 23K, they cannot be replaced with equal values, and sampling at random preserve the curve
+# 
+# -Since the date of the incidents is not related in any way to other fields of the dataset, and failing to identify the cause that generated the errors, replacing the dates with random ones from the dataset does not introduce particular inconsistencies
 
 
