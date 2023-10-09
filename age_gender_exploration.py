@@ -629,9 +629,9 @@ for index, row in participant1.iterrows():
         participant1.loc[index, ['participant1_male']] = 0
         participant1.loc[index, ['participant1_female']] = 0
         if row['participant_gender1'] == 'Male':
-            participant1['participant1_male'] = 1
+            participant1.loc[index, ['participant1_male']] = 1
         else:
-            participant1['participant1_female'] = 1
+            participant1.loc[index, ['participant1_female']] = 1
     
     # age group
     if not (type(row['participant_age_group1']) == float and np.isnan(row['participant_age_group1'])):
@@ -641,11 +641,11 @@ for index, row in participant1.iterrows():
         participant1.loc[index, ['participant1_adult']] = 0
 
         if row['participant_age_group1'] == 'Child 0-11':
-            participant1['participant1_child'] = 1
+            participant1.loc[index, ['participant1_child']] = 1
         elif row['participant_age_group1'] == 'Teen 12-17':
-            participant1['participant1_teen'] = 1
+            participant1.loc[index, ['participant1_teen']] = 1
         elif row['participant_age_group1'] == 'Adult 18+':
-            participant1['participant1_adult'] = 1
+            participant1.loc[index, ['participant1_adult']] = 1
 
 
 # %%
