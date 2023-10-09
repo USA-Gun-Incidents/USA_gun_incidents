@@ -36,6 +36,9 @@ clean_data = pd.concat([geo_data, class_data], axis=1)
 # %%
 clean_data.head()
 
+# %%
+len(clean_data)
+
 # %% [markdown]
 # ## E.D.A.
 
