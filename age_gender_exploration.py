@@ -495,9 +495,13 @@ display(type(incidents_data['participant_age_group1'][2])) # NaN
 incidents_data['participant_age_group1'][2] not in ['Adult 18+', 'Teen 12-17', 'Child 0-11'])
 
 # %%
-# check consistency of participant_age1 and participant_age_group1
-index_partecipant1 = []
+np.isnan(incidents_data['participant_age1'][2]) # NaN value
 
+# %% [markdown]
+# Check consistency of participant_age1 and participant_age_group1 \
+# Note: code divided in three cells in order to avoid kernel crash
+
+# %%
 # default boolean values (False)
 participant1['inconsistent'] = False
 participant1['NaN values'] = False
@@ -508,7 +512,7 @@ for index, row in incidents_data.iterrows():
     inconsitence = False # flag for presence of inconsistent values
 
     # set participant_age1
-    if type(row['participant_age1']) == float and np.isnan(row['participant_age1']):
+    if np.isnan(row['participant_age1']):
         flag = True
     else:
         try:
@@ -519,6 +523,22 @@ for index, row in incidents_data.iterrows():
                 participant1.loc[index, ['participant_age1']] = age
         except:
             flag = True
+        
+    # set boolean columns
+    if flag:
+        participant1.loc[index, ['NaN values']] = True
+    if inconsitence:
+        participant1.loc[index, ['inconsistent']] = True
+
+# %%
+# default boolean values (False)
+participant1['inconsistent'] = False
+participant1['NaN values'] = False
+
+
+for index, row in incidents_data.iterrows():
+    flag = False # flag for presence NaN values
+    inconsitence = False # flag for presence of inconsistent values
 
     # set participant_age_group and check consistency
     if (type(row['participant_age_group1']) == float and np.isnan(row['participant_age_group1']) or
@@ -562,7 +582,18 @@ for index, row in incidents_data.iterrows():
             else:
                 if ages_data['n_participants_child'][index] <= 0:
                     inconsitence = True
+        
+    # change boolean columns
+    if not flag and participant1['NaN values'][index]:
+        participant1.loc[index, ['NaN values']] = False
+    if not inconsitence and participant1['inconsistent'][index]:
+        participant1.loc[index, ['inconsistent']] = False
 
+# %%
+for index, row in incidents_data.iterrows():
+    flag = False # flag for presence NaN values
+    inconsitence = False # flag for presence of inconsistent values
+  
     # set participant_gender1 values
     gender = row['participant_gender1']
     if gender in ['Male', 'Female']:
@@ -578,11 +609,11 @@ for index, row in incidents_data.iterrows():
     else:
         flag = True
         
-    # set boolean columns
-    if flag:
-        participant1.loc[index, ['inconsistent']] = True
-    if inconsitence:
-        participant1.loc[index, ['inconsistent']] = True
+    # change boolean columns
+    if not flag and participant1['NaN values'][index]:
+        participant1.loc[index, ['NaN values']] = False
+    if not inconsitence and participant1['inconsistent'][index]:
+        participant1.loc[index, ['inconsistent']] = False
 
 # %%
 participant1.head()
