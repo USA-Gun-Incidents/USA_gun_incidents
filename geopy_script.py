@@ -17,6 +17,8 @@ from geopy.geocoders import Nominatim
 import json
 import time
 import random
+import pandas
+
 
 import clean_data_utils as cdu
 
@@ -148,7 +150,6 @@ def start_requests():
     ERR_FILE.close()
     STATS_FILE.close()
 
-
 def unify_files(names):   
     DIR = cur_path = os.path.dirname(__file__) + '\\data\\geopy\\'
 
@@ -182,10 +183,7 @@ def unify_files(names):
 
     OUT_FILE.close()
     ERR_FILE.close()
-    STATS_FILE.close()
-
-
-        
+    STATS_FILE.close()       
 
 def check_error(file):
 
@@ -199,7 +197,7 @@ def check_error(file):
         line = cdu.delete_space(line)
 
         data = line.partition('data:')[2]
-        index = line.partition('index:')[2]
+        index = int(line.partition('index:')[2].partition('coord:')[0])
         err = line.partition('err:')[2]
 
         if err in error_types:
@@ -207,7 +205,67 @@ def check_error(file):
         else:
             error_types[err] = [index]
 
-    return error_types
-        
     
-unify_files(['giacomo', 'irene', 'luca', 'giulia'])
+    for k in error_types:
+        print(len(error_types[k]))
+        error_types[k] = list(set(error_types[k]))
+        error_types[k].sort()
+        print(len(error_types[k]))
+
+    return error_types
+
+def process_datas(IN, OUT):
+    DIR = cur_path = os.path.dirname(__file__) + '\\data\\geopy\\'
+    STATS_FILE = DIR + 'geopy_stats.txt'
+
+    F = open(IN, 'r+')
+    lines = F.readlines()
+    F.close()
+
+    #getting all the data extracted from geopy
+    datas = []
+    for line in lines:
+        datas.append(json.loads(line))
+
+    #adding a tag
+    for el in datas:
+        el[1]['coord_presence'] = True
+
+    #adding errors
+    errors = json.load(open(STATS_FILE, 'r'))
+    for key in errors:
+        for el in errors[key]:
+            datas.append([el, {'coord_presence':False}])
+    
+    datas.sort(key=lambda x: x[0])
+
+
+    def extract(x):
+        y = x[1]
+        y['index'] = x[0]
+        return x[1]
+    new_datas = [extract(item) for item in datas]
+
+    
+
+    F = open(OUT, 'w+')
+    json.dump(new_datas, F, indent=2)
+    F.close()
+
+def to_csv(IN, OUT):
+    data = json.load(open(IN, 'r'))
+    df = pandas.DataFrame.from_dict(data)
+    df.set_index('index', inplace=True)
+    df.drop(['licence', 'osm_type'], axis=1, inplace=True)
+    df.to_csv(OUT)
+
+DIR = cur_path = os.path.dirname(__file__) + '\\data\\geopy\\'
+ERR_DIR = DIR + 'geopy_error.txt'
+STATS_FILE = DIR + 'geopy_stats.txt'
+FINAL_DATA = DIR + 'geopy_merged.txt'
+OUT_FILE = DIR + 'geopy.csv'
+
+#unify_files(['giacomo', 'irene', 'luca', 'giulia'])
+#json.dump(check_error(ERR_DIR), STATS_FILE, indent=2)
+
+#to_csv(FINAL_DATA, OUT_FILE)
