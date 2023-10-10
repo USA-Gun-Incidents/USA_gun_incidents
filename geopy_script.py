@@ -215,7 +215,7 @@ def check_error(file):
     return error_types
 
 def process_datas(IN, OUT):
-    DIR = cur_path = os.path.dirname(__file__) + '\\data\\geopy\\'
+    DIR = os.path.dirname(__file__) + '\\data\\geopy\\'
     STATS_FILE = DIR + 'geopy_stats.txt'
 
     F = open(IN, 'r+')
@@ -252,6 +252,19 @@ def process_datas(IN, OUT):
     json.dump(new_datas, F, indent=2)
     F.close()
 
+def remove_dup(IN, OUT):
+    data = json.load(open(IN, 'r'))
+
+    result = list(
+        {
+            dictionary['index']: dictionary
+            for dictionary in data
+        }.values()
+    )
+    F = open(OUT, 'w+')
+    json.dump(result, F, indent=2)
+    F.close()
+    
 def to_csv(IN, OUT):
     data = json.load(open(IN, 'r'))
     df = pandas.DataFrame.from_dict(data)
@@ -263,9 +276,12 @@ DIR = cur_path = os.path.dirname(__file__) + '\\data\\geopy\\'
 ERR_DIR = DIR + 'geopy_error.txt'
 STATS_FILE = DIR + 'geopy_stats.txt'
 FINAL_DATA = DIR + 'geopy_merged.json'
+FINAL_DATA_2 = DIR + 'geopy_merged_1.json'
 OUT_FILE = DIR + 'geopy.csv'
 
 #unify_files(['giacomo', 'irene', 'luca', 'giulia'])
 #json.dump(check_error(ERR_DIR), STATS_FILE, indent=2)
 
-to_csv(FINAL_DATA, OUT_FILE)
+to_csv(FINAL_DATA_2, OUT_FILE)
+
+#remove_dup(FINAL_DATA, FINAL_DATA_2)

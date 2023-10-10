@@ -4,28 +4,38 @@
 
 # %% [markdown]
 # ## Import data
+#  
+# In the geopy dataframe, there is a row for each row of the original dataset.
+# So be careful when merging with a dataset after dropping duplicates.
 
 # %%
+# imports
 import pandas as pd
 
 # %%
 # read data
 FOLDER = './data/'
 incidents_path = FOLDER + 'incidents.csv'
-
+geopy_path = FOLDER + 'geopy/geopy.csv' #IMPORTANT UNZIP THE CSV!!!!!!
 incidents_data = pd.read_csv(incidents_path)
+geopy_data = pd.read_csv(geopy_path, index_col=0)
 
-# %%
 # drop duplicates rows
-incidents_data.drop_duplicates(inplace=True)
+# incidents_data.drop_duplicates(inplace=True)
 
-# %%
+
 # select only relevant columns from incidents_data
 geo_data = incidents_data[['date', 'state', 'city_or_county', 'address', 'latitude', 'longitude',
        'congressional_district', 'state_house_district', 'state_senate_district']]
 
 # %%
 geo_data
+
+# %%
+geopy_data
+
+# %%
+geopy_data.dtypes
 
 # %% [markdown]
 # ## GeoPy Data Description
