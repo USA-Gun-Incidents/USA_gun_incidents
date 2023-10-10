@@ -256,16 +256,16 @@ def to_csv(IN, OUT):
     data = json.load(open(IN, 'r'))
     df = pandas.DataFrame.from_dict(data)
     df.set_index('index', inplace=True)
-    df.drop(['licence', 'osm_type'], axis=1, inplace=True)
+    df.drop(['licence', 'osm_type', 'osm_id'],axis=1, inplace=True)
     df.to_csv(OUT)
 
 DIR = cur_path = os.path.dirname(__file__) + '\\data\\geopy\\'
 ERR_DIR = DIR + 'geopy_error.txt'
 STATS_FILE = DIR + 'geopy_stats.txt'
-FINAL_DATA = DIR + 'geopy_merged.txt'
+FINAL_DATA = DIR + 'geopy_merged.json'
 OUT_FILE = DIR + 'geopy.csv'
 
 #unify_files(['giacomo', 'irene', 'luca', 'giulia'])
 #json.dump(check_error(ERR_DIR), STATS_FILE, indent=2)
 
-#to_csv(FINAL_DATA, OUT_FILE)
+to_csv(FINAL_DATA, OUT_FILE)

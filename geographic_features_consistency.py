@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Geographic features
 
@@ -60,33 +61,33 @@ geopy_sample.keys()
 
 # %% [markdown]
 # ### GeoPy Keys:
-# 
+#
 # - place_id: identificatore numerico univoco del luogo.
-# 
+#
 # - licence: licenza per uso dei dati geografici.
-# 
+#
 # - osm_type: tipo di oggetto OpenStreetMap (OSM) al quale appartiene la posizione ("node" per un punto, "way" per una strada o "relation" per una relazione tra elementi).
-# 
+#
 # - osm_id: identificatore univoco assegnato all'oggetto OSM.
-# 
+#
 # - lat + lon: latitudine e longitudine della posizione.
-# 
+#
 # - class: classificazione della posizione (es. "place").
-# 
+#
 # - type: classificazione della posizione (es. "city").
-# 
+#
 # - place_rank: Rango o la priorità del luogo nella gerarchia geografica (quanto una posizione è significativa).
-# 
+#
 # - importance: Valore numerico, indica l'importanza della posizione rispetto ad altre posizioni.
-# 
+#
 # - addresstype: tipo di indirizzo (es. "house", "street", "postcode")
-# 
+#
 # - name: nome del luogo (es.nome di una città o di una strada).
-# 
+#
 # - display_name: rappresentazione leggibile per l'utente della posizione, spesso formattata come un indirizzo completo.
-# 
+#
 # - address: indirizzo dettagliato.
-# 
+#
 # - boundingbox: elenco di quattro coordinate (latitudine e longitudine) che definiscono un rettangolo che racchiude la posizione (è un'approx dell'area coperta dalla posizione).
 
 # %% [markdown]
@@ -99,11 +100,11 @@ geopy_sample.keys()
 #     - "state"
 # - class and/or type: to classify incident's place
 # - adresstype: to classify incident's place
-# 
+#
 # Se si vuole fare check per luoghi che corrispondono tra loro:
 # - osm_id
 # - boundingbox
-# 
+#
 
 # %% [markdown]
 # ## Import counties data from Wikipedia 
