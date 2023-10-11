@@ -32,6 +32,9 @@ elections_data[elections_data['candidatevotes'] <= 0.5 * elections_data['totalvo
 # %% [markdown]
 # # U.S. House special election, 2022: New York District 19
 #
+# Democratic hold
+
+# %% [markdown]
 # | Party             | Candidate       | Votes  | %    |
 # | ----------------- | --------------- | ------ | ---- |
 # | Democratic        | Pat Ryan        | 58,427 | 45.3 |
@@ -42,8 +45,6 @@ elections_data[elections_data['candidatevotes'] <= 0.5 * elections_data['totalvo
 # | Total             | Marc Molinaro   | 62,952 | 48.1 |
 # | Write-in          |                 | 96     | 0.07 |
 # | Total votes       |                 | 128,991| 100.0|
-#
-# Democratic hold
 
 # %%
 elections_data['perc_winner'] = elections_data['candidatevotes'] / elections_data['totalvotes']
@@ -301,24 +302,23 @@ incidents_data[incidents_data['state']=='DISTRICT OF COLUMBIA']['congressional_d
 incidents_data.loc[incidents_data['state']=='DISTRICT OF COLUMBIA', 'congressional_district'] = 0
 
 # %%
-elections_data[elections_data['state']=='KENTUCKY']['congressional_district'].unique() # TODO: su Wiki sono 6...
+incidents_data[incidents_data['state']=='KENTUCKY']['congressional_district'].unique()
 
 # %%
-incidents_data[(incidents_data['state']=='KENTUCKY') & (incidents_data['congressional_district']>7)] # TODO: come correggere?
-
-# %% [markdown]
-# It is not in Lexington, above Cincinnati...
-#
-# ![image.png](https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/United_States_Congressional_Districts_in_Kentucky%2C_since_2013.tif/lossless-page1-1364px-United_States_Congressional_Districts_in_Kentucky%2C_since_2013.tif.png)
+elections_data[(elections_data['state']=='KENTUCKY') & (elections_data['year']>2012)]['congressional_district'].unique()
 
 # %%
-elections_data[elections_data['state']=='OREGON']['congressional_district'].unique()
+incidents_data[(incidents_data['state']=='KENTUCKY') & (incidents_data['congressional_district']>6)]
+
+# %%
+location = geolocator.reverse(str(39.9186) + ' ' + str(-83.9392)).raw
+location['address'] # it is in the 8th ohio district...
+
+# %%
+elections_data[(elections_data['state']=='OREGON') & (elections_data['year']>2012)]['congressional_district'].unique()
 
 # %%
 incidents_data[(incidents_data['state']=='OREGON') & (incidents_data['congressional_district']>6)]
-
-# %% [markdown]
-# ![image.png](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Oregon_Congressional_Districts%2C_118th_Congress.svg/1920px-Oregon_Congressional_Districts%2C_118th_Congress.svg.png)
 
 # %%
 location = geolocator.reverse(str(39.7573) + ' ' + str(-84.1818	)).raw
@@ -335,19 +335,46 @@ location['address']
 # TODO: corregere indirizzo con dati sopra, potrebbe essere il 9° distretto congressuale (in realtà sembra fuori dall'Indiana)
 
 # %%
-elections_data[elections_data['state']=='WEST VIRGINIA']['congressional_district'].unique() # TODO: dal 1990 sono 2...
+elections_data[(elections_data['state']=='WEST VIRGINIA') & (elections_data['year']>2012)]['congressional_district'].unique()
 
 # %%
-incidents_data[(incidents_data['state']=='WEST VIRGINIA') & (incidents_data['congressional_district']>4)]
+incidents_data[(incidents_data['state']=='WEST VIRGINIA') & (incidents_data['congressional_district']>3)]
 
 # %%
 location = geolocator.reverse(str(39.0006) + ' ' + str(-81.9786)).raw
-location['address'] # sbaglia anche geopandas, è in Virginia... e quello che dice geopandas non è ohio ma West Virginia
+location['address'] # it is in the 6th district of Ohio
+
+# %%
+# we should have
+# latitute and longitude => congressional district
+# latitute and longitude => state house district
+# latitute and longitude => state senate district
 
 # %%
 g = incidents_data[incidents_data['congressional_district'].notnull()].groupby(['latitude', 'longitude'])['congressional_district'].unique()
 g[g.apply(lambda x: len(x)>1)]
-# TODO: errors to correct
+
+# %% [markdown]
+# Sembra che la prima entry sopra appartenga a due distretti diversi in quanto al confine tra i due...
+
+# %%
+incidents_data[(incidents_data['latitude']==25.7829) & (incidents_data['longitude']==-80.1312)]
+
+# %% [markdown]
+# ![image](https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Florida_Congressional_Districts%2C_113th_Congress.tif/lossless-page1-1920px-Florida_Congressional_Districts%2C_113th_Congress.tif.png)
+
+# %%
+corrected_congr_districts = incidents_data[incidents_data['congressional_district'].notnull()].groupby(['latitude', 'longitude'])['congressional_district'].agg(lambda x: x.value_counts().index[0])
+
+# %%
+incidents_data = incidents_data.merge(corrected_congr_districts, on=['latitude', 'longitude'], how='left')
+incidents_data['congressional_district_y'].fillna(incidents_data['congressional_district_x'], inplace=True)
+incidents_data.rename(columns={'congressional_district_y':'congressional_district'}, inplace=True)
+incidents_data.drop(columns=['congressional_district_x'], inplace=True)
+incidents_data
+
+# %%
+incidents_data[incidents_data['congressional_district'].isnull()].shape[0] # 450 valori non più null
 
 # %%
 g = incidents_data[incidents_data['state_house_district'].notnull()].groupby(['latitude', 'longitude'])['state_house_district'].unique()
@@ -360,14 +387,40 @@ g[g.apply(lambda x: len(x)>1)]
 # TODO: errors to correct
 
 # %%
-incidents_data[incidents_data['congressional_district'].isnull()].shape[0]
+# we cannot conclude that 'state', 'city_or_county', 'state_senate_district' => 'congressional_district'
+g = incidents_data[incidents_data['congressional_district'].notnull()].groupby(['state', 'city_or_county', 'state_senate_district'])['congressional_district'].unique()
+g[g.apply(lambda x: len(x)>1)]
 
 # %%
-# latitute and longitude => congressional district
-# latitute and longitude => state house district
-# latitute and longitude => state senate district
-# TODO: non credo che possiamo concludere state, state_house_district, state_senate_district => congressional district
-# sembrano cose disgiunte...
+# we cannot conclude that 'state', 'city_or_county', 'state_house_district' => 'congressional_district'
+g = incidents_data[incidents_data['congressional_district'].notnull()].groupby(['state', 'city_or_county', 'state_house_district'])['congressional_district'].unique()
+g[g.apply(lambda x: len(x)>1)]
+
+# %%
+# we cannot conclude that 'state', 'city_or_county', 'state_house_district', 'state_senate_district' => 'congressional_district'
+g = incidents_data[incidents_data['congressional_district'].notnull()].groupby(['state', 'city_or_county', 'state_house_district', 'state_senate_district'])['congressional_district'].unique()
+g[g.apply(lambda x: len(x)>1)]
+
+# %%
+# DAI DATI RISULTA CHE:
+# lat, long, state house district => congressional district
+# lat, long, state senate district => congressional district
+
+# TODO: ridurre nan entries come fatto per congressional district e riapplicare
+
+# UNA VOLTA SISTEMATI GLI INDIRIZZI VALUTARE:
+# state, city, senate => cong
+# state, city, house => cong
+
+# %%
+incidents_data[(incidents_data['congressional_district'].isna()) & (incidents_data['state_senate_district'].notna())]
+
+# %%
+incidents_data[(incidents_data['congressional_district'].isna()) & (incidents_data['state_house_district'].notna())]
+
+# %%
+g = incidents_data[incidents_data['congressional_district'].notnull()].groupby(['longitude', 'latitude', 'state_senate_district'])['congressional_district'].unique()
+g[g.apply(lambda x: len(x)>1)]
 
 # %% [markdown]
 # # Info su distretti
