@@ -267,6 +267,15 @@ def remove_dup(IN, OUT):
     
 def to_csv(IN, OUT):
     data = json.load(open(IN, 'r'))
+
+    for el in data:
+        if el['coord_presence']:
+            for key in el['address']:
+                el[key] = el['address'][key]
+
+            del el['address']
+
+
     df = pandas.DataFrame.from_dict(data)
     df.set_index('index', inplace=True)
     df.drop(['licence', 'osm_type', 'osm_id'],axis=1, inplace=True)
@@ -276,12 +285,11 @@ DIR = cur_path = os.path.dirname(__file__) + '\\data\\geopy\\'
 ERR_DIR = DIR + 'geopy_error.txt'
 STATS_FILE = DIR + 'geopy_stats.txt'
 FINAL_DATA = DIR + 'geopy_merged.json'
-FINAL_DATA_2 = DIR + 'geopy_merged_1.json'
 OUT_FILE = DIR + 'geopy.csv'
 
 #unify_files(['giacomo', 'irene', 'luca', 'giulia'])
 #json.dump(check_error(ERR_DIR), STATS_FILE, indent=2)
 
-to_csv(FINAL_DATA_2, OUT_FILE)
+to_csv(FINAL_DATA, OUT_FILE)
 
 #remove_dup(FINAL_DATA, FINAL_DATA_2)
