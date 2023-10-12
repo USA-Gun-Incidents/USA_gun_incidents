@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Age and numerical attributes preprocessing
 
@@ -237,7 +238,7 @@ incidents_data.loc[indices, ['min_age_participants', 'max_age_participants', 'av
 type(incidents_data['n_participants_child'][2])
 
 # %%
-# copy in ages_data onlny numeric values from incidents_data
+# # copy in ages_data only numeric values from incidents_data
 for index, row in incidents_data.iterrows():
     if index not in indices:
         try:
@@ -249,19 +250,19 @@ for index, row in incidents_data.iterrows():
 
 # %% [markdown]
 # Check if row not in indices have consistent values
-# 
+#
 # Checks:
 # - min_age_participants < avg_age_participants < max_age_participants
 # - n_participants_child + n_participants_teen + n_participants_adult > 0
-# 
+#
 # - $if$ min_age_participants < 12 $then$ n_participants_child > 0
 # - $if$ <= min_age_participants < 18 $then$ n_participants_teen > 0
 # - $if$ min_age_participants >= 18 $then$ n_participants_adult > 0
-# 
+#
 # - $if$ max_age_participants < 12 $then$ n_participants_child > 0 and n_participants_teen = 0 and n_participants_adult = 0
 # - $if$ max_age_participants < 18 $then$ n_participants_teen > 0 or n_participants_child > 0 and n_participants_adult = 0
 # - $if$ max_age_participants >= 18 $then$ n_participants_adult > 0
-# 
+#
 # note: teen = 12-17, child = 0-11, adult = 18+
 
 # %%
@@ -324,12 +325,12 @@ ages_data.head()
 # ## Gender and other partecipants class consistency
 # 'n_males', 
 # 'n_females', 
-# 
+#
 # 'n_killed', 
 # 'n_injured',
 # 'n_arrested', 
 # 'n_unharmed', 
-# 
+#
 # 'n_participants'
 
 # %%
@@ -446,12 +447,12 @@ for index, row in class_data.iterrows():
     # killed
     if index not in indices_killed:
         flag_nan = False
-        if np.sum([row['n_killed'], row['n_injured'], row['n_arrested'], row['n_unharmed']]) > row['n_participants']:
+        if (np.sum([row['n_killed'], row['n_injured']]) > row['n_participants'] or 
+            row['n_arrested'] > row['n_participants'] or row['n_unharmed'] > row['n_participants']):
             flag_inconsistent = True
 
     # update boolean columns  
-    if flag_inconsistent or (np.sum([row['n_killed'], row['n_injured'], row['n_arrested'], row['n_unharmed']]) != np.sum(
-            [row['n_males'], row['n_females']])):
+    if flag_inconsistent:
             class_data.loc[index, ['inconsistent']] = True
     if flag_nan:
         class_data.loc[index, ['NaN values']] = 'NaN values'
@@ -463,7 +464,7 @@ class_data.head()
 # 'participant_age1', \
 # 'participant_age_group1', \
 # 'participant_gender1'
-# 
+#
 # note: partecipant randomly chosen
 
 # %%
@@ -715,8 +716,8 @@ data.to_csv(FOLDER + 'post_proc/new_columns_incidents.csv', index=False)
 # All numeric data are save as int64 \
 # 'participant_age_group1' and 'participant_gender1' are saved as string \
 # missing n.a. values are saved as np.nan
-# 
-# 
+#
+#
 # Additional columns:
 # - 'participant_age_group1' (str): partecipants1's age range \
 # one hot encoding columns: 'participant1_child', 'participant1_teen', 'participant1_adult'

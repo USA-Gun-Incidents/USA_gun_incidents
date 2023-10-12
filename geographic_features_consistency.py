@@ -4,38 +4,28 @@
 
 # %% [markdown]
 # ## Import data
-#  
-# In the geopy dataframe, there is a row for each row of the original dataset.
-# So be careful when merging with a dataset after dropping duplicates.
 
 # %%
-# imports
 import pandas as pd
 
 # %%
 # read data
 FOLDER = './data/'
 incidents_path = FOLDER + 'incidents.csv'
-geopy_path = FOLDER + 'geopy/geopy.csv' #IMPORTANT UNZIP THE CSV!!!!!!
+
 incidents_data = pd.read_csv(incidents_path)
-geopy_data = pd.read_csv(geopy_path, index_col=0)
 
+# %%
 # drop duplicates rows
-# incidents_data.drop_duplicates(inplace=True)
+incidents_data.drop_duplicates(inplace=True)
 
-
+# %%
 # select only relevant columns from incidents_data
 geo_data = incidents_data[['date', 'state', 'city_or_county', 'address', 'latitude', 'longitude',
        'congressional_district', 'state_house_district', 'state_senate_district']]
 
 # %%
 geo_data
-
-# %%
-geopy_data
-
-# %%
-geopy_data.dtypes
 
 # %% [markdown]
 # ## GeoPy Data Description
@@ -122,70 +112,80 @@ geopy_sample.keys()
 # %%
 counties_path = FOLDER + 'wikipedia/counties.csv'
 
-counties_data = pd.read_csv(counties_path)
-counties_data.head()
+additional_data = pd.read_csv(counties_path)
+additional_data.head()
+
+# %%
+additional_data.dtypes
 
 # %% [markdown]
 # ## 'state', 'city_or_county', 'address', 'latitude', 'longitude' consistency
 
 # %%
-from clean_data_utils import check_address_consistency, state_county_consistency
-
-# %%
 data_check_consistency = pd.DataFrame(columns=['state', 'city_or_county', 'address', 'latitude', 'longitude', 
-    'road_geopy', 'city_geopy', 'county_geopy', 'state_geopy'])
-
-
+    'road_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy'])
 
 # %%
 data_check_consistency[['state', 'city_or_county', 'address', 'latitude', 'longitude']] = incidents_data[[
     'state', 'city_or_county', 'address', 'latitude', 'longitude']]
 
 # %%
-# TODO: read data from geopy file and file and fill data_check_consistency dataframe matching latitude and longitude
+geopy_path = FOLDER + 'geopy/geopy.csv'
+geopy_data = pd.read_csv(geopy_path)
+geopy_data.head()
 
 # %%
-clean_geo_data = pd.DataFrame(columns=['state', 'city', 'county', 'road', 'latitude', 'longitude', 'adresstype', 'importance'])
-clean_geo_data.index(data_check_consistency.index)
+# display geopy_data columns names
+geopy_data.columns # country, state, city, road
 
 # %%
-incomplete_data_count = 0
-
-for index, row in data_check_consistency.iterrows():
-    state_consistency, county_consistency, city_consistency = check_address_consistency(row)
-    if (state_consistency + county_consistency + city_consistency) >= 2:
-        # set geopy data
-        clean_geo_data.loc[index, 'state'] = row['state_geopy']
-        clean_geo_data.loc[index, 'county'] = row['county_geopy']
-        clean_geo_data.loc[index, 'city'] = row['city_geopy']
-        clean_geo_data.loc[index, 'road'] = row['road_geopy']
-        clean_geo_data.loc[index, 'latitude'] = row['latitude']
-        clean_geo_data.loc[index, 'longitude'] = row['longitude']
-        clean_geo_data.loc[index, 'adresstype'] = row['adresstype']
-        clean_geo_data.loc[index, 'importance'] = row['importance']
-    else:
-        incomplete_data_count += 1
-        state, county = state_county_consistency(row['state'], row['city_or_county'], counties_data)
-
-        if state_consistency:
-            clean_geo_data.loc[index, 'state'] = row['state_geopy']
-        elif state is not None:
-            clean_geo_data.loc[index, 'state'] = state 
-        
-        if county_consistency:
-            clean_geo_data.loc[index, 'county'] = row['county_geopy']
-        elif county is not None:
-            clean_geo_data.loc[index, 'county'] = county
-
+print('Number of rows in which state is null: ', geopy_data[geopy_data['state'].isnull()].shape[0])
+print('Number of rows in which county is null: ', geopy_data[geopy_data['county'].isnull()].shape[0])
+print('Number of rows in which city is null: ', geopy_data[geopy_data['city'].isnull()].shape[0])
+print('Number of rows in which town is null: ', geopy_data[geopy_data['town'].isnull()].shape[0])
+print('Number of rows in which road is null: ', geopy_data[geopy_data['road'].isnull()].shape[0])
+print('Number of rows in which addresstype is null: ', geopy_data[geopy_data['addresstype'].isnull()].shape[0])
+print('Number of rows in which importance is null: ', geopy_data[geopy_data['importance'].isnull()].shape[0])
 
 # %%
-print('Number of incomplete entries: ', incomplete_data_count)
+print('Number of rows in which city is null and town is not null: ', 
+    geopy_data[(geopy_data['city'].isnull()) & (geopy_data['town'].notnull())].shape[0])
+
+# %%
+data_check_consistency[['road_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy']] = geopy_data[[
+    'road', 'town', 'city', 'county', 'state']]
+
+# %%
+data_check_consistency.head()
+
+# %%
+# convert latitude and longitude to float
+data_check_consistency['latitude'] = data_check_consistency['latitude'].astype(float)
+data_check_consistency['longitude'] = data_check_consistency['longitude'].astype(float)
+
+# %%
+clean_geo_data = pd.DataFrame(columns=['state', 'city', 'county', 'road', 'latitude', 'longitude'])
+clean_geo_data = clean_geo_data.reindex(incidents_data.index)
+
+# %%
+from clean_data_utils import check_geographical_data_consistenc
+clean_geo_data = data_check_consistency.apply(lambda row: 
+    check_geographical_data_consistenc(row, additional_data=additional_data), axis=1)
+
+# %%
+print('Number of rows with all null values: ', clean_geo_data.isnull().all(axis=1).sum())
+print('Number of rows with null value for state: ', clean_geo_data['state'].isnull().sum())
+print('Number of rows with null value for county: ', clean_geo_data['county'].isnull().sum())
+print('Number of rows with null value for city: ', clean_geo_data['city'].isnull().sum())
+print('Number of rows with null value for road: ', clean_geo_data['road'].isnull().sum())
+print('Number of rows with null value for latitude: ', clean_geo_data['latitude'].isnull().sum())
+print('Number of rows with null value for longitude: ', clean_geo_data['longitude'].isnull().sum())
 
 # %%
 clean_geo_data.head(10)
 
 # %%
-clean_geo_data.to_csv(FOLDER + 'post-proc/new_columns_geo.csv', index=False)
+clean_geo_data.to_csv(FOLDER + 'post_proc/new_columns_geo.csv', index=False)
 
 # %% [markdown]
 # ## 'congressional_district', 'state_house_district', 'state_senate_district' consistency
