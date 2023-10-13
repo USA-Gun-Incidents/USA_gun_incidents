@@ -87,7 +87,7 @@ def plot_clf_decision_boundary(clf, X_train, y_train, color_map):
         colors="lime",
         plot_method="contour" # "pcolormesh", "pcolormesh"
     )
-
+    
     disp.ax_.scatter(
         X_train[:, 0],
         X_train[:, 1],
@@ -122,9 +122,6 @@ for c in incidents_data[(incidents_data['state']=="ALABAMA")]['congressional_dis
 
 # %%
 map_plotly_plot(incidents_data[incidents_data['state']=='ALABAMA'], 'congressional_district')
-
-# %%
-map_matplotlib_plot(incidents_data[incidents_data['state']=='ALABAMA'], alabama_color_map, colors)
 
 # %%
 X_train, X_test, y_train = build_X_y_for_district_inference(incidents_data[incidents_data['state']=="ALABAMA"])
@@ -171,3 +168,29 @@ map_plotly_plot(incidents_data[incidents_data['state']=='ALABAMA'], 'NC_congress
 plot_clf_decision_boundary(nc_clf, X_train, y_train, alabama_color_map)
 
 
+
+# %%
+map_plotly_plot(incidents_data[incidents_data['state']=='FLORIDA'], 'congressional_district')
+
+# %%
+X_train, X_test, y_train = build_X_y_for_district_inference(incidents_data[incidents_data['state']=="FLORIDA"])
+
+K = 3
+knn_clf = KNeighborsClassifier(n_neighbors=K)
+knn_clf.fit(X_train, y_train)
+knn_pred = knn_clf.predict(X_test)
+
+incidents_data['KNN_congressional_district'] = incidents_data['congressional_district']
+incidents_data.loc[
+    (incidents_data['state']=="FLORIDA") &
+    (incidents_data['congressional_district'].isna()) &
+    (incidents_data['latitude'].notna()) & 
+    (incidents_data['longitude'].notna()),
+    'KNN_congressional_district'
+    ] = knn_pred
+
+# %%
+map_plotly_plot(incidents_data[incidents_data['state']=='FLORIDA'], 'KNN_congressional_district')
+
+# %%
+plot_clf_decision_boundary(nc_clf, X_train, y_train)
