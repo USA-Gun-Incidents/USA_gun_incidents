@@ -168,7 +168,7 @@ clean_geo_data = pd.DataFrame(columns=['state', 'city', 'county', 'road', 'latit
 clean_geo_data = clean_geo_data.reindex(incidents_data.index)
 
 # %%
-from clean_data_utils import check_geographical_data_consistenc
+from utils import check_geographical_data_consistenc
 clean_geo_data = data_check_consistency.apply(lambda row: 
     check_geographical_data_consistenc(row, additional_data=additional_data), axis=1)
 

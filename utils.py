@@ -212,7 +212,7 @@ def check_consistency_additional_data(state, county, additional_data):
 # main function
 def check_geographical_data_consistency(row, additional_data):
     # initialize clean_geo_data
-    clean_geo_data_row = pd.Series(index=['state', 'county', 'city', 'road', 'latitude', 'longitude'])
+    clean_geo_data_row = pd.Series(index=['state', 'county', 'city', 'road', 'latitude', 'longitude'], dtype=str)
 
     # initialize consistency variables
     state_consistency = False

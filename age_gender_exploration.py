@@ -298,7 +298,7 @@ for index, row in ages_data.iterrows():
 
 
 # %%
-len(indices2) # 34024 w teen in [13, 17] and 16492 w teen in [13, 16], now teen in [12, 17] 10955
+len(indices2)
 
 # %%
 incidents_data.loc[indices2, ['min_age_participants', 'max_age_participants', 'avg_age_participants',
