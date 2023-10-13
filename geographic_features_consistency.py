@@ -6,6 +6,7 @@
 
 # %%
 import pandas as pd
+import plot_utils
 
 # %%
 # read data
@@ -227,31 +228,6 @@ print( ' ---- GOOD ---\t', a+b+c+d)
 print( ' ---- BAD ----\t', e+f+g+h)
 
 # %%
-
-
-# %%
-import plotly.express as px
-import numpy as np
-"""fig = px.choropleth(locations=incidents_data['state'].value_counts().index,
-                    locationmode="USA-states",
-                    color=incidents_data['state'].value_counts().values,
-                    scope="usa",
-                    color_continuous_scale="Viridis",
-                    title='Number of incidents in each state')"""
-
-color_scale = [(0, 'orange'), (1,'blue')]
-fig = px.scatter_mapbox(color=np.ones(clean_geo_data.shape[0]), 
-                        lat=clean_geo_data['latitude'], 
-                        lon=clean_geo_data['longitude'],
-                        color_continuous_scale=color_scale,
-                        zoom=3, 
-                        height=800,
-                        width=800)
-fig.update_layout(mapbox_style="open-street-map")
-fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
-fig.show()
-
-# %%
 only_nan_coord = clean_geo_data[clean_geo_data['latitude'].isnull()]
 
 for col in only_nan_coord:
@@ -264,6 +240,24 @@ print('Number of rows divided state:\n', only_nan_coord['state'].value_counts())
 # %%
 print('Number of nan: ', only_nan_coord['county'].isna().sum())
 print('Number of not nan: ', len(only_nan_coord['county']) - only_nan_coord['county'].isna().sum())
+
+# %%
+dummy_data = clean_geo_data[clean_geo_data['latitude'].notna()]
+print(len(dummy_data))
+plot_utils.map_plotly_plot(dummy_data, 'state')
+
+# %%
+plot_utils.map_plotly_plot(clean_geo_data[(clean_geo_data['latitude'].notna()) & (clean_geo_data['state'] == 'California')], 'county')
+
+# %%
+dummy_data = clean_geo_data[(clean_geo_data['latitude'].notna()) & (clean_geo_data['city'].isna())]
+print(len(dummy_data))
+plot_utils.map_plotly_plot(dummy_data, 'state')
+
+# %%
+dummy_data = clean_geo_data[(clean_geo_data['latitude'].notna()) & (clean_geo_data['city'].isna()) & (clean_geo_data['county'].isna())]
+print(len(dummy_data))
+plot_utils.map_plotly_plot(dummy_data, 'state')
 
 # %%
 #TODO: aggiungere tutte le colonne di 'incidenti' significative e mancanti, e aggiungere colonne aggiuntive geopy solo nelle righe sensatte
@@ -281,7 +275,7 @@ clean_geo_data.to_csv(FOLDER + 'post_proc/new_columns_geo.csv', index=False)
 # * 174796 = The completely consistent and final rows of the dataset.
 # * 26635 = The rows in which only the city is missing that can be inferred easily from the location (k-nn)
 # * 15000 = The rows in which only the county is missing that can be inferred easily from the location (k-nn)
-# * 33 = The rows where city and county are missing, also in this group the missing information can be inferred from the location (k-nn)
+# * 33 = The rows where city and county are missing, also in this group the missing information can be inferred from the location (All clustered close to Baltimore)
 # 
 # ---------- BAD GROUPS ----------
 # * 3116 = The rows where latitude and longitude and city are missing, they can be inferred (not faithfully) from the pair county-state
