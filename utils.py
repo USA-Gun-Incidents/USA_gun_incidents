@@ -2,9 +2,6 @@
 import pandas as pd
 import re
 import jellyfish
-import nltk
-from stop_words import get_stop_words
-from nltk.corpus import stopwords
 import numpy as np
 
 # epics variables
@@ -57,16 +54,14 @@ def clean_data_incidents(data):
         return [data]
     
 def clean_data_geopy(data):
+    if pd.isnull(data): return data
+
     data = lower_case(data)
     data = delete_numbers(data)
     data = delete_punctuation(data)
     data = delete_space(data)
     
     return data.replace('county', '')
-
-def split_by_stop_word(data):
-    output = data.replace('and', '||').replace('of', '||').replace(',', '||').replace('or', '||').split('||')
-    return output
 
 # check if two strings are the same
 '''def check_typo(data1, data2):
@@ -103,16 +98,16 @@ def split_by_stop_word(data):
 '''
 
 def check_typo_jellyfish(s1, s2):
-    if np.isnan(s1): return -1
-    if np.isnan(s2): return -1
+    if pd.isnull(s1): return -1
+    if pd.isnull(s2): return -1
 
     dis = jellyfish.damerau_levenshtein_distance(s1, s2)
     return int(dis <= DAMERAU_LEVENSHTEIN_DISTANCE_TRESHOLD)
 
 #A2 MUST BE THE GEOPY DATA
 def check_address(a1, a2):
-    if np.isnan(a1): return -1
-    if np.isnan(a2): return -1
+    if pd.isnull(a1): return -1
+    if pd.isnull(a2): return -1
 
     for sep in MOST_USED_WORDS:
         a1 = a1.replace(sep, '|+|')
@@ -127,13 +122,13 @@ def check_address(a1, a2):
 
 # check consistency between two addresses
 def check_consistency_geopy(row):
-
     # 0 -> false
     # 1 -> true
     # -1 -> null
     
     state_consistency = 0
     county_city_consistency = 0
+    county_city_match = '-1'
     address_consistency = 0
     
     # STATE
@@ -168,7 +163,7 @@ def check_consistency_geopy(row):
 
 
     # ADDRESS
-    address_consistency = check_address(row['address'], row['display_name'])
+    address_consistency = check_address(row['address'], row['address_geopy'])
 
     return state_consistency, county_city_consistency, county_city_match, address_consistency #, address_consistency, similar_words
 
@@ -229,11 +224,8 @@ def check_consistency_additional_data(state, county, additional_data):
 # main function
 def check_geographical_data_consistency(row, additional_data):
     # initialize clean_geo_data
-    clean_geo_data_row = pd.Series(index=['state', 'county', 'city', 'display_name', 'latitude', 'longitude'], dtype=str)
+    clean_geo_data_row = pd.Series(index=['state', 'county', 'city', 'latitude', 'longitude',  'state_consistency', 'county_consistency', 'address_consistency'], dtype=str)
     
-    #columns=['state', 'city_or_county', 'address', 'latitude', 'longitude', 
-    #'display_name', 'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy']
-
     # initialize consistency variables
     state_consistency = -1
     county_consistency = -1
@@ -253,7 +245,7 @@ def check_geographical_data_consistency(row, additional_data):
         clean_geo_data_row.loc[['state']] = row['state_geopy']
         clean_geo_data_row.loc[['county']] = row['county_geopy']
 
-        if county_city_match == 'county_geopy':
+        if county_city_match == 'county_geopy' or county_city_match == '-1':
             if row['city_geopy'] is not None:
                 clean_geo_data_row.loc[['city']] = row['city_geopy']
             elif row['town_geopy'] is not None:
@@ -267,7 +259,7 @@ def check_geographical_data_consistency(row, additional_data):
         clean_geo_data_row.loc[['longitude']] = row['longitude'] 
 
         #TODO: ADD IMPORTACNE AND BLA BLA
-    elif (state_consistency==1 and county_consistency==-1 and address_consistency==0 and np.isnan(row['city_or_county'])):
+    elif (state_consistency==1 and county_consistency==-1 and address_consistency==0 and pd.isnull(row['city_or_county'])):
         clean_geo_data_row.loc[['state']] = row['state_geopy']
 
     else:
@@ -275,6 +267,10 @@ def check_geographical_data_consistency(row, additional_data):
 
         clean_geo_data_row.loc[['state']] = state
         clean_geo_data_row.loc[['county']] = county
+
+    clean_geo_data_row.loc[['state_consistency']] = state_consistency
+    clean_geo_data_row.loc[['county_consistency']] = county_consistency
+    clean_geo_data_row.loc[['address_consistency']] = address_consistency
 
     return clean_geo_data_row
 

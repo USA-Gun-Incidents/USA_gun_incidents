@@ -17,6 +17,7 @@ incidents_data = pd.read_csv(incidents_path)
 # %%
 # drop duplicates rows
 incidents_data.drop_duplicates(inplace=True)
+incidents_data.info()
 
 # %%
 # select only relevant columns from incidents_data
@@ -122,7 +123,7 @@ additional_data.dtypes
 
 # %%
 data_check_consistency = pd.DataFrame(columns=['state', 'city_or_county', 'address', 'latitude', 'longitude', 
-    'road_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy'])
+    'display_name', 'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 'coord_presence'])
 
 # %%
 data_check_consistency[['state', 'city_or_county', 'address', 'latitude', 'longitude']] = incidents_data[[
@@ -130,29 +131,32 @@ data_check_consistency[['state', 'city_or_county', 'address', 'latitude', 'longi
 
 # %%
 geopy_path = FOLDER + 'geopy/geopy.csv'
-geopy_data = pd.read_csv(geopy_path)
-geopy_data.head()
+geopy_data = pd.read_csv(geopy_path, index_col=['index'])
+geopy_data.info()
 
 # %%
-# display geopy_data columns names
-geopy_data.columns # country, state, city, road
+for col in geopy_data:
+    dummy = geopy_data[col].unique()
+    print( [ col, dummy, len(dummy)] )
 
 # %%
-print('Number of rows in which state is null: ', geopy_data[geopy_data['state'].isnull()].shape[0])
+'''print('Number of rows in which state is null: ', geopy_data[geopy_data['state'].isnull()].shape[0])
 print('Number of rows in which county is null: ', geopy_data[geopy_data['county'].isnull()].shape[0])
 print('Number of rows in which city is null: ', geopy_data[geopy_data['city'].isnull()].shape[0])
 print('Number of rows in which town is null: ', geopy_data[geopy_data['town'].isnull()].shape[0])
 print('Number of rows in which road is null: ', geopy_data[geopy_data['road'].isnull()].shape[0])
 print('Number of rows in which addresstype is null: ', geopy_data[geopy_data['addresstype'].isnull()].shape[0])
-print('Number of rows in which importance is null: ', geopy_data[geopy_data['importance'].isnull()].shape[0])
+print('Number of rows in which importance is null: ', geopy_data[geopy_data['importance'].isnull()].shape[0])'''
+
+print('Number of rows without coordinates: ', geopy_data['coord_presence'].value_counts())
+print('Number of rows without importance: ', geopy_data['importance'].isnull().value_counts())
 
 # %%
-print('Number of rows in which city is null and town is not null: ', 
-    geopy_data[(geopy_data['city'].isnull()) & (geopy_data['town'].notnull())].shape[0])
+geopy_data.groupby(['class']).count()
 
 # %%
-data_check_consistency[['road_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy']] = geopy_data[[
-    'road', 'town', 'city', 'county', 'state']]
+data_check_consistency[['address_geopy', 'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 'coord_presence']] = geopy_data[[
+    'display_name', 'village', 'town', 'city', 'county', 'state', 'coord_presence']]
 
 # %%
 data_check_consistency.head()
@@ -163,11 +167,8 @@ data_check_consistency['latitude'] = data_check_consistency['latitude'].astype(f
 data_check_consistency['longitude'] = data_check_consistency['longitude'].astype(float)
 
 # %%
-clean_geo_data = pd.DataFrame(columns=['state', 'city', 'county', 'road', 'latitude', 'longitude'])
-clean_geo_data = clean_geo_data.reindex(incidents_data.index)
-
-# %%
 from utils import check_geographical_data_consistency
+
 clean_geo_data = data_check_consistency.apply(lambda row: 
     check_geographical_data_consistency(row, additional_data=additional_data), axis=1)
 
@@ -176,12 +177,40 @@ print('Number of rows with all null values: ', clean_geo_data.isnull().all(axis=
 print('Number of rows with null value for state: ', clean_geo_data['state'].isnull().sum())
 print('Number of rows with null value for county: ', clean_geo_data['county'].isnull().sum())
 print('Number of rows with null value for city: ', clean_geo_data['city'].isnull().sum())
-print('Number of rows with null value for road: ', clean_geo_data['road'].isnull().sum())
 print('Number of rows with null value for latitude: ', clean_geo_data['latitude'].isnull().sum())
 print('Number of rows with null value for longitude: ', clean_geo_data['longitude'].isnull().sum())
 
 # %%
 clean_geo_data.head(10)
+
+# %%
+print('Number of rows divided by state_consistency: ', clean_geo_data['state_consistency'].value_counts())
+print('Number of rows divided by county_consistency: ', clean_geo_data['county_consistency'].value_counts())
+print('Number of rows divided by address_consistency: ', clean_geo_data['address_consistency'].value_counts())
+clean_geo_data.info()
+
+
+# %%
+import plotly.express as px
+import numpy as np
+"""fig = px.choropleth(locations=incidents_data['state'].value_counts().index,
+                    locationmode="USA-states",
+                    color=incidents_data['state'].value_counts().values,
+                    scope="usa",
+                    color_continuous_scale="Viridis",
+                    title='Number of incidents in each state')"""
+
+color_scale = [(0, 'orange'), (1,'blue')]
+fig = px.scatter_mapbox(color=np.ones(clean_geo_data.shape[0]), 
+                        lat=clean_geo_data['latitude'], 
+                        lon=clean_geo_data['longitude'],
+                        color_continuous_scale=color_scale,
+                        zoom=3, 
+                        height=800,
+                        width=800)
+fig.update_layout(mapbox_style="open-street-map")
+fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+fig.show()
 
 # %%
 clean_geo_data.to_csv(FOLDER + 'post_proc/new_columns_geo.csv', index=False)
