@@ -118,7 +118,7 @@ def check_address(a1, a2):
         if el_of_a1 in a2:
             cardinality_a1_in_a2 += 1
 
-    return int(cardinality_a1_in_a2 <= ADDRESS_SIMILARITY_TRESHOLD)
+    return int(cardinality_a1_in_a2 >= ADDRESS_SIMILARITY_TRESHOLD)
 
 # check consistency between two addresses
 def check_consistency_geopy(row):

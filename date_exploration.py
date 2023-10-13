@@ -242,8 +242,8 @@ dates_data = get_box_plot_data(ylabels, boxplot)
 # -Is the one that preserves the distribution the most thank's to the rendom sampling approach, and since the values ​​are more than 23K they cannot be replaced with equal values
 #
 # -Since the date of the incidents is not related in any way to other fields of the dataset, and failing to identify the cause that generated the errors, replacing the dates with random ones from the dataset does not introduce particular inconsistencies
-
-
+#
+#
 
 # %%
 dates_data

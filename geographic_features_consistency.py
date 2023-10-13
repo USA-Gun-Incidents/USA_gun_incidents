@@ -187,7 +187,46 @@ clean_geo_data.head(10)
 print('Number of rows divided by state_consistency: ', clean_geo_data['state_consistency'].value_counts())
 print('Number of rows divided by county_consistency: ', clean_geo_data['county_consistency'].value_counts())
 print('Number of rows divided by address_consistency: ', clean_geo_data['address_consistency'].value_counts())
+
 clean_geo_data.info()
+
+# %%
+dummy = {}
+stats_columns = ['null_val', 'not_null', 'value_count']
+for col in clean_geo_data.columns:
+    dummy[col] = []
+    dummy[col].append(clean_geo_data[col].isna().sum())
+    dummy[col].append(len(clean_geo_data[col]) - clean_geo_data[col].isna().sum())
+    dummy[col].append(len(clean_geo_data[col].value_counts()))
+    
+print(dummy)
+clean_geo_stat_stats = pd.DataFrame(dummy, index=stats_columns).transpose()
+clean_geo_stat_stats
+
+# %%
+a = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].notna())])
+b = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].isna())])
+c = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())])
+d = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].isna())])
+e = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].notna())])
+f = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].isna())])
+g = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())])
+h = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].isna())])
+
+print('LAT/LONG --- COUNTY --- CITY')
+print( ' 0 --- 0 --- 0\t', a)
+print( ' 0 --- 0 --- 1\t', b)
+print( ' 0 --- 1 --- 0\t', c)
+print( ' 0 --- 1 --- 1\t', d)
+print( ' 1 --- 0 --- 0\t', e)
+print( ' 1 --- 0 --- 1\t', f)
+print( ' 1 --- 1 --- 0\t', g)
+print( ' 1 --- 1 --- 1\t', h)
+print( ' ---- TOT ----\t', a+b+c+d+e+f+g+h)
+print( ' ---- GOOD ---\t', a+b+c+d)
+print( ' ---- BAD ----\t', e+f+g+h)
+
+# %%
 
 
 # %%
@@ -213,7 +252,47 @@ fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
 fig.show()
 
 # %%
+only_nan_coord = clean_geo_data[clean_geo_data['latitude'].isnull()]
+
+for col in only_nan_coord:
+    dummy = only_nan_coord[col].unique()
+    print( [ col, dummy, len(dummy)] )
+
+# %%
+print('Number of rows divided state:\n', only_nan_coord['state'].value_counts())
+
+# %%
+print('Number of nan: ', only_nan_coord['county'].isna().sum())
+print('Number of not nan: ', len(only_nan_coord['county']) - only_nan_coord['county'].isna().sum())
+
+# %%
+#TODO: aggiungere tutte le colonne di 'incidenti' significative e mancanti, e aggiungere colonne aggiuntive geopy solo nelle righe sensatte
+#TODO: per farlo aggiungere booleano della utils per capire se i dati salvati sono o no di geopy
+
 clean_geo_data.to_csv(FOLDER + 'post_proc/new_columns_geo.csv', index=False)
+
+# %% [markdown]
+# # FINAL EVALUATIONS:
+# We divided the dataset into several groups depending on what information we were able to demonstrate consistent between the latitude, longitude, state, county, and city fields. And we did this by also making use of the address field, which, however, we decided not to use further because it is not very identifying of the line and is too variable. Finally, we defined strategies to be applied on these groups to fill in the missing data (considered erroneous or missing from the original dataset) in a more or less effective way according to the row information.
+# 
+# We now report the division into disjointed groups in which we indicate the size
+# 
+# ---------- GOOD GROUPS ----------
+# * 174796 = The completely consistent and final rows of the dataset.
+# * 26635 = The rows in which only the city is missing that can be inferred easily from the location (k-nn)
+# * 15000 = The rows in which only the county is missing that can be inferred easily from the location (k-nn)
+# * 33 = The rows where city and county are missing, also in this group the missing information can be inferred from the location (k-nn)
+# 
+# ---------- BAD GROUPS ----------
+# * 3116 = The rows where latitude and longitude and city are missing, they can be inferred (not faithfully) from the pair county-state
+# * 19844 = The rows in which only the state field is present. difficult to retrieve
+# 
+# missing combinations are not present in the dataset
+# 
+# # Final considerations
+# as many as 216464 lines are either definitive or can be derived with a good degree of fidelity. the remainder must be handled carefully\
+# 
+# CAUTION: EVALUATE THE CHOSEN TRESHOULDS
 
 # %% [markdown]
 # ## 'congressional_district', 'state_house_district', 'state_senate_district' consistency
