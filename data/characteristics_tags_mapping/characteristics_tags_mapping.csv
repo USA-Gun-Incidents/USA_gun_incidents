@@ -1,0 +1,91 @@
+ATF/LE Confiscation/Raid/Arrest;Firearm;Illegal holding
+Accidental Shooting;Firearm;Shots
+Accidental Shooting - Death;Firearm;Shots;Death
+Accidental Shooting - Injury;Firearm;Shots;Injuries
+Accidental Shooting at a Business;Firearm;Shots;Workplace
+Accidental/Negligent Discharge;Firearm
+Animal shot/killed;Firearm;Shots;Death
+Armed robbery with injury/death and/or evidence of DGU found;Firearm;Shots;Injuries;Illegal holding
+Assault weapon (AR-15, AK-47, and ALL variants defined by law enforcement);Firearm
+Attempted Murder/Suicide (one variable unsuccessful)
+BB/Pellet/Replica gun;Firearm
+Bar/club incident - in or around establishment
+Brandishing/flourishing/open carry/lost/found;Firearm
+Car-jacking;Road;Illegal holding
+Child Involved Incident;Children
+Child picked up & fired gun;Firearm;Shots;Children
+Child with gun - no shots fired;Firearm;Children
+Cleaning gun;Firearm;Illegal holding
+Concealed Carry License - Perpetrator;Firearm
+Concealed Carry License - Victim;Firearm
+Criminal act with stolen gun;Firearm;Illegal holding
+Defensive Use;Firearm;Defensive
+Defensive Use - Crime occurs, victim shoots subject/suspect/perpetrator;Firearm;Shots;Defensive
+Defensive Use - Shots fired, no injury/death;Firearm;Shots;Defensive
+Defensive Use - Victim stops crime;Firearm;Defensive
+Defensive Use - WITHOUT a gun;Defensive
+Domestic Violence;House
+Drive-by (car to street, car to car);Firearm;Shots;Road
+Drug involvement;Drugs
+Gang involvement;Organized
+Ghost gun;Firearm
+Gun at school, no death/injury - elementary/secondary school;Firearm;School;Children
+Gun at school, no death/injury - university/college;Firearm;School
+Gun buy back action;Firearm;Illegal holding
+Gun range/gun shop/gun show shooting;Firearm;Shots
+Gun shop robbery or burglary;Firearm;Illegal holding
+Gun(s) stolen from owner;Firearm;Illegal holding
+Guns stolen from law enforcement;Firearm;Illegal holding;Officers
+Hate crime;Social reasons
+Home Invasion;House
+Home Invasion - No death or injury;House
+Home Invasion - Resident injured;Injuries;House
+Home Invasion - Resident killed;Death;House
+Home Invasion - subject/suspect/perpetrator injured;Injuries;House
+Home Invasion - subject/suspect/perpetrator killed;Death;House
+House party;House
+Hunting accident;Firearm
+Implied Weapon;Firearm
+Institution/Group/Business;Organized
+Kidnapping/abductions/hostage
+LOCKDOWN/ALERT ONLY: No GV Incident Occurred Onsite
+Mass Murder (4+ deceased victims excluding the subject/suspect/perpetrator , one location);Death
+Mass Shooting (4+ victims injured or killed excluding the subject/suspect/perpetrator, one location);Firearm;Shots;Injuries
+Murder/Suicide;Death
+Non-Aggression Incident
+Non-Shooting Incident
+Officer Involved Incident;Officers
+Officer Involved Incident - Weapon involved but no shots fired;Firearm;Officers
+Officer Involved Shooting - Accidental discharge - no injury required;Firearm;Shots;Officers
+Officer Involved Shooting - Officer killed;Firearm;Shots;Death;Officers
+Officer Involved Shooting - Officer shot;Firearm;Shots;Injuries;Officers
+Officer Involved Shooting - Shots fired, no injury;Firearm;Shots;Officers
+Officer Involved Shooting - subject/suspect/perpetrator killed;Firearm;Shots;Death;Officers
+Officer Involved Shooting - subject/suspect/perpetrator shot;Firearm;Shots;Injuries;Officers
+Officer Involved Shooting - subject/suspect/perpetrator suicide at standoff;Suicide;Officers
+Officer Involved Shooting - subject/suspect/perpetrator surrender at standoff;Officers
+Officer Involved Shooting - subject/suspect/perpetrator unarmed;Firearm;Shots;Officers
+Pistol-whipping;Firearm
+Police Targeted;Officers
+Political Violence;Social reasons
+Possession (gun(s) found during commission of other crimes);Firearm
+Possession of gun by felon or prohibited person;Firearm;Illegal holding
+Road rage;Road
+School Incident;School
+School Shooting - elementary/secondary school;Firearm;Shots;School;Children
+Sex crime involving firearm;Firearm
+Shootout (where VENN diagram of shooters and victims overlap);Firearm;Shots
+Shot - Dead (murder, accidental, suicide);Firearm;Shots;Death
+Shot - Wounded/Injured;Firearm;Shots;Injuries
+ShotSpotter;Firearm;Shots
+Shots Fired - No Injuries;Firearm;Shots
+Shots fired, no action (reported, no evidence found);Firearm;Shots
+Spree Shooting (multiple victims, multiple locations);Firearm;Shots;Death
+Stolen/Illegally owned gun{s} recovered during arrest/warrant;Firearm;Illegal holding
+Suicide - Attempt;Suicide
+Suicide^;Suicide;Death
+TSA Action;Road
+Terrorism Involvement;Organized
+Under the influence of alcohol or drugs (only applies to the subject/suspect/perpetrator );Drugs
+Unlawful purchase/sale;Illegal holding
+Workplace shooting (disgruntled employee);Firearm;Shots;Workplace

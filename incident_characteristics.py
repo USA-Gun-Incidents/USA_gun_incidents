@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+import math
 
 FOLDER = './data/'
 incidents_path = FOLDER + 'incidents.csv'
@@ -74,12 +75,65 @@ print(incidents_data.pivot_table(columns=['incident_characteristics2'], aggfunc=
 # %%
 #add tags to dataframe
 
-tags = ["Firearm", "Shots", "Suicide", "Injuries", "Death", "Road", "Illegal holding", "House", "School", "Children", "Drugs", "Officiers", "Organized", "Social reasons", "Defensive", "Workplace"]
+tags = ["Firearm", "Shots", "Suicide", "Injuries", "Death", "Road", "Illegal holding", "House", "School", "Children", "Drugs", "Officers", "Organized", "Social reasons", "Defensive", "Workplace"]
 zeros = [0] * incidents_data_characteristics.shape[0]
 
 for tag in tags:
     incidents_data_characteristics.insert(incidents_data_characteristics.shape[1], tag, zeros)
   
 incidents_data_characteristics
+
+# %%
+import csv
+
+#read csv to populate tags
+
+characteristics_folder_name = FOLDER + 'characteristics_tags_mapping/'
+filename = characteristics_folder_name + 'characteristics_tags_mapping.csv'
+characteristics_tags_list = []
+with open(filename, mode='r') as file: #create list with categories and tags
+    for line in file:
+        line_read = line.rstrip()
+        characteristics_tags_list.append(line_read.split(';'))
+
+indicization_list = []
+for lst in characteristics_tags_list:
+    indicization_list.append(lst[0])
+
+# %%
+#given characteristic
+#return all the tags 
+def get_tags(characteristic):
+    if not type(characteristic) == str.__class__:
+        return []
+    index = indicization_list.index(characteristic)
+    tags = characteristics_tags_list[index]
+    if len(tags) == 1:
+        return []
+    return tags[1:]
+
+# %%
+for index, record in incidents_data_characteristics.iterrows():
+    tags = set(get_tags(record['incident_characteristics1']) + get_tags(record['incident_characteristics2']))
+    for tag in tags: #set values to tags binary mask
+        incidents_data_characteristics.at[index, tag] = 1
+
+incidents_data_characteristics
+
+# %%
+incidents_data_characteristics.drop(["incident_characteristics1", "incident_characteristics2"], axis=1, inplace=True)
+
+# %%
+#concatenate tags on original dataset
+incidents_data = pd.concat([incidents_data, incidents_data_characteristics], axis=1)
+
+incidents_data
+
+# %%
+from pathlib import Path
+
+filename = FOLDER + 'post_proc/incidents_with_tags.csv'
+filepath = Path(filename)
+incidents_data.to_csv(filepath)  
 
 
