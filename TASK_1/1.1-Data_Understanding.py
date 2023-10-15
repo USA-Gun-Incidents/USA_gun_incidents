@@ -9,16 +9,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
 import plotly.graph_objects as go
-
-# %% [markdown]
-# We define constants and settings for the notebook:
-
-# %%
 import os
 import sys
 sys.path.append(os.path.abspath('..')) # TODO: c'è un modo per farlo meglio?
 from plot_utils import *
 
+# %% [markdown]
+# We define constants and settings for the notebook:
+
+# %%
 %matplotlib inline
 
 DATA_FOLDER_PATH = '../data/'
@@ -171,10 +170,14 @@ poverty_state_year_size[poverty_state_year_size>1]
 poverty_data[(poverty_data['state']=='Wyoming')]
 
 # %% [markdown]
-# We notice that the entry relative to 2010 is missing. Since the other entries are ordered by year, we correct this error setting the year of the row at index 571 to 2010.
+# We notice that the entry relative to 2010 is missing. Since the other entries are ordered by year, we correct this error setting the year of the row with a povertyPercentage equal to 10.0 to 2010.
 
 # %%
-poverty_data.at[571,'year']=2010
+poverty_data.loc[
+    (poverty_data['state'] == 'Wyoming') &
+    (poverty_data['year'] == 2009) &
+    (poverty_data['povertyPercentage'] == 10),
+    'year'] = 2010
 
 # %% [markdown]
 # We check if each state has the expected number or rows:
@@ -426,7 +429,29 @@ for year in years:
 elections_data[elections_data['state']=='DISTRICT OF COLUMBIA']
 
 # %% [markdown]
-# Missing values are probably due to the fact that District of Columbia is a non voting delegate district. We found in [Wikipedia](https://en.wikipedia.org/wiki/2020_United_States_House_of_Representatives_election_in_the_District_of_Columbia) that while the number of votes received by the winning party coincides, the number of totalvotes is different. TODO: capire perchè e leggere il csv con i dati di Wiki.
+# Missing values are probably due to the fact that District of Columbia is a non voting delegate district. Anyway, we gathered the missing values from Wikipedia. We noticed that as for the 2020 elecetions, the number of votes received by the winning party coincides, but the number of totalvotes is different (see [here](https://en.wikipedia.org/wiki/2020_United_States_House_of_Representatives_election_in_the_District_of_Columbia)). To be consistent with the other data, we replace the totalvotes value from 2020 with the one from Wikipedia.
+# 
+# Now we import those data:
+
+# %%
+dc_elections_data = pd.read_csv('../data/wikipedia/district_of_columbia_house.csv')
+dc_elections_data.head(n=2)
+
+# %% [markdown]
+# We display a concise summary of the DataFrame:
+
+# %%
+dc_elections_data.info()
+
+# %% [markdown]
+# The inferred types are correct.
+# 
+# We now merge the two dataframes:
+
+# %%
+elections_data.drop(elections_data[elections_data['state']=='DISTRICT OF COLUMBIA'].index, inplace=True)
+elections_data = pd.concat([elections_data, dc_elections_data], ignore_index=True)
+elections_data.sort_values(by=['year', 'state', 'congressional_district'], inplace=True, ignore_index=True)
 
 # %% [markdown]
 # We now check if congressional districts are numbered correctly (with '0' for states with only one congressional district, or with incremental values starting from '1' otherwise):
@@ -471,8 +496,16 @@ elections_data[(elections_data['year']>2013) & (elections_data['state']=='MAINE'
 # We found in [Wikipedia](https://en.wikipedia.org/wiki/2022_United_States_House_of_Representatives_elections_in_Maine) that in Maine, that year, the Democratic party received 165136 votes out of a total of 311278 votes. We correct the error:
 
 # %%
-elections_data.at[10186, 'candidatevotes'] = 165136
-elections_data.at[10186, 'totalvotes'] = 311278
+elections_data.loc[
+    (elections_data['state']=='MAINE') &
+    (elections_data['year']==2022) &
+    (elections_data['congressional_district']==2),
+    'candidatevotes'] = 165136
+elections_data.loc[
+    (elections_data['state']=='MAINE') &
+    (elections_data['year']==2022) &
+    (elections_data['congressional_district']==2),
+    'totalvotes'] = 311278
 
 # %%
 elections_data[
@@ -501,16 +534,15 @@ for index, row in elections_data.iterrows():
 
 # %%
 elections_data[
-    (elections_data['year']>2012)
+    elections_data['year']>2012
 ].boxplot(column='totalvotes', by='state', figsize=(20, 10), rot=90, xlabel='State', ylabel='Total votes')
 plt.suptitle('Total votes from 2014')
 plt.title('')
 plt.tight_layout()
 
 # %% [markdown]
-# TODO: commentare
-
-# %% [markdown]
+# It is evident that the number of votes fluctuates significantly from year to year.
+# 
 # We get the unique names of the parties for the years of interest:
 
 # %%
@@ -523,18 +555,84 @@ elections_data[
 
 # %%
 elections_data['party'] = elections_data['party'].apply(
-    lambda x: 'DEMOCRATIC' if x=='DEMOCRATIC-FARMER-LABOR' else x
+    lambda x: 'DEMOCRAT' if x=='DEMOCRATIC-FARMER-LABOR' else x
 )
 
 # %% [markdown]
-# TODO:
-# plot popolazione totale dello stato dal 2010 al 2022
-# plot di cose stacked: per ogni stato una colonna blu-rossa per 14, 16, 18? (aggregato per stato...)
-
-# %% [markdown]
-# We check if `candidatevotes` are always more than 50% of `totalvotes`:
+# We now compute the percentage of votes obtained by the winner party and we plot the distribution of these percentages for the years of interest:
 
 # %%
-elections_data[elections_data['candidatevotes'] <= 0.5 * elections_data['totalvotes']].size == elections_data.size
+elections_data['candidateperc'] = (elections_data['candidatevotes']/elections_data['totalvotes'])*100
+elections_data[elections_data['year']>2012]['candidateperc'].plot.hist(bins=50, figsize=(10, 5), title='Percentage of winner votes')
+
+# %% [markdown]
+# It seems that in some districts the winner party obtained 100% of the votes. We disaply those districts:
+
+# %%
+elections_data[(elections_data['candidateperc']==100) & (elections_data['year']>2012)]
+
+# %% [markdown]
+# Wikipedia reports the same data, in those cases there was not an opponent party.
+# 
+# The histogram above also shows that in some disticts the winner party obtained less than 50% of the votes. We display those districts:
+
+# %%
+elections_data[(elections_data['candidateperc']<=50) & (elections_data['year']>2012)] # TODO: Connecticut 5, 2014  is wrong, Louisiana 5, 2014 is wrong...
+
+# %%
+elections_data[(elections_data['candidateperc']<=30) & (elections_data['year']>2012)]
+
+# %% [markdown]
+# Now we compute, for each year and state, the party with the highest percentage of votes, so to have a better understanding of the political orientation of each state:
+
+# %%
+winning_party_per_state = elections_data.groupby(['year', 'state', 'party'])['candidateperc'].mean()
+winning_party_per_state = winning_party_per_state.groupby(['year', 'state']).idxmax().apply(lambda x: x[2])
+winning_party_per_state
+
+# %% [markdown]
+# We can now merge the dataframe with the poverty data with the one with the aggregated election data:
+
+# %%
+poverty_data['state'] = poverty_data['state'].apply(lambda x: x.upper())
+poverty_elections_data = pd.merge(
+    poverty_data,
+    winning_party_per_state.to_frame(name='winningparty'),
+    how='inner',
+    left_on=['year', 'state'],
+    right_on=['year', 'state']
+)
+poverty_elections_data
+
+# %% [markdown]
+# We now plot on a map the winning party over the years:
+
+# %%
+fig = px.choropleth(
+    poverty_elections_data,
+    locations='px_code',
+    locationmode="USA-states",
+    color='winningparty',
+    scope="usa",
+    animation_frame='year',
+    title="Results of the elections over the years", # TODO: capire perchè nel Vermont rimane il 2004
+    hover_name='state',
+    hover_data={'px_code': False}
+)
+fig.update_layout(
+    # TODO: set legend title
+)
+fig.show()
+
+# %% [markdown]
+# We display the correlation matrix between the attributes:
+
+# %%
+poverty_elections_data['winningparty'] = poverty_elections_data['winningparty'].astype('category').cat.codes
+corr = poverty_elections_data.corr()
+corr.style.background_gradient(cmap='coolwarm')
+
+# %% [markdown]
+# No correlation is evident.
 
 
