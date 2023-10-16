@@ -1,42 +1,68 @@
-####################### Geographical data cleaning #######################
 import pandas as pd
 import re
 import jellyfish
 import numpy as np
 
-# epics variables
-DAMERAU_LEVENSHTEIN_DISTANCE_TRESHOLD = 2
-ADDRESS_SIMILARITY_TRESHOLD = 2
-MOST_USED_WORDS = ['of', 'block', 'Street', 'and', 'Avenue', 'St', 'Ave', 'Road', 'Drive', 'Rd', 'South', 'West', 'N', 'North', 'Dr', 'S', 'W', 'E', 'East', 'Blvd', 'Boulevard']
+# default variables
+DAMERAU_LEVENSHTEIN_DISTANCE_THRESHOLD = 2
+DIFFERENT_WORDS_ADDRESS_THRESHOLD = 2
+FREQUENT_WORDS = ['of', 
+    'block', 
+    'Street', 
+    'and', 
+    'Avenue', 
+    'St', 
+    'Ave', 
+    'Road', 
+    'Drive', 
+    'Rd', 
+    'South', 
+    'West', 
+    'N', 
+    'North', 
+    'Dr', 
+    'S', 
+    'W', 
+    'E', 
+    'East', 
+    'Blvd', 
+    'Boulevard']
 
-# basic cleaning functions
+####################### Geographical data cleaning #######################
+
 def lower_case(data):
+    """put data in lower case"""
     return data.lower()
 
 def delete_space(data):
+    """delete all spaces in data"""
     return data.replace(" ", "")
 
 def split_where_parenthesis(data):
+    """return two strings where parenthesis are present in data"""    
     # split data where parenthesis
     data1, data2 = data.split("(")
     # delete close parenthesis and return two strings
     return data1, data2.replace(")", "")
 
 def check_parenthesis(data):
+    """check if parenthesis are present in data"""
     if "(" in data:
         return True
     else:
         return False
 
 def delete_punctuation(data):
-    # delete all puntuction but parenthesis
+    """delete all punctuation but parenthesis in data"""
     return re.sub(r'[^\w\s\(\)]', '', data)
 
 def delete_numbers(data):
+    """delete all numbers in data"""
     return re.sub(r'[0-9]', '', data)
 
-# clean data functions
+
 def clean_data_incidents(data):
+    """clean data from incidents dataset"""
     data = delete_space(data)
     data = lower_case(data)
     data = delete_numbers(data)
@@ -54,6 +80,7 @@ def clean_data_incidents(data):
         return [data]
     
 def clean_data_geopy(data):
+    """clean data from geopy dataset"""
     if pd.isnull(data): return data
 
     data = lower_case(data)
@@ -63,87 +90,52 @@ def clean_data_geopy(data):
     
     return data.replace('county', '')
 
-# check if two strings are the same
-'''def check_typo(data1, data2):
+def check_string_typo(string1, string2):
+    """check if two strings are the same with at most a typo
+    according to the Damerau-Levenshtein distance"""
+    if pd.isnull(string1): return -1
+    if pd.isnull(string2): return -1
 
-    # check if two string are different for at least two letters
-    if len(data1) == len(data2):
-        count = 0
-        for i in range(len(data1)):
-            if data1[i] != data2[i]:
-                count += 1
-        if count <= 2:
-            return True
-        
-    # check if one string is a substring
-    if data1 in data2 or data2 in data1:
-            return True
-    
-    # check if one string is a substring of the other with a typo
-    j = 0
-    for i in range(len(data1)):
-        if j < len(data2):
-            if data1[i] == data2[j]:
-                j += 1
-            elif (j+1) < len(data2) and data1[i] == data2[j+1]:
-                j += 2
-            elif (j+2) < len(data2) and (data1[i] == data2[j+2]):
-                j += 3
-        else: break
-    if j in range(len(data2)-2, len(data2)+3):
-        return True
-    
-    # no matching
-    return False
-'''
+    string_distance = jellyfish.damerau_levenshtein_distance(string1, string2)
+    return int(string_distance <= DAMERAU_LEVENSHTEIN_DISTANCE_THRESHOLD)
 
-def check_typo_jellyfish(s1, s2):
-    if pd.isnull(s1): return -1
-    if pd.isnull(s2): return -1
+def check_address(address1, address2_geopy):
+    """check if two addresses are the same with at most a typo"""
+    if pd.isnull(address1): return -1
+    if pd.isnull(address2_geopy): return -1
 
-    dis = jellyfish.damerau_levenshtein_distance(s1, s2)
-    return int(dis <= DAMERAU_LEVENSHTEIN_DISTANCE_TRESHOLD)
+    for sep in FREQUENT_WORDS:
+        # replace frequent words with a separator
+        address1 = address1.replace(sep, '|+|')
+    address1_splitted = address1.split('|+|')
 
-#A2 MUST BE THE GEOPY DATA
-def check_address(a1, a2):
-    if pd.isnull(a1): return -1
-    if pd.isnull(a2): return -1
+    cardinality_address1_in_address2 = 0
+    for word in address1_splitted:
+        if word in address2_geopy:
+            cardinality_address1_in_address2 += 1
 
-    for sep in MOST_USED_WORDS:
-        a1 = a1.replace(sep, '|+|')
-    a1_splitted = a1.split('|+|')
+    return int(cardinality_address1_in_address2 >= DIFFERENT_WORDS_ADDRESS_THRESHOLD)
 
-    cardinality_a1_in_a2 = 0
-    for el_of_a1 in a1_splitted:
-        if el_of_a1 in a2:
-            cardinality_a1_in_a2 += 1
-
-    return int(cardinality_a1_in_a2 >= ADDRESS_SIMILARITY_TRESHOLD)
-
-# check consistency between two addresses
 def check_consistency_geopy(row):
-    # 0 -> false
-    # 1 -> true
-    # -1 -> null
-    
+    """check consistency between address in incidents dataset and geopy dataset
+    return 0 if not consistent, 1 if consistent, -1 if null values in one of the two addresses"""
     state_consistency = 0
     county_city_consistency = 0
     county_city_match = '-1'
     address_consistency = 0
     
-    # STATE
+    # set state
     state = clean_data_incidents(row['state']) # our data
     state_geopy = clean_data_geopy(row['state_geopy']) # geopy data
 
     for s in state:
-        dummy = check_typo_jellyfish(s, state_geopy)
+        dummy = check_string_typo(s, state_geopy)
         if state_consistency == 0:
             state_consistency = dummy
         if dummy == 1:
             state_consistency = dummy
-        #state_consistency = state_consistency or check_typo_jellyfish(s, state_geopy)
 
-   # CITY OR COUNTY
+   # set city or county
     incidents_couty_city = clean_data_incidents(row['city_or_county']) #our data
 
     geopy_couty_city_town_village = []
@@ -153,7 +145,7 @@ def check_consistency_geopy(row):
 
     for cc in incidents_couty_city:
         for i, val in enumerate(geopy_couty_city_town_village):
-            dummy = check_typo_jellyfish(cc, val)
+            dummy = check_string_typo(cc, val)
 
             if county_city_consistency == 0:
                 county_city_consistency = dummy
@@ -161,70 +153,50 @@ def check_consistency_geopy(row):
                 county_city_match = geopy_col[i]
                 county_city_consistency = dummy
 
-
-    # ADDRESS
+    # set address
     address_consistency = check_address(row['address'], row['address_geopy'])
 
-    return state_consistency, county_city_consistency, county_city_match, address_consistency #, address_consistency, similar_words
+    return state_consistency, county_city_consistency, county_city_match, address_consistency
 
 def check_consistency_additional_data(state, county, additional_data):
+    """check consistency between address in incidents dataset and additional data"""
     state_consistency = False
     state_current = np.nan
 
     if state in additional_data['State or equivalent'].unique():
         state_consistency = True
         state_current = state
-    else:
-        # check typo
+    else: # check typo
         clean_data_geopy(state)
         for s in additional_data['State or equivalent'].unique():
             state = clean_data_geopy(s)
-            if check_typo_jellyfish(state, s) == 1:
+            if check_string_typo(state, s) == 1:
                 state_consistency = True
                 state_current = s
                 break
 
-
     if state_consistency:
-        if county in additional_data[additional_data['State or equivalent'] == state_current]['County or equivalent'].unique():
+        if county in additional_data[additional_data['State or equivalent'] == state_current
+                                     ]['County or equivalent'].unique():
             return state_current, county
-        else:
-            # check typo
+        else: # check typo
             county_list = clean_data_incidents(county)
-            for c in additional_data[additional_data['State or equivalent'] == state_current]['County or equivalent'].unique():
+            for c in additional_data[additional_data['State or equivalent'] == state_current
+                                     ]['County or equivalent'].unique():
 
                 c = clean_data_geopy(c)
                 for county_incidents in county_list:     
-                    if check_typo_jellyfish(county_incidents, c) == 1:
+                    if check_string_typo(county_incidents, c) == 1:
                         return state_current, c
-
-    '''
-    else:
-        county1, county2 = clean_data_city_county(county)
-        for c in additional_data['County or equivalent']:
-            if c is not None and type(c) == str:
-                clean_data_state(c)
-                if check_typo(county1, c):
-                    county_current = c
-                    state_current = additional_data[additional_data['County or equivalent'] == c]['State or equivalent'].values[0]
-                    return state_current, county_current
-                elif check_typo(county2, c):
-                    county_current = c
-                    state_current = additional_data[additional_data['County or equivalent'] == c]['State or equivalent'].values[0]
-                    return state_current, county_current
-    
-    if state_consistency:
-        return state_current, None
-    else:
-        return None, None'''
     
     return state_current, np.nan
     
-
-# main function
 def check_geographical_data_consistency(row, additional_data):
+    """check consistency between our data, geopty data and additional data
+    return consistent data if consistent, else return nan values"""
     # initialize clean_geo_data
-    clean_geo_data_row = pd.Series(index=['state', 'county', 'city', 'latitude', 'longitude',  'state_consistency', 'county_consistency', 'address_consistency'], dtype=str)
+    clean_geo_data_row = pd.Series(index=['state', 'county', 'city', 'latitude', 'longitude', 'state_consistency', 
+                                'county_consistency', 'address_consistency', 'importance', 'address_type'], dtype=str)
     
     # initialize consistency variables
     state_consistency = -1
@@ -232,15 +204,12 @@ def check_geographical_data_consistency(row, additional_data):
     county_city_match = []
     address_consistency = -1
 
-
-    
     # check consistency with geopy data
-    if row['coord_presence']:
+    if row['coord_presence']: # if geopy data is present
         state_consistency, county_consistency, county_city_match, address_consistency = check_consistency_geopy(row)
 
     if ((state_consistency==1 and (county_consistency==1 or (county_consistency==-1 and address_consistency!=0))) 
-        or
-        (county_consistency==1 and address_consistency==1)):
+        or (county_consistency==1 and address_consistency==1)):
         # set geopy data
         clean_geo_data_row.loc[['state']] = row['state_geopy']
         clean_geo_data_row.loc[['county']] = row['county_geopy']
@@ -257,14 +226,17 @@ def check_geographical_data_consistency(row, additional_data):
 
         clean_geo_data_row.loc[['latitude']] = row['latitude']
         clean_geo_data_row.loc[['longitude']] = row['longitude'] 
+        clean_geo_data_row.loc[['importance']] = row['importance_geopy']
+        clean_geo_data_row.loc[['address_type']] = row['addresstype_geopy']
 
-        #TODO: ADD IMPORTACNE AND BLA BLA
     elif (state_consistency==1 and county_consistency==-1 and address_consistency==0 and pd.isnull(row['city_or_county'])):
+        # set not null geopy data
         clean_geo_data_row.loc[['state']] = row['state_geopy']
+        clean_geo_data_row.loc[['importance']] = row['importance_geopy']
+        clean_geo_data_row.loc[['address_type']] = row['addresstype_geopy']
 
-    else:
+    else: # check consistency with additional data
         state, county = check_consistency_additional_data(row['state'], row['city_or_county'], additional_data)
-
         clean_geo_data_row.loc[['state']] = state
         clean_geo_data_row.loc[['county']] = county
 
@@ -273,28 +245,5 @@ def check_geographical_data_consistency(row, additional_data):
     clean_geo_data_row.loc[['address_consistency']] = address_consistency
 
     return clean_geo_data_row
-
-'''
-    elif (state_consistency + county_consistency + town_consistency) >= 2:
-        # set geopy data
-        clean_geo_data_row.loc[['state']] = row['state_geopy']
-        clean_geo_data_row.loc[['county']] = row['county_geopy']
-        clean_geo_data_row.loc[['city']] = row['town_geopy']
-        clean_geo_data_row.loc[['road']] = row['road_geopy']
-        clean_geo_data_row.loc[['latitude']] = row['latitude']
-        clean_geo_data_row.loc[['longitude']] = row['longitude']
-    else:
-        # check consistency with data from additional_data
-        state, county = check_consistency_additional_data(row['state'], row['city_or_county'], additional_data)
-        if state_consistency:
-            clean_geo_data_row.loc[['state']] = row['state_geopy'] # assign geopy data
-        elif state is not None:
-            clean_geo_data_row.loc[['state']] = state # assign additional data
-        if county_consistency:
-            clean_geo_data_row.loc[['county']] = row['county_geopy'] # assign geopy data
-        elif county is not None:
-            clean_geo_data_row.loc[['county']] = county # assign additional data
-    
-    '''
 
     
