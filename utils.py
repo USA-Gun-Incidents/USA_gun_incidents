@@ -328,13 +328,13 @@ def category_consistency(n_killed, n_injured, n_arrested, n_unharmed, n_particip
             (n_unharmed <= n_participants))
     return np.nan
 
-def ages_groups_participant1(participant_gender1):
+def ages_groups_participant1(participant_age_group1):
     """Binarize participant1 age groups attribute"""
-    if participant_gender1 == 'Child 0-11':
+    if participant_age_group1 == 'Child 0-11':
         return [True, False, False] #'Child 0-11'
-    elif participant_gender1 == 'Teen 12-17':
+    elif participant_age_group1 == 'Teen 12-17':
         return [False, True, False] #'Teen 12-17'
-    elif participant_gender1 == 'All Ages':
+    elif participant_age_group1 == 'Adult 18+':
         return [False, False, True] #'Adult 18+'
     else: 
         return [np.nan, np.nan, np.nan]
@@ -402,6 +402,8 @@ def check_age_gender_data_consistency(row):
         'n_participants',
         'consistency_age', 'consistency_n_participant', 'consistency_gender', 
         'consistency_participant1', 'consistency_participants1_wrt_n_participants',
+        'participant1_age_consistency_wrt_all_data', 'participant1_age_range_consistency_wrt_all_data',
+        'participant1_gender_consistency_wrt_all_data',
         'nan_values'], dtype=int)
     
     # convert ot integer participants age range attributes
@@ -439,27 +441,81 @@ def check_age_gender_data_consistency(row):
     # converto to integer participants1 attributes
     clean_data_row.loc[['participant_age1']] = convert_age_to_int(row['participant_age1'])
     clean_data_row.loc[['participant1_child', 'participant1_teen', 'participant1_adult']] = ages_groups_participant1(
-        clean_data_row['participant_age1'])
+        row['participant_age_group1'])
     clean_data_row.loc[['participant1_male', 'participant1_female']] = gender_participant1(row['participant_gender1'])
 
+    # initialize boolean flag
+    consistency_participant1 = False
+    participant1_age_consistency = False
+    participant1_age_range_consistency = False
+    participant1_gender_consistency = False
+
     # check consistency between participants1 attributes
-    clean_data_row.loc[['consistency_participant1']] = participant1_age_data_consistency(clean_data_row['participant_age1'],
+    consistency_participant1 = participant1_age_data_consistency(clean_data_row['participant_age1'],
         clean_data_row['participant1_child'], clean_data_row['participant1_teen'], clean_data_row['participant1_adult'])
+    clean_data_row.loc[['consistency_participant1']] = consistency_participant1
     
     # check consistency between participants1 attributes and number of participants
-    clean_data_row.loc[['consistency_participants1_wrt_n_participants']] = (
-        participant1_age_data_consistency(clean_data_row['participant_age1'], clean_data_row['participant1_child'],
-            clean_data_row['participant1_teen'], clean_data_row['participant1_adult']) and
-        participant1_age_consistency_wrt_all_data(clean_data_row['participant_age1'], 
-            clean_data_row['min_age_participants'], clean_data_row['max_age_participants']) and
-        participant1_age_range_consistency_wrt_all_data(clean_data_row['participant1_child'],
-            clean_data_row['participant1_teen'], clean_data_row['participant1_adult'],
-            clean_data_row['n_participants_child'], clean_data_row['n_participants_teen'], 
-            clean_data_row['n_participants_adult']) and
-        participant1_gender_consistency_wrt_all_data(clean_data_row['participant1_male'], 
-            clean_data_row['participant1_female'], clean_data_row['n_males'], clean_data_row['n_females']))
+    # TODO: checkkkk!!!!!!!!!!!!!!!!!
+    participant1_age_consistency = participant1_age_consistency_wrt_all_data(clean_data_row['participant_age1'], 
+        clean_data_row['min_age_participants'], clean_data_row['max_age_participants']) 
+    participant1_age_range_consistency = participant1_age_range_consistency_wrt_all_data(
+        clean_data_row['participant1_child'],
+        clean_data_row['participant1_teen'], clean_data_row['participant1_adult'],
+        clean_data_row['n_participants_child'], clean_data_row['n_participants_teen'], 
+        clean_data_row['n_participants_adult'])
+    participant1_gender_consistency = participant1_gender_consistency_wrt_all_data(clean_data_row['participant1_male'], 
+            clean_data_row['participant1_female'], clean_data_row['n_males'], clean_data_row['n_females'])
+    
+    clean_data_row.loc[['participant1_age_consistency_wrt_all_data']] = participant1_age_consistency
+    clean_data_row.loc[['participant1_age_range_consistency_wrt_all_data']] = participant1_age_range_consistency
+    clean_data_row.loc[['participant1_gender_consistency_wrt_all_data']] = participant1_gender_consistency
+
+    clean_data_row.loc[['consistency_participants1_wrt_n_participants']] = (participant1_age_consistency and 
+        participant1_age_range_consistency and participant1_gender_consistency)
 
     # check if nan values are present
     clean_data_row.loc[['nan_values']] = True if row.isnull().sum() > 0 else False
 
     return clean_data_row
+
+def set_gender_age_consistent_data(row):
+    new_data = pd.Series(index=['min_age_participants', 'avg_age_participants', 'max_age_participants', 
+        'n_participants_child', 'n_participants_teen', 'n_participants_adult', 
+        'n_males', 'n_females',
+        'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 
+        'n_participants',
+        'nan_values'], dtype=int)
+    
+    # set boolean flag #TODO: mettere 0,1,-1 per consistenza con dati geografici(?)
+    consistency_n_participant = row['consistency_n_participant']
+    consistency_age = row['consistency_age']
+    consistency_gender = row['consistency_gender']
+
+    if consistency_n_participant:
+        new_data.loc[['n_participants']] = row['n_participants']
+        new_data.loc[['n_killed']] = row['n_killed']
+        new_data.loc[['n_injured']] = row['n_injured']
+        new_data.loc[['n_arrested']] = row['n_arrested']
+        new_data.loc[['n_unharmed']] = row['n_unharmed']
+    
+    if consistency_age:
+        new_data.loc[['min_age_participants']] = row['min_age_participants']
+        new_data.loc[['avg_age_participants']] = row['avg_age_participants']
+        new_data.loc[['max_age_participants']] = row['max_age_participants']
+        new_data.loc[['n_participants_child']] = row['n_participants_child']
+        new_data.loc[['n_participants_teen']] = row['n_participants_teen']
+        new_data.loc[['n_participants_adult']] = row['n_participants_adult']
+    
+    if consistency_gender:
+        new_data.loc[['n_males']] = row['n_males']
+        new_data.loc[['n_females']] = row['n_females']
+    
+    if consistency_gender or consistency_n_participant:
+        new_data.loc[['n_participants']] = row['n_participants']
+    elif consistency_age:
+        new_data.loc[['n_participants']] = (row['n_participants_children'] + row['n_participants_teen'] 
+            + row['n_participants_adult'])
+    
+    #TODO_ altrimenti altri check usando participant1 data
+    return new_data
