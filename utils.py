@@ -246,3 +246,211 @@ def check_geographical_data_consistency(row, additional_data):
     return clean_geo_data_row
 
 ####################### Age-gender and categorical data cleaning #######################
+def convert_age_to_int(data):
+    """return age as a int if it is numeric and between 0 and 100
+    else return nan"""
+    data = convert_data_to_int(data)
+    if data.notnull():
+        return exclude_inconsIstent_age(data)
+    else: return np.nan
+
+def exclude_inconsIstent_age(data):
+    if (data >= 0 and data <= 100):
+        return data
+    else: return np.nan
+
+def convert_group_cardinality_to_int(data):
+    data = convert_data_to_int(data)
+    if data.notnull():
+        return exclude_negative_value(data)
+    else: return np.nan
+
+def exclude_negative_value(data):
+    if data < 0:
+        return np.nan
+    else: return data
+
+def convert_data_to_int(data):
+    if type(data) == str:
+        try:
+            data = int(float(data))
+            return data
+        except:
+            return np.nan
+    elif type(data) == float:
+        try:
+            data = int(data)
+            return data
+        except:
+            return np.nan
+    else: return np.nan
+
+def age_groups_consistency(min_age, max_age, avg_age, n_child, n_teen, n_adult): #TODO: check
+    if min_age.notna():
+        if min_age > max_age or min_age > avg_age:
+            return False
+        if min_age < 12:
+            if n_child <= 0:
+                return False
+        elif 12 <= min_age < 18:
+            if n_child > 0 and n_teen <= 0:
+                return False
+        else:
+            if n_child > 0 or n_teen > 0 or n_adult <= 0:
+                return False
+
+    if max_age.notna():
+        if max_age < 12:
+            if n_child <= 0 or n_teen > 0 or n_adult > 0:
+                return False
+        elif 12 <= max_age < 18:
+            if n_teen <= 0 or n_adult > 0:
+                return False
+        else:
+            if n_adult <= 0:
+                return False
+
+    if n_child.notna() and n_teen.notna() and n_adult.notna():
+        if n_child + n_teen + n_adult <= 0:
+            return False
+
+    return True
+
+def gender_consistecy(n_males, n_females, n_participants):
+    if n_males.notna() and n_females.notna() and n_participants.notna():
+        return (n_males + n_females == n_participants)
+    return np.nan
+
+def category_consistency(n_killed, n_injured, n_arrested, n_unharmed, n_participants):
+    if (n_killed.notna() and n_injured.notna() and n_arrested.notna() and n_unharmed.notna() and 
+        n_participants.notna()):
+        return ((n_killed + n_injured <= n_participants) and
+            (n_arrested <= n_participants) and
+            (n_unharmed <= n_participants))
+    return np.nan
+
+def ages_groups_participant1(participant_gender1):
+    if participant_gender1 == 'Child 0-11':
+        return [True, False, False] #'Child 0-11'
+    elif participant_gender1 == 'Teen 12-17':
+        return [False, True, False] #'Teen 12-17'
+    elif participant_gender1 == 'All Ages':
+        return [False, False, True] #'Adult 18+'
+    else: 
+        return [np.nan, np.nan, np.nan]
+    
+def gender_participant1(participant_gender1):
+    if participant_gender1 == 'Male':
+        return [True, False]
+    elif participant_gender1 == 'Female':
+        return [False, True]
+    else:
+        return [np.nan, np.nan]
+
+def participant1_age_data_consistency(participant_age1, participant1_child, participant1_teen, participant1_adult):
+    if participant_age1.notna():
+        if participant_age1 < 12:
+            if participant1_child is not True:
+                return False
+        elif 12 <= participant_age1 < 18:
+            if participant1_teen is not True:
+                return False
+        else:
+            if participant1_adult is not True:
+                return False
+    return True
+
+def participant1_age_consistency_wrt_all_data(participant_age1, min_age, max_age):
+    if participant_age1.notna() and min_age.notna() and max_age.notna():
+        return (participant_age1 >= min_age and participant_age1 <= max_age)
+    return np.nan
+
+def participant1_age_range_consistency_wrt_all_data(participant1_child, participant1_teen, participant1_adult,
+    n_participants_child, n_participants_teen, n_participants_adult):
+    if participant1_child is True:
+        return (n_participants_child > 0)
+    elif participant1_teen is True:
+        return (n_participants_teen > 0)
+    elif participant1_adult is True:
+        return (n_participants_adult > 0) 
+    return np.nan
+
+def participant1_gender_consistency_wrt_all_data(participant1_male, participant1_female, n_males, n_female):
+    if participant1_male is True:
+        return (n_males > 0)
+    elif participant1_female is True:
+        return (n_female > 0)
+    return np.nan
+
+def check_age_gender_data_consistency(row):
+    clean_data_row = pd.Series(index=['participant_age1', 
+        'participant1_child', 'participant1_teen', 'participant1_adult',
+        'participant1_male', 'participant1_female',
+        'min_age_participants', 'avg_age_participants', 'max_age_participants', 
+        'n_participants_child', 'n_participants_teen', 'n_participants_adult', 
+        'n_males', 'n_females',
+        'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 
+        'n_participants',
+        'consistency_age', 'consistency_n_participant', 'consistency_gender', 
+        'consistency_participant1', 'consistency_participants1_wrt_n_participants',
+        'nan_values'], dtype=int)
+    
+    # convert ot integer participants age range attributes
+    clean_data_row[['min_age_participants']] = convert_age_to_int(row['min_age_participants'])
+    clean_data_row[['max_age_participants']] = convert_age_to_int(row['max_age_participants'])
+    clean_data_row[['avg_age_participants']] = convert_age_to_int(row['avg_age_participants'])
+    clean_data_row[['n_participants_child']] = convert_group_cardinality_to_int(row['n_participants_child'])
+    clean_data_row['n_participants_teen'] = convert_group_cardinality_to_int(row['n_participants_teen'])
+    clean_data_row['n_participants_adult'] = convert_group_cardinality_to_int(row['n_participants_adult'])
+
+    # check consistency participants age range attributes
+    clean_data_row[['consistency_age']] = age_groups_consistency(
+        clean_data_row['min_age_participants'], clean_data_row['max_age_participants'], 
+        clean_data_row['avg_age_participants'], clean_data_row['n_participants_child'], 
+        clean_data_row['n_participants_teen'], clean_data_row['n_participants_adult'])
+    
+    # convert to integer attributes releted to number of participants
+    clean_data_row[['n_males']] = convert_group_cardinality_to_int(row['n_males'])
+    clean_data_row[['n_females']] = convert_group_cardinality_to_int(row['n_females'])
+    clean_data_row[['n_killed']] = convert_group_cardinality_to_int(row['n_killed'])
+    clean_data_row[['n_injured']] = convert_group_cardinality_to_int(row['n_injured'])
+    clean_data_row[['n_arrested']] = convert_group_cardinality_to_int(row['n_arrested'])
+    clean_data_row[['n_unharmed']] = convert_group_cardinality_to_int(row['n_unharmed'])
+    clean_data_row[['n_participants']] = convert_group_cardinality_to_int(row['n_participants'])
+
+    # check genderes consistency w.r.t. number of participants
+    clean_data_row[['consistency_gender']] = gender_consistecy(clean_data_row[['n_males']],
+        clean_data_row[['n_females']], clean_data_row[['n_participants']])
+    
+    # check consistency between number of participants and number of killed, injured, arrested and unharmed
+    clean_data_row[['consistency_n_participant']] = category_consistency(clean_data_row[['n_killed']], 
+        clean_data_row[['n_injured']], clean_data_row[['n_arrested']], clean_data_row[['n_unharmed']], 
+        clean_data_row[['n_participants']])
+
+    # converto to integer participants1 attributes
+    clean_data_row[['participant_age1']] = convert_age_to_int(row['participant_age1'])
+    clean_data_row[['participant1_child', 'participant1_teen', 'participant1_adult']] = ages_groups_participant1(
+        clean_data_row['participant_age1'])
+    clean_data_row[['participant1_male', 'participant1_female']] = gender_participant1(row['participant_gender1'])
+
+    # check consistency between participants1 attributes
+    clean_data_row[['consistency_participant1']] = participant1_age_data_consistency(clean_data_row['participant_age1'],
+        clean_data_row['participant1_child'], clean_data_row['participant1_teen'], clean_data_row['participant1_adult'])
+    
+    # check consistency between participants1 attributes and number of participants
+    clean_data_row[['consistency_participants1_wrt_n_participants']] = (
+        participant1_age_data_consistency(clean_data_row[['participant_age1']], clean_data_row[['participant1_child']],
+            clean_data_row[['participant1_teen']], clean_data_row[['participant1_adult']]) and
+        participant1_age_consistency_wrt_all_data(clean_data_row[['participant_age1']], 
+            clean_data_row[['min_age_participants']], clean_data_row[['max_age_participants']]) and
+        participant1_age_range_consistency_wrt_all_data(clean_data_row[['participant1_child']],
+            clean_data_row[['participant1_teen']], clean_data_row[['participant1_adult']],
+            clean_data_row[['n_participants_child']], clean_data_row[['n_participants_teen']], 
+            clean_data_row[['n_participants_adult']]) and
+        participant1_gender_consistency_wrt_all_data(clean_data_row[['participant1_male']], 
+            clean_data_row[['participant1_female']], clean_data_row[['n_male']], clean_data_row[['n_female']]))
+
+    # check if nan values are present
+    clean_data_row[['nan_values']] = True if row.isnull().sum() > 0 else False
+
+    return clean_data_row
