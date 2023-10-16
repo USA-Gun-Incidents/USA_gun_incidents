@@ -5,7 +5,7 @@ import numpy as np
 
 # default variables
 DAMERAU_LEVENSHTEIN_DISTANCE_THRESHOLD = 2
-DIFFERENT_WORDS_ADDRESS_THRESHOLD = 2
+SAME_WORDS_ADDRESS_THRESHOLD = 2
 FREQUENT_WORDS = ['of', 
     'block', 
     'Street', 
@@ -29,7 +29,6 @@ FREQUENT_WORDS = ['of',
     'Boulevard']
 
 ####################### Geographical data cleaning #######################
-
 def lower_case(data):
     """put data in lower case"""
     return data.lower()
@@ -114,7 +113,7 @@ def check_address(address1, address2_geopy):
         if word in address2_geopy:
             cardinality_address1_in_address2 += 1
 
-    return int(cardinality_address1_in_address2 >= DIFFERENT_WORDS_ADDRESS_THRESHOLD)
+    return int(cardinality_address1_in_address2 >= SAME_WORDS_ADDRESS_THRESHOLD)
 
 def check_consistency_geopy(row):
     """check consistency between address in incidents dataset and geopy dataset
@@ -246,4 +245,4 @@ def check_geographical_data_consistency(row, additional_data):
 
     return clean_geo_data_row
 
-    
+####################### Age-gender and categorical data cleaning #######################
