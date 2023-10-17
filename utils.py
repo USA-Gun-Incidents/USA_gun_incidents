@@ -572,4 +572,11 @@ def check_consistency_tag(tag, data):
             return False
         if tag['Injuries'] and data['n_injured'] == 0:
             return False
+        if((data["incident_characteristics1"] == "Non-Shooting Incident" or data["incident_characteristics2"] == "Non-Shooting Incident") and
+            tag["Shots"]): #consistency for non-shooting incidents
+            return False
+        if((data["incident_characteristics1"] == "Non-Aggression Incident" or data["incident_characteristics2"] == "Non-Aggression Incident") and
+            tag["Aggression"]): #consistency for non-aggression incidents
+            return False
+        
     return True
