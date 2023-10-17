@@ -557,3 +557,19 @@ def set_gender_age_consistent_data(row):
                 new_data_row.loc[['n_participants_child', 'n_participants_teen', 'n_participants_adult']] = [0, 0, 1]
 
     return new_data_row
+
+####################### Tag Consistency w.r.t. all other data #######################
+
+"""TAG: Firearm, Shots, Aggression, Suicide, Injuries, Death, Road, Illegal holding, House, 
+School, Children, Drugs, Officers, Organized, Social reasons, Defensive, Workplace, Tag Consistency"""
+
+def check_consistency_tag(tag, data):
+    """Return if tag are consistent w.r.t. other data"""
+    if tag['Tag Consistency']:
+        if tag['Death'] and data['n_killed'] == 0:
+            return False
+        if tag['Children'] and data['n_participants_child'] == 0:
+            return False
+        if tag['Injuries'] and data['n_injured'] == 0:
+            return False
+    return True
