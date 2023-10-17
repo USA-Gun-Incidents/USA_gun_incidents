@@ -2,9 +2,6 @@ import pandas as pd
 import re
 import jellyfish
 import numpy as np
-import json
-import os
-import sys
 
 # default variables
 DAMERAU_LEVENSHTEIN_DISTANCE_THRESHOLD = 2
@@ -92,14 +89,14 @@ def clean_data_geopy(data):
     
     return data.replace('county', '')
 
-def check_string_typo(string1, string2, sensibility=DAMERAU_LEVENSHTEIN_DISTANCE_THRESHOLD):
+def check_string_typo(string1, string2):
     """check if two strings are the same with at most a typo
     according to the Damerau-Levenshtein distance"""
     if pd.isnull(string1): return -1
     if pd.isnull(string2): return -1
 
     string_distance = jellyfish.damerau_levenshtein_distance(string1, string2)
-    return int(string_distance <= sensibility)
+    return int(string_distance <= DAMERAU_LEVENSHTEIN_DISTANCE_THRESHOLD)
 
 def check_address(address1, address2_geopy):
     """check if two addresses are the same with at most a typo"""
@@ -239,145 +236,6 @@ def check_geographical_data_consistency(row, additional_data):
 
     else: # check consistency with additional data
         state, county = check_consistency_additional_data(row['state'], row['city_or_county'], additional_data)
-        clean_geo_data_row.loc[['state']] = state
-        clean_geo_data_row.loc[['county']] = county
-
-    clean_geo_data_row.loc[['state_consistency']] = state_consistency
-    clean_geo_data_row.loc[['county_consistency']] = county_consistency
-    clean_geo_data_row.loc[['address_consistency']] = address_consistency
-
-    return clean_geo_data_row
-
-
-
-
-
-def create_fips_dict():
-    DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data\\geopy')
-    IN = open(os.path.join(DIR, 'FIPS.txt'), 'r')
-    
-    states_ended = False
-    out_dict = {}
-    reverse_states = {}
-    for line in IN.readlines():
-        if line.startswith('#'):
-                continue
-        elif not states_ended:
-            if line.startswith('&&&&&&&&&&'):
-                states_ended = True
-                continue
-            else:
-                splitted_line = line.strip().replace('        ', '|').split('|')
-                out_dict[splitted_line[1]] = [splitted_line[0],{}]
-                reverse_states[splitted_line[0]] = splitted_line[1]
-        else:
-            splitted_line = line.strip().replace('        ', '|').split('|')
-            out_dict[reverse_states[splitted_line[0][:2]]][1][splitted_line[1]] = splitted_line[0]
-
-    json.dump([out_dict, reverse_states], open(os.path.join(DIR, 'FIPS.json'), 'w+'), indent=2)
-
-def get_fips_codes(state:str, county:str, fips_dict:dict, sensibility:int=1):
-    
-    # very very bad in terms of complexity but ok
-    for key in fips_dict.keys():
-        if check_string_typo(clean_data_geopy(key), clean_data_geopy(state), sensibility) == 1:
-            for key_2 in fips_dict[key][1].keys():
-                if check_string_typo(clean_data_geopy(key_2), clean_data_geopy(county), sensibility) == 1:
-                    return fips_dict[key][0], fips_dict[key][1][key_2]
-            
-            return fips_dict[key][0], np.nan
-    
-    return np.nan, np.nan
-
-def check_address(address1, address2_geopy):
-    """check if two addresses are the same with at most a typo"""
-    if pd.isnull(address1): return -1
-    if pd.isnull(address2_geopy): return -1
-
-    for sep in FREQUENT_WORDS:
-        # replace frequent words with a separator
-        address1 = address1.replace(sep, '|+|')
-    address1_splitted = address1.split('|+|')
-
-    cardinality_address1_in_address2 = 0
-    for word in address1_splitted:
-        if word in address2_geopy:
-            cardinality_address1_in_address2 += 1
-
-    return int(cardinality_address1_in_address2 >= SAME_WORDS_ADDRESS_THRESHOLD)
-
-def check_consistency_additional_data_2(state, county, fips_dict):
-    """check consistency between address in incidents dataset and additional data"""
-    county_list = clean_data_incidents(county)
-
-    state_current, county_current = get_fips_codes(state,county_list[0], fips_dict)
-
-    if pd.isna(county_current) and len(county_list) > 1:
-        a, b = get_fips_codes(state,county_list[1], fips_dict)
-        if not pd.isna(a):
-            state_current = a
-            county_current = b
-
-    return state_current, county_current
-    
-def check_geographical_data_consistency_2(row, fips_dict):
-    """check consistency between our data, geopty data and additional data
-    return consistent data if consistent, else return nan values"""
-    # initialize clean_geo_data
-    clean_geo_data_row = pd.Series(index=['state', 'county', 'city', 'latitude', 'longitude', 'state_consistency', 
-                                'county_consistency', 'address_consistency', 'importance', 'address_type'], dtype=str)
-    
-    #is a list of 2 dict with the FIPS codes of the states and then the counties
-
-
-    # initialize consistency variables
-    state_consistency = -1
-    county_consistency = -1
-    county_city_match = []
-    address_consistency = -1
-
-    # check consistency with geopy data
-    if row['coord_presence']: # if geopy data is present
-        state_consistency, county_consistency, county_city_match, address_consistency = check_consistency_geopy(row)
-
-    if ((state_consistency==1 and (county_consistency==1 or (county_consistency==-1 and address_consistency!=0))) 
-        or (county_consistency==1 and address_consistency==1)):
-        # set geopy data
-        
-        # using the FIPS codes
-        a,b = get_fips_codes(row['state_geopy'], row['county_geopy'], fips_dict)
-        if pd.isna(a) or (pd.isna(b) and not pd.isna(row['county_geopy'])):
-            print('aiaiai','-', row['state_geopy'],'-', row['county_geopy'],'-', a,'-', b)
-
-        clean_geo_data_row.loc[['state']] = a
-        clean_geo_data_row.loc[['county']] = b
-
-        if county_city_match == 'county_geopy' or county_city_match == '-1':
-            if row['city_geopy'] is not None:
-                clean_geo_data_row.loc[['city']] = row['city_geopy']
-            elif row['town_geopy'] is not None:
-                clean_geo_data_row.loc[['city']] = row['town_geopy']
-            else:
-                clean_geo_data_row.loc[['city']] = row['village_geopy']
-        else:
-            clean_geo_data_row.loc[['city']] = row[county_city_match]
-
-        clean_geo_data_row.loc[['latitude']] = row['latitude']
-        clean_geo_data_row.loc[['longitude']] = row['longitude'] 
-        clean_geo_data_row.loc[['importance']] = row['importance_geopy']
-        clean_geo_data_row.loc[['address_type']] = row['addresstype_geopy']
-
-    elif (state_consistency==1 and county_consistency==-1 and address_consistency==0 and pd.isnull(row['city_or_county'])):
-        
-        a,b = get_fips_codes(row['state_geopy'], row['county_geopy'], fips_dict)
-
-        # set not null geopy data
-        clean_geo_data_row.loc[['state']] = a
-        clean_geo_data_row.loc[['importance']] = row['importance_geopy']
-        clean_geo_data_row.loc[['address_type']] = row['addresstype_geopy']
-
-    else: # check consistency with additional data
-        state, county = check_consistency_additional_data_2(row['state'], row['city_or_county'], fips_dict)
         clean_geo_data_row.loc[['state']] = state
         clean_geo_data_row.loc[['county']] = county
 
@@ -545,7 +403,8 @@ def check_age_gender_data_consistency(row):
         'consistency_age', 'consistency_n_participant', 'consistency_gender', 
         'consistency_participant1', 'consistency_participants1_wrt_n_participants',
         'participant1_age_consistency_wrt_all_data', 'participant1_age_range_consistency_wrt_all_data',
-        'participant1_gender_consistency_wrt_all_data'], dtype=int)
+        'participant1_gender_consistency_wrt_all_data',
+        'nan_values'], dtype=int)
     
     # convert ot integer participants age range attributes
     clean_data_row.loc[['min_age_participants']] = convert_age_to_int(row['min_age_participants'])
@@ -628,8 +487,7 @@ def set_gender_age_consistent_data(row):
         'n_participants_child', 'n_participants_teen', 'n_participants_adult', 
         'n_males', 'n_females',
         'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 
-        'n_participants',
-        'nan_values'], dtype=int)
+        'n_participants'], dtype=int)
     
     # set boolean flag 
     consistency_n_participant = row['consistency_n_participant']
