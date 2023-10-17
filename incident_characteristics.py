@@ -75,8 +75,8 @@ print(incidents_data.pivot_table(columns=['incident_characteristics2'], aggfunc=
 # %%
 #add tags to dataframe
 
-tags = ["Firearm", "Shots", "Suicide", "Injuries", "Death", "Road", "Illegal holding", "House", "School", "Children", "Drugs", "Officers", "Organized", "Social reasons", "Defensive", "Workplace"]
-zeros = [0] * incidents_data_characteristics.shape[0]
+tags = ["Firearm", "Shots", "Aggression", "Suicide", "Injuries", "Death", "Road", "Illegal holding", "House", "School", "Children", "Drugs", "Officers", "Organized", "Social reasons", "Defensive", "Workplace"]
+zeros = [False] * incidents_data_characteristics.shape[0]
 
 for tag in tags:
     incidents_data_characteristics.insert(incidents_data_characteristics.shape[1], tag, zeros)
@@ -104,7 +104,7 @@ for lst in characteristics_tags_list:
 #given characteristic
 #return all the tags 
 def get_tags(characteristic):
-    if not type(characteristic) == str.__class__:
+    if not isinstance(characteristic, str): #if is nan
         return []
     index = indicization_list.index(characteristic)
     tags = characteristics_tags_list[index]
@@ -116,12 +116,39 @@ def get_tags(characteristic):
 for index, record in incidents_data_characteristics.iterrows():
     tags = set(get_tags(record['incident_characteristics1']) + get_tags(record['incident_characteristics2']))
     for tag in tags: #set values to tags binary mask
-        incidents_data_characteristics.at[index, tag] = 1
+        incidents_data_characteristics.at[index, tag] = True
+
 
 incidents_data_characteristics
 
 # %%
-incidents_data_characteristics.drop(["incident_characteristics1", "incident_characteristics2"], axis=1, inplace=True)
+tag_consistency_attr_name = "Tag Consistency"
+col = [True] * incidents_data_characteristics.shape[0] #tag consistency assumed true
+incidents_data_characteristics.insert(incidents_data_characteristics.shape[1], tag_consistency_attr_name, col)
+
+incidents_data_characteristics
+
+# %%
+#consistency check
+shooting_inconsistencies = 0
+aggression_inconsistencies = 0
+for index, record in incidents_data_characteristics.iterrows():
+    if((record["incident_characteristics1"] == "Non-Shooting Incident" or record["incident_characteristics2"] == "Non-Shooting Incident") and
+       record["Shots"] == True): #consistency for non-shooting incidents
+        incidents_data_characteristics.at[index, tag_consistency_attr_name] = False
+        shooting_inconsistencies += 1
+    elif((record["incident_characteristics1"] == "Non-Aggression Incident" or record["incident_characteristics2"] == "Non-Aggression Incident") and
+        record["Aggression"] == True): #consistency for non-shooting incidents
+        incidents_data_characteristics.at[index, tag_consistency_attr_name] = False
+        aggression_inconsistencies += 1
+
+print("Non-Shooting Incident inconcistencies: " + str(shooting_inconsistencies))
+print("Non-Aggression Incident inconsistencies: " + str(aggression_inconsistencies))
+
+# %%
+incidents_data_characteristics = incidents_data_characteristics.drop(["incident_characteristics1", "incident_characteristics2"], axis=1)
+
+incidents_data_characteristics
 
 # %%
 #concatenate tags on original dataset
@@ -134,6 +161,6 @@ from pathlib import Path
 
 filename = FOLDER + 'post_proc/incidents_with_tags.csv'
 filepath = Path(filename)
-incidents_data.to_csv(filepath)  
+incidents_data.to_csv(filepath)
 
 
