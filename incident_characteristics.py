@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import math
+from utils import *
 
 FOLDER = './data/'
 incidents_path = FOLDER + 'incidents.csv'
@@ -130,20 +131,13 @@ incidents_data_characteristics
 
 # %%
 #consistency check
-shooting_inconsistencies = 0
-aggression_inconsistencies = 0
+unconsistencies = 0
 for index, record in incidents_data_characteristics.iterrows():
-    if((record["incident_characteristics1"] == "Non-Shooting Incident" or record["incident_characteristics2"] == "Non-Shooting Incident") and
-       record["Shots"] == True): #consistency for non-shooting incidents
+    if not check_consistency_tag(record, incidents_data.loc[index]):
         incidents_data_characteristics.at[index, tag_consistency_attr_name] = False
-        shooting_inconsistencies += 1
-    elif((record["incident_characteristics1"] == "Non-Aggression Incident" or record["incident_characteristics2"] == "Non-Aggression Incident") and
-        record["Aggression"] == True): #consistency for non-shooting incidents
-        incidents_data_characteristics.at[index, tag_consistency_attr_name] = False
-        aggression_inconsistencies += 1
+        unconsistencies += 1
 
-print("Non-Shooting Incident inconcistencies: " + str(shooting_inconsistencies))
-print("Non-Aggression Incident inconsistencies: " + str(aggression_inconsistencies))
+print(unconsistencies)
 
 # %%
 incidents_data_characteristics = incidents_data_characteristics.drop(["incident_characteristics1", "incident_characteristics2"], axis=1)
@@ -159,8 +153,18 @@ incidents_data
 # %%
 from pathlib import Path
 
+#write tag results in a new file
 filename = FOLDER + 'post_proc/incidents_with_tags.csv'
 filepath = Path(filename)
 incidents_data.to_csv(filepath)
+
+# %%
+updated_incidents_folder = FOLDER + 'post_proc/'
+updated_incidents_path = updated_incidents_folder + 'final_incidents.csv'
+
+final_incidents_data = pd.read_csv(updated_incidents_path)
+
+# %%
+final_incidents_data
 
 
