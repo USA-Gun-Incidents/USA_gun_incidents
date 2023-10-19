@@ -484,7 +484,10 @@ def check_age_gender_data_consistency(row):
 def set_gender_age_consistent_data(row):
     """return a row with consistent data"""
     # initialize new_data_row
-    new_data_row = pd.Series(index=['min_age_participants', 'avg_age_participants', 'max_age_participants', 
+    new_data_row = pd.Series(index=['participant_age1', 
+        'participant1_child', 'participant1_teen', 'participant1_adult',
+        'participant1_male', 'participant1_female',
+        'min_age_participants', 'avg_age_participants', 'max_age_participants', 
         'n_participants_child', 'n_participants_teen', 'n_participants_adult', 
         'n_males', 'n_females',
         'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 
@@ -534,6 +537,9 @@ def set_gender_age_consistent_data(row):
             new_data_row.loc[['n_injured']] = row['n_injured']
             new_data_row.loc[['n_arrested']] = row['n_arrested']
             new_data_row.loc[['n_unharmed']] = row['n_unharmed']
+        if (new_data_row['n_participants'] in [np.nan] and new_data_row['n_males'] not in [np.nan] and
+            new_data_row['n_females'] not in [np.nan]):
+            new_data_row.loc[['n_participants']] = new_data_row['n_males'] + new_data_row['n_females']
 
     # age data
     if consistency_age:
@@ -588,24 +594,33 @@ def set_gender_age_consistent_data(row):
                 new_data_row.loc[['n_participants_child', 'n_participants_teen', 'n_participants_adult']] = [0, 1, 0]
             elif row['participant1_adult']:
                 new_data_row.loc[['n_participants_child', 'n_participants_teen', 'n_participants_adult']] = [0, 0, 1]
+    
+    # participant1 data
+    if row['consistency_participant1']:
+        new_data_row.loc[['participant_age1']] = row['participant_age1']
+        new_data_row.loc[['participant1_child']] = row['participant1_child']
+        new_data_row.loc[['participant1_teen']] = row['participant1_teen']
+        new_data_row.loc[['participant1_adult']] = row['participant1_adult']
+        new_data_row.loc[['participant1_male']] = row['participant1_male']
+        new_data_row.loc[['participant1_female']] = row['participant1_female']
 
     return new_data_row
 
 ####################### Tag Consistency w.r.t. all other data #######################
 def check_consistency_tag(row):
     """Return if tag are consistent w.r.t. other data"""
-    if row['Tag Consistency']:
-        if row['Death'] and row['n_killed'] == 0:
-            return False
-        if row['Children'] and row['n_participants_child'] == 0:
-            return False
-        if row['Injuries'] and row['n_injured'] == 0:
-            return False
-        if((data["incident_characteristics1"] == "Non-Shooting Incident" or data["incident_characteristics2"] == "Non-Shooting Incident") and
-            tag["Shots"]): #consistency for non-shooting incidents
-            return False
-        if((data["incident_characteristics1"] == "Non-Aggression Incident" or data["incident_characteristics2"] == "Non-Aggression Incident") and
-            tag["Aggression"]): #consistency for non-aggression incidents
-            return False
-        
+    if row['Death'] and row['n_killed'] == 0:
+        return False
+    if row['Children'] and row['n_participants_child'] == 0:
+        return False
+    if row['Injuries'] and row['n_injured'] == 0:
+        return False
+    if((row["incident_characteristics1"] == "Non-Shooting Incident" or row["incident_characteristics2"] == 
+        "Non-Shooting Incident") and row["Shots"]): #consistency for non-shooting incidents
+        return False
+    if((row["incident_characteristics1"] == "Non-Aggression Incident" or row["incident_characteristics2"] == 
+        "Non-Aggression Incident") and row["Aggression"]): #consistency for non-aggression incidents
+        return False
+    # TODO LUCA e GIULIA: valutare se fare tutto qua per tag consistency e vedere se sono necessari altri 
+    # check (es. mass shooting)
     return True

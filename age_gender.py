@@ -1,5 +1,6 @@
 # %%
 import pandas as pd
+import matplotlib.pyplot as plt
 
 # %% [markdown]
 # We read the data and drop the duplicates rows
@@ -19,23 +20,32 @@ incidents_data.drop_duplicates(inplace=True)
 incidents_data.head(10)
 
 # %% [markdown]
+# ## Date
+
+# %% [markdown]
+# ## Geographic data
+
+# %% [markdown]
+# ## Age, gender and number of participants data
+
+# %% [markdown]
 # Columns of the dataset are considered in order to verify the correctness and consistency of data related to age, gender, and the number of participants for each incident:
-# - participant_age1
-# - participant_age_group1
-# - participant_gender1
-# - min_age_participants
-# - avg_age_participants
-# - max_age_participants
-# - n_participants_child
-# - n_participants_teen
-# - n_participants_adult
-# - n_males
-# - n_females
-# - n_killed
-# - n_injured
-# - n_arrested
-# - n_unharmed
-# - n_participants
+# - *participant_age1*+
+# - *participant_age_group1*
+# - *participant_gender1*
+# - *min_age_participants*
+# - *avg_age_participants*
+# - *max_age_participants*
+# - *n_participants_child*
+# - *n_participants_teen*
+# - *n_participants_adult*
+# - *n_males*
+# - *n_females*
+# - *n_killed*
+# - *n_injured*
+# - *n_arrested*
+# - *n_unharmed*
+# - *n_participants*
 
 # %%
 # participant_age1,participant_age_group1,participant_gender1,min_age_participants,avg_age_participants,max_age_participants,n_participants_child,n_participants_teen,n_participants_adult,n_males,n_females,n_killed,n_injured,n_arrested,n_unharmed,n_participants
@@ -49,6 +59,9 @@ data = incidents_data[['participant_age1', 'participant_age_group1', 'participan
 # %%
 data.head(10)
 
+# %% [markdown]
+# We display a concise summary of the DataFrame:
+
 # %%
 data.info()
 
@@ -56,18 +69,85 @@ data.info()
 data['participant_age_group1'].unique()
 
 # %% [markdown]
-# We create some functions to identify and, if possible, correct missing and inconsistent data.
-# Below, we provide a brief documentation of all the functions used:
+# ### Data consistency
 
-# %%
-# TODO: documentazione da utils
+# %% [markdown]
+# We create some functions to identify and, if possible, correct missing and inconsistent data.
+# Below, we provide a brief summary of all the functions used to check data consistency:
+
+# %% [markdown]
+# First of all, we convert all the values to type int if the values were consistent (i.e., values related to age and the number of participants for a particular category must be a positive number), all the values that are out of range or contain alphanumeric strings were set to *NaN*.
+
+# %% [markdown]
+# Checks done to evaluate the consistency of data related to the minimum, maximum, and average ages of participants, as well as the composition of the age groups:
+# 
+# - min_age_participants $<$ avg_age_participants $<$ max_age_participants
+# - n_participants_child $+$ n_participants_teen $+$ n_participants_adult $>$ 0
+# 
+# - $if$ min_age_participants $<$ 12 $then$ n_participants_child $>$ 0
+# - $if$ 12 $\leq$ min_age_participants $<$ 18 $then$ n_participants_teen $>$ 0
+# - $if$ min_age_participants $\geq$ 18 $then$ n_participants_adult $>$ 0
+# 
+# - $if$ max_age_participants $<$ 12 $then$ n_participants_child $>$ 0 and n_participants_teen $=$ 0 and n_participants_adult $=$ 0
+# - $if$ max_age_participants $<$ 18 $then$ n_participants_teen $>$ 0 or n_participants_child $>$ 0 and n_participants_adult $=$ 0
+# - $if$ max_age_participants $\geq$ 18 $then$ n_participants_adult $>$ 0
+# 
+# Note that: child = 0-11, teen = 12-17, adult = 18+
+
+# %% [markdown]
+# Checks done to evaluate the consistency of data related to number of participants divided by gender and other participants class:
+# 
+# - n_participants $\geq$ 0
+# - n_participants $==$ n_males $+$ n_females
+# - n_killed $+$ n_injured $\leq$ n_participants
+# - n_arrested $\leq$ n_participants
+# - n_unharmed $\leq$ n_participants
+
+# %% [markdown]
+# We also considered data of participants1, a randomly chosen participant whose data related to gender and age are reported in the dataset. For participants, we have the following features: *participant_age1*, *participant_age_group1*, *participant_gender1*.
+# 
+# Values related to participant_age_group1 and participant_gender1 have been binarized using one-hot encoding, thus creating the boolean features *participant1_child*, *participant1_teen*, *participant1_adult*, *participant1_male*, *participant1_female*.
+# 
+# The following checks are done in order to verify the consistency of the data among them and with respect to the other features of the incident:
+# 
+# - $if$ participant_age1 $<$ 12 $then$ participant_age_group1 $=$ *Child*
+# - $if$ 12 $\leq$ participant_age1 $<$ 18 $then$ participant_age_group1 $=$ *Teen*
+# - $if$ participant_age1 $\geq$ 18 $then$ participant_age_group1 $==$ *Adult*
+# 
+# - $if$ participant_age_group1 $==$ *Child* $then$ n_participants_child $>$ 0
+# - $if$ participant_age_group1 $==$ *Teen* $then$ n_participants_teen $>$ 0
+# - $if$ participant_age_group1 $==$ *Adult* $then$ n_participants_adult $>$ 0
+# 
+# - $if$ participant_gender1 $==$ *Male* $then$ n_males $>$ 0
+# - $if$ participant_gender1 $==$ *Female* $then$ n_females $>$ 0
+
+# %% [markdown]
+# In the initial phase, only the values that were not permissible were set to *NaN*. 
+# 
+# We kept track of the consistency of admissible values by using variables (which could take on the boolean value *True* if they were consistent, *False* if they were not, or *NaN* in cases where data was not present). 
+# 
+# These variables were temporarily included in the dataframe so that we could later replace them with consistent values, if possible, or remove them if they were outside the acceptable range.
+# 
+# Variables:
+# - *consistency_age*: Values related to the minimum, maximum, and average ages consistent with the number of participants by age groups.
+# - *consistency_n_participant*: The number of participants for different categories consistent with each other.
+# - *consistency_gender*: The number of participants by gender consistent with the total number of participants.
+# - *consistency_participant1*: Values of features related to participant1 consistent with each other.
+# 
+# - *consistency_participants1_wrt_n_participants*: If *consistency_participants1_wrt_n_participants*, *participant1_age_range_consistency_wrt_all_data*, and *participant1_gender_consistency_wrt_all_data* are all *True*.
+# 
+# - *participant1_age_consistency_wrt_all_data*: Age of participant1 consistent with the minimum and maximum age values of the participants.
+# - *participant1_age_range_consistency_wrt_all_data*: Value of the age range (*Child*, *Teen*, or *Adult*) consistent with the age groups of the participants.
+# - *participant1_gender_consistency_wrt_all_data*: Gender value of participant1 consistent with the gender breakdown values of the group.
+# 
+# - *nan_values*: Presence of "NaN" values in the row.
 
 # %%
 from utils import check_age_gender_data_consistency
 def compute_clean_data(data):
     clean_data = data.apply(lambda row: check_age_gender_data_consistency(row), axis=1)
     # save data
-    clean_data.to_csv(FOLDER + 'post_proc/temporary_columns_age_gender.csv', index=False)
+    clean_data.to_csv(FOLDER + 'post_proc/temporary_columns_age_gender.csv')
 
 def load_clean_data():
     clean_data = pd.read_csv(FOLDER + 'post_proc/temporary_columns_age_gender.csv')
@@ -90,11 +170,14 @@ clean_data.head(10)
 # %%
 clean_data.info()
 
+# %% [markdown]
+# We assess the correctness of the checks performed by printing the consistency variable for the first 5 rows and providing a concise summary of their most frequent values.
+
 # %%
 clean_data[['consistency_age', 'consistency_n_participant', 'consistency_gender', 
     'consistency_participant1', 'consistency_participants1_wrt_n_participants',
     'participant1_age_consistency_wrt_all_data', 'participant1_age_range_consistency_wrt_all_data',
-    'participant1_gender_consistency_wrt_all_data', 'nan_values']]
+    'participant1_gender_consistency_wrt_all_data', 'nan_values']].head(5)
 
 # %%
 clean_data[['consistency_age', 'consistency_n_participant', 'consistency_gender', 
@@ -102,11 +185,8 @@ clean_data[['consistency_age', 'consistency_n_participant', 'consistency_gender'
     'participant1_age_consistency_wrt_all_data', 'participant1_age_range_consistency_wrt_all_data',
     'participant1_gender_consistency_wrt_all_data', 'nan_values']].describe()
 
-# %%
-clean_data[clean_data['consistency_participant1']==False].count().sum()
-
-# %%
-data[data['participant_age1'] == 18]['participant_age_group1'].value_counts()
+# %% [markdown]
+# Below, we print the number of rows with 'NaN' or inconsistent data.
 
 # %%
 print('Number of rows with null values: ', clean_data[clean_data['nan_values'] == True].shape[0])
@@ -144,8 +224,14 @@ print('Number of rows with all null data: ', clean_data.isnull().all(axis=1).sum
 print('Range age: ', clean_data['min_age_participants'].min(), '-', clean_data['max_age_participants'].max())
 print('Average number of participants: ', clean_data['n_participants'].mean())
 
+# %% [markdown]
+# We can notice that:
+# - The data in our dataset related to participant1, excluding the 1295 cases where age and age group data were inconsistent with each other, always appear to be consistent with the data in the rest of the dataset and can thus be used to fill in missing or incorrect data.
+# - In the data related to age and gender, some inconsistencies are present, but they account for only 2.09% and 6.75% of the total dataset rows, respectively.
+# - In 93806 rows, at least one field had a *NaN* value.
+
 # %%
-import matplotlib.pyplot as plt
+data[data['participant_age1'] == 18]['participant_age_group1'].value_counts()
 
 # %% [markdown]
 # Some preliminary plots to understand how data is distributed. \
@@ -226,7 +312,11 @@ clean_data.iloc[236017]
 # ### Fix incosistente data
 
 # %% [markdown]
-# We have created a new DataFrame where we have recorded the corrected and consistent data. The functions and checks necessary for this process are documented in the 'utils.py' file. Below, we have provided a brief documentation of the methods used.
+# We have created a new DataFrame where we have recorded the corrected and consistent data. The functions and checks necessary for this process are documented in the 'utils.py' file. \
+# Below, we have provided a brief documentation of the methods used.
+
+# %%
+# TODO: documentazione da utils
 
 # %%
 new_data = pd.DataFrame(columns=[
@@ -242,7 +332,7 @@ from utils import  set_gender_age_consistent_data
 def compute_new_data(clean_data):
     new_data = clean_data.apply(lambda row:  set_gender_age_consistent_data(row), axis=1)
     # save data
-    new_data.to_csv(FOLDER + 'post_proc/new_columns_age_gender.csv', index=False)
+    new_data.to_csv(FOLDER + 'post_proc/new_columns_age_gender.csv')
 
 def load_new_data():
     new_data = pd.read_csv(FOLDER + 'post_proc/new_columns_age_gender.csv')
@@ -253,7 +343,7 @@ clean_data[['n_males', 'n_females']].sum(axis=1)
 
 # %%
 # checkpoint
-compute_new_data(clean_data)
+#compute_new_data(clean_data)
 new_data = load_new_data()
 
 # %%
@@ -395,7 +485,7 @@ print('Total rows with null value for n_females: ', new_data['n_females'].isnull
 
 # %%
 FOLDER = './data/'
-tag_path = FOLDER + 'incidents_with_tags.csv'
+tag_path = FOLDER + 'post_proc/incidents_with_tags.csv'
 
 # Load data from csv files
 tag_data = pd.read_csv(tag_path)
@@ -417,7 +507,7 @@ df = pd.concat([new_data, tag_data[['Firearm', 'Shots', 'Aggression', 'Suicide',
 df.head(10)
 
 # %%
-print('Number of rows in which tag are incosistent: ', df[df['Tag consistency']==False].count())
+print('Number of rows in which tag are incosistent: ', df[df['Tag Consistency']==False].count())
 
 # %%
 from utils import check_consistency_tag
