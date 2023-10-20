@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Task 1.1 Data Understanding
 
@@ -7,6 +8,7 @@
 # %%
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sn
 import plotly.express as px
 import plotly.graph_objects as go
 import os
@@ -18,7 +20,7 @@ from plot_utils import *
 # We define constants and settings for the notebook:
 
 # %%
-%matplotlib inline
+# %matplotlib inline
 
 DATA_FOLDER_PATH = '../data/'
 
@@ -43,9 +45,9 @@ incidents_data.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about gun incidents in the USA.
-# 
+#
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas dtype for later analysis.
-# 
+#
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :-----------: |
 # | 0 | date | Numeric (Interval) | Date of incident occurrence| datetime |
@@ -86,8 +88,66 @@ incidents_data.info()
 # %% [markdown]
 # We notice that:
 # - `congressional_district`, `state_house_district`, `state_senate_district`, `participant_age1`, `n_males`, `n_females`, `n_arrested`, `n_unharmed`, `n_participants` are stored as `float64` while should be `int64`
-# - `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` are stored as `object` while should be `int64`
+# - `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` are stored as `object` while should be `int64`, this probably indicates the presence of out of syntactic errors (not in the domain)
 # - the presence of missing values within many attributes; the only attributes without missing values are the following: `date`, `state`, `city_or_county`, `n_killed`, `n_injured`, `n_participants`
+#
+# We cast the attributes to the correct type:
+
+# %%
+# NUMERIC ATTRIBUTES
+# positive integers
+incidents_data['participant_age1'] = pd.to_numeric(incidents_data['participant_age1'], downcast='unsigned', errors='coerce')
+incidents_data['n_males'] = pd.to_numeric(incidents_data['n_males'], downcast='unsigned', errors='coerce')
+incidents_data['n_females'] = pd.to_numeric(incidents_data['n_females'], downcast='unsigned', errors='coerce')
+incidents_data['n_killed'] = pd.to_numeric(incidents_data['n_killed'], downcast='unsigned', errors='coerce')
+incidents_data['n_injured'] = pd.to_numeric(incidents_data['n_injured'], downcast='unsigned', errors='coerce')
+incidents_data['n_arrested'] = pd.to_numeric(incidents_data['n_arrested'], downcast='unsigned', errors='coerce')
+incidents_data['n_unharmed'] = pd.to_numeric(incidents_data['n_unharmed'], downcast='unsigned', errors='coerce')
+incidents_data['n_participants'] = pd.to_numeric(incidents_data['n_participants'], downcast='unsigned', errors='coerce')
+incidents_data['min_age_participants'] = pd.to_numeric(incidents_data['min_age_participants'], downcast='unsigned', errors='coerce')
+incidents_data['max_age_participants'] = pd.to_numeric(incidents_data['max_age_participants'], downcast='unsigned', errors='coerce')
+incidents_data['n_participants_child'] = pd.to_numeric(incidents_data['n_participants_child'], downcast='unsigned', errors='coerce')
+incidents_data['n_participants_teen'] = pd.to_numeric(incidents_data['n_participants_teen'], downcast='unsigned', errors='coerce')
+incidents_data['n_participants_adult'] = pd.to_numeric(incidents_data['n_participants_adult'], downcast='unsigned', errors='coerce')
+# float
+incidents_data['avg_age_participants'] = pd.to_numeric(incidents_data['avg_age_participants'], errors='coerce')
+
+# DATE
+incidents_data['date'] = pd.to_datetime(incidents_data['date'], format='%Y-%m-%d')
+
+# CATEGORICAL ATTRIBUTE
+# nominal
+incidents_data['congressional_district'] = incidents_data['congressional_district'].astype("category")
+incidents_data['state_house_district'] = incidents_data['state_house_district'].astype("category")
+incidents_data['state_senate_district'] = incidents_data['state_senate_district'].astype("category")
+incidents_data['participant_gender1'] = incidents_data['participant_gender1'].astype("category")
+# ordinal
+incidents_data['participant_age_group1'] = incidents_data['participant_age_group1'].astype(
+    pd.api.types.CategoricalDtype(categories = ["Child 0-11", "Teen 12-17", "Adult 18+"], ordered = True))
+
+# %% [markdown]
+# We display again information about the dataset to check the correctness of the casting and the number of missing values:
+
+# %%
+incidents_data.info()
+
+# %% [markdown]
+# And now we visualize missing values:
+
+# %%
+fig, ax = plt.subplots(figsize=(12,8)) 
+sn.heatmap(incidents_data.isnull(), cbar=False, xticklabels=True, ax=ax)
+
+# %% [markdown]
+# TODO: commentare
+
+# %% [markdown]
+# We drop duplicates:
+
+# %%
+print(f"# of rows before dropping duplicates: {incidents_data.shape[0]}")
+incidents_data.drop_duplicates(inplace=True)
+print(f"# of rows after dropping duplicates: {incidents_data.shape[0]}")
 
 # %% [markdown]
 # We display descriptive statistics:
@@ -118,15 +178,15 @@ poverty_data.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about the poverty percentage for each USA state and year.
-# 
+#
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas dtype for later analysis.
-# 
+#
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :------------: |
 # | 0 | state | Categorical (Nominal) | Name of the state | object |
 # | 1 | year | Numeric (Interval) | Year | int64 |
 # | 2 | povertyPercentage | Numeric (Ratio) | Poverty percentage for the corresponding state and year | float64 |
-# 
+#
 
 # %% [markdown]
 # We display a concise summary of the DataFrame:
@@ -187,7 +247,7 @@ poverty_data.loc[
 
 # %% [markdown]
 # Since the tuple <`state`, `year`> uniquely identifies each row we can conclude that there are no missing rows.
-# 
+#
 # Now, we count how many rows have missing values:
 
 # %%
@@ -201,7 +261,7 @@ poverty_data[poverty_data['povertyPercentage'].isnull()]['year'].unique()
 
 # %% [markdown]
 # As expected we have no data from 2012. Later we will fix this issue.
-# 
+#
 # Now we visualize the distribution of poverty percentage for each state.
 
 # %%
@@ -246,7 +306,7 @@ plt.ylabel('Average Poverty (%)')
 
 # %% [markdown]
 # It is evident that New Hampshire's average poverty rate is markedly lower than that of the other states, whereas Mississippi's average poverty rate is notably higher than the rest. 
-# 
+#
 # To inspect and compare the poverty percentage of each state over the year, we plot an interactive line chart:
 
 # %%
@@ -256,11 +316,11 @@ fig = px.line(
 fig.show()
 
 # %% [markdown]
-# TODO: commentare
+# We can oberserve that New Hampshire always had the lowest poverty percentage, whereas Mississippi had the highest till 2009, then it was surpassed by New Mexico and Louisiana.
 
 # %% [markdown]
 # TODO: spostare in preparation.
-# 
+#
 # To imputate the missing data from 2012, we calculate the average of the `povertyPercentage` values for the preceding and succeeding year.
 
 # %%
@@ -353,9 +413,9 @@ elections_data.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about the winner of the congressional elections in the USA, for each year, state and congressional district.
-# 
+#
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas `dtype` for later analysis.
-# 
+#
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :------------: |
 # | 0 | year | Numeric (Interval) | Year | int64 |
@@ -411,7 +471,7 @@ print(f'Number of states: {states.size}')
 
 # %% [markdown]
 # All the states (District og Columbia included) are present.
-# 
+#
 # We now display the states and the years for which there are missing rows:
 
 # %%
@@ -430,7 +490,7 @@ elections_data[elections_data['state']=='DISTRICT OF COLUMBIA']
 
 # %% [markdown]
 # Missing values are probably due to the fact that District of Columbia is a non voting delegate district. Anyway, we gathered the missing values from Wikipedia. We noticed that as for the 2020 elecetions, the number of votes received by the winning party coincides, but the number of totalvotes is different (see [here](https://en.wikipedia.org/wiki/2020_United_States_House_of_Representatives_election_in_the_District_of_Columbia)). To be consistent with the other data, we replace the totalvotes value from 2020 with the one from Wikipedia.
-# 
+#
 # Now we import those data:
 
 # %%
@@ -445,7 +505,7 @@ dc_elections_data.info()
 
 # %% [markdown]
 # The inferred types are correct.
-# 
+#
 # We now merge the two dataframes:
 
 # %%
@@ -486,7 +546,7 @@ plt.tight_layout()
 
 # %% [markdown]
 # We can observe that for both total and candidate votes Florida, Louisian and Oklahoma have lower outliers, while Maine has an upper outlier. 
-# 
+#
 # We display the rows relative to Maine:
 
 # %%
@@ -530,19 +590,19 @@ for index, row in elections_data.iterrows():
             elections_data.at[index, 'totalvotes'] = replacement['totalvotes'].iloc[0]
 
 # %% [markdown]
-# We plot again the distribution of `totalvotes` and `candidatevotes` after cleaning the data:
+# We now plot the distribution of `totalvotes` (summing over the districts) after cleaning the data:
 
 # %%
 elections_data[
     elections_data['year']>2012
-].boxplot(column='totalvotes', by='state', figsize=(20, 10), rot=90, xlabel='State', ylabel='Total votes')
+].groupby(['year', 'state']).agg('sum').boxplot(column='totalvotes', by='state', figsize=(20, 10), rot=90, xlabel='State', ylabel='Total votes')
 plt.suptitle('Total votes from 2014')
 plt.title('')
 plt.tight_layout()
 
 # %% [markdown]
-# It is evident that the number of votes fluctuates significantly from year to year.
-# 
+# It is evident that in some states the number of votes fluctuates significantly from year to year.
+#
 # We get the unique names of the parties for the years of interest:
 
 # %%
@@ -573,7 +633,7 @@ elections_data[(elections_data['candidateperc']==100) & (elections_data['year']>
 
 # %% [markdown]
 # Wikipedia reports the same data, in those cases there was not an opponent party.
-# 
+#
 # The histogram above also shows that in some disticts the winner party obtained less than 50% of the votes. We display those districts:
 
 # %%
@@ -604,23 +664,26 @@ poverty_elections_data = pd.merge(
 )
 poverty_elections_data
 
+# %%
+poverty_elections_data[poverty_elections_data['state']=='VERMONT']
+
 # %% [markdown]
 # We now plot on a map the winning party over the years:
 
 # %%
 fig = px.choropleth(
-    poverty_elections_data,
+    poverty_elections_data[poverty_elections_data['year']>2004],
     locations='px_code',
     locationmode="USA-states",
     color='winningparty',
     scope="usa",
     animation_frame='year',
-    title="Results of the elections over the years", # TODO: capire perchè nel Vermont rimane il 2004
+    title="Results of the elections over the years", 
     hover_name='state',
     hover_data={'px_code': False}
 )
 fig.update_layout(
-    # TODO: set legend title
+    legend_title_text='Party'
 )
 fig.show()
 
