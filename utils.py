@@ -5,10 +5,11 @@ import numpy as np
 import json
 import os
 import sys
+import math
 
 # default variables
-DAMERAU_LEVENSHTEIN_DISTANCE_THRESHOLD = 2
-SAME_WORDS_ADDRESS_THRESHOLD = 2
+DAMERAU_LEVENSHTEIN_DISTANCE_THRESHOLD = 1
+SAME_WORDS_ADDRESS_THRESHOLD = 3
 FREQUENT_WORDS = ['of', 
     'block', 
     'Street', 
@@ -99,6 +100,7 @@ def check_string_typo(string1, string2, sensibility=DAMERAU_LEVENSHTEIN_DISTANCE
     if pd.isnull(string2): return -1
 
     string_distance = jellyfish.damerau_levenshtein_distance(string1, string2)
+    sensibility = math.ceil(max(len(string1), len(string2))/5)
     return int(string_distance <= sensibility)
 
 def check_address(address1, address2_geopy):
@@ -116,7 +118,9 @@ def check_address(address1, address2_geopy):
         if word in address2_geopy:
             cardinality_address1_in_address2 += 1
 
-    return int(cardinality_address1_in_address2 >= SAME_WORDS_ADDRESS_THRESHOLD)
+    esito = cardinality_address1_in_address2/len(address1)
+
+    return int(esito >= 0.33)
 
 def check_consistency_geopy(row):
     """check consistency between address in incidents dataset and geopy dataset
@@ -169,10 +173,10 @@ def check_consistency_additional_data(state, county, additional_data):
         state_consistency = True
         state_current = state
     else: # check typo
-        clean_data_geopy(state)
+        clean_state = clean_data_geopy(state)
         for s in additional_data['State or equivalent'].unique():
-            state = clean_data_geopy(s)
-            if check_string_typo(state, s) == 1:
+            clean_state_wiki = clean_data_geopy(s)
+            if check_string_typo(clean_state, clean_state_wiki) == 1:
                 state_consistency = True
                 state_current = s
                 break
@@ -186,10 +190,10 @@ def check_consistency_additional_data(state, county, additional_data):
             for c in additional_data[additional_data['State or equivalent'] == state_current
                                      ]['County or equivalent'].unique():
 
-                c = clean_data_geopy(c)
+                c_clean = clean_data_geopy(c)
                 for county_incidents in county_list:     
-                    if check_string_typo(county_incidents, c) == 1:
-                        return state_current, c
+                    if check_string_typo(county_incidents, c_clean) == 1:
+                        return state_current, c + ' County'
     
     return state_current, np.nan
     
