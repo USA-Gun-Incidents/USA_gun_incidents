@@ -28,7 +28,7 @@ pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 
 # %% [markdown]
-# ## Incidents Data
+# # Incidents Data
 
 # %% [markdown]
 # We load the dataset:
@@ -78,6 +78,113 @@ incidents_data.head(n=2)
 # | 25 | notes | Categorical (Nominal) | Additional notes about the incident | object |
 # | 26 | incident_characteristics1 | Categorical (Nominal) | Incident characteristics | object |
 # | 27 | incident_characteristics2 | Categorical (Nominal) | Incident characteristics (not all incidents have two available characteristics) | object |
+
+# %% [markdown]
+# After analysing the dataset and the features it contains, it is immediately apparent that there are missing values, syntactic errors, semantic errors and unwanted outliers. We must then proceed to correct each feature present so that it is correct and consistent with the others present. To do this, we divide the features into groups that differ by semantic field and correct them in order of independence, starting with the most independent groups (such as date or geographical location) and then correcting the remaining, more specific ones, which must also be consistent with the corrected ones.
+
+# %% [markdown]
+# ## geographic consistency
+
+# %% [markdown]
+# The first group addressed concerns fields describing the geographical location of the recorded incident, and includes:
+#
+# - state
+# - city_or_county
+# - address
+# - latitude
+# - longitude
+
+# %%
+data_check_consistency = pd.DataFrame()
+data_check_consistency[['state', 'city_or_county', 'address', 'latitude', 'longitude']] = incidents_data[[
+    'state', 'city_or_county', 'address', 'latitude', 'longitude']]
+
+# %% [markdown]
+# An examination of these columns immediately reveals the following problems
+# - the 'city_or_county' field represents the two different concepts of county and city where the incident took place, which is not effective because it is difficult to understand when the field refers to the former, the latter or both
+# - Both the 'state' and 'bubcity_or_countyu' fields may contain non-unique references to the same abstract object, as is often the case in human language, which is full of synonyms, diminutives of names, etc.
+# - The 'address' field contains information that is not precise or uniform, and it is often useless or complicated to understand its content.
+#
+# Finally, the presence of errors or outliers is obvious, so that the need to check the consistency of the fields arises spontaneously, a task that is difficult to perform with a priori knowledge.
+
+# %% [markdown]
+# By using an external data source, obtained through the Geopy library, we can check the consistency of the data; by running a query on each record with coordinates, it is possible to have a detailed and uniform description of the dataset of the geographical reference where the incident occurred.
+
+# %%
+#TODO: sparare grafici a profusione per validare la tesi
+# geopy data esample
+geopy_sample = {
+    "place_id": 327684232, 
+    "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright", 
+    "osm_type": "way", 
+    "osm_id": 437510561, 
+    "lat": "39.832221333801186", 
+    "lon": "-86.24921127905256", 
+    "class": "highway", 
+    "type": "secondary", 
+    "place_rank": 26, 
+    "importance": 0.10000999999999993, 
+    "addresstype": "road", 
+    "name": "Pike Plaza Road", 
+    "display_name": "Pike Plaza Road, Indianapolis, Marion County, Indiana, 46254, United States", 
+    "address": {"road": "Pike Plaza Road", 
+                "city": "Indianapolis", 
+                "county": "Marion County", 
+                "state": "Indiana", 
+                "ISO3166-2-lvl4": "US-IN", 
+                "postcode": "46254", 
+                "country": "United States", 
+                "country_code": "us"}, 
+    "boundingbox": ["39.8322034", "39.8324807", "-86.2492452", "-86.2487207"]}
+
+# %% [markdown]
+# GeoPy keys:
+#
+# - place_id: unique numeric place identifier.
+#
+# - licence: licence to use the geographic data.
+#
+# - osm_type: type of OpenStreetMap (OSM) object the place belongs to ('node' for a point, 'way' for a road or 'relation' for a relation between elements).
+#
+# - osm_id: unique identifier assigned to the OSM object.
+#
+# - lat + lon: Latitude and longitude of the location.
+#
+# - class: classification of the location (e.g. 'place').
+#
+# - type: Classification of the location (e.g. 'city').
+#
+# - place_rank: Rank or priority of the place in the geographical hierarchy (how important a place is).
+#
+# - importance: Numerical value indicating the importance of the place in relation to other places.
+#
+# - addresstype: type of address (e.g. 'house', 'street', 'postcode')
+#
+# - name: name of place (e.g. name of town or street)
+#
+# - display_name: user-readable representation of the location, often formatted as a full address.
+#
+# - address: detailed address.
+#
+# - boundingbox: list of four coordinates (latitude and longitude) that define a rectangle surrounding the location (this is an approximation of the area covered by the location).
+
+# %% [markdown]
+# Our intention is therefore to use the supporting dataset to verify the consistency of the data and to have unique references to states, cities and counties. Finally, we will integrate additional and potentially useful information for the future study, such as: the geographical importance and type of location, identified by: importance and address_type
+
+# %%
+# select only relevant columns from incidents_data
+geo_data = incidents_data[['date', 'state', 'city_or_county', 'address', 'latitude', 'longitude',
+       'congressional_district', 'state_house_district', 'state_senate_district']]
+geo_data
+
+# %% [markdown]
+# Our comparison takes into account synonyms, diminutives and typing errors as much as possible, assuming that the data is mostly correct and that our check must therefore either confirm its correctness or identify errors that are not too complex to find.
+
+# %%
+#TODO caricare il dataset final e fare tutti i controlli del caso
+
+# %% [markdown]
+# ## other shit
 
 # %% [markdown]
 # We display a concise summary of the DataFrame:
@@ -161,7 +268,7 @@ incidents_data.describe(include='all')
 # - ...
 
 # %% [markdown]
-# ## Poverty Data
+# # Poverty Data
 
 # %% [markdown]
 # We load the dataset:
@@ -396,7 +503,7 @@ fig.suptitle("Povery percentage over the years", fontsize=25)
 fig.tight_layout()
 
 # %% [markdown]
-# ## Elections Data
+# # Elections Data
 
 # %% [markdown]
 # We load the dataset:

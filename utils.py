@@ -8,7 +8,7 @@ import sys
 import math
 
 # default variables
-EDIT_DISTANCE_RATIO = 6 
+EDIT_DISTANCE_RATIO = 3 
 SIMILARITY_PERCENTAGE_ADDRESS_THRESHOLD = 0.33
 FREQUENT_WORDS = ['of', 
     'block', 
@@ -121,7 +121,7 @@ def check_address(address1, address2_geopy):
             cardinality_address1_in_address2 += 1
 
     esito = cardinality_address1_in_address2/len(address1)
-    return int(esito >= SIMILARITY_PERCENTAGE_ADDRESS_THRESHOLD)
+    return int(cardinality_address1_in_address2 >= 1)
 
 def check_consistency_geopy(row):
     """check consistency between address in incidents dataset and geopy dataset
