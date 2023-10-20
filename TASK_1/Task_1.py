@@ -7,13 +7,16 @@
 # %%
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sn
+import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 import os
 import sys
 sys.path.append(os.path.abspath('..')) # TODO: c'è un modo per farlo meglio?
 from plot_utils import *
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.inspection import DecisionBoundaryDisplay
+from sklearn.metrics import confusion_matrix
 
 # %% [markdown]
 # We define constants and settings for the notebook:
@@ -183,9 +186,6 @@ fig.show()
 
 # %% [markdown]
 # We can oberserve that New Hampshire always had the lowest poverty percentage, whereas Mississippi had the highest till 2009, then it was surpassed by New Mexico and Louisiana.
-
-# %% [markdown]
-# TODO: spostare in preparation.
 # 
 # To imputate the missing data from 2012, we calculate the average of the `povertyPercentage` values for the preceding and succeeding year.
 
@@ -631,7 +631,7 @@ incidents_data.info()
 # We display descriptive statistics of the DataFrame so to better understand how to cast the data:
 
 # %%
-incidents_data.describe()
+incidents_data.describe(include='all')
 
 # %% [markdown]
 # We cast the attributes to the correct type:
@@ -675,14 +675,33 @@ incidents_data['participant_age_group1'] = incidents_data['participant_age_group
 # %%
 incidents_data.info()
 
+# %%
+# TODO: rivedere
+
+# trasformare negativi in positivi?
+# trasformare e.g. età=300 in 30?
+# trasformare e.g. età=0.5 in 1?
+# o settare a NaN?
+
+# Bisognerebbe fare qualcosa come sotto per ogni attributo di cui vogliamo fare il downcast
+# incidents_data['min_age_participants_NEW'] = incidents_data['min_age_participants'].apply(lambda x: x if (x.is_integer() and x<np.iinfo(np.uint8).max and x >=0) else np.nan)
+# incidents_data['min_age_participants_NEW'] = incidents_data['min_age_participants_NEW'].astype('UInt8')
+
+# Per gli attributi ordinali bisognerebbe fare come segue
+# max = int(incidents_data[incidents_data['congressional_district'].notna()]['congressional_district'].max())
+# incidents_data['congressional_district_NEW'] = incidents_data['congressional_district'].astype('Int64') # per togliere .0
+# incidents_data['congressional_district_NEW'] = incidents_data['congressional_district_NEW'].astype('string') # perchè l'istruzione successiva funzioni (trovi il match)
+# incidents_data['congressional_district_NEW'] = incidents_data['congressional_district_NEW'].astype(
+#     pd.api.types.CategoricalDtype(categories = [str(i) for i in range(max)], ordered = True))
+
 # %% [markdown]
-# We observe that the downcasting of many attributes has not succeeded. This is due to the presence of missing or out of range values, we'll handle this problem later.
+# We observe that the downcasting of many attributes has not succeeded. This is due to the presence of missing or out of range values. TODO: to handle
 # 
 # Now we visualize missing values:
 
 # %%
 fig, ax = plt.subplots(figsize=(12,8)) 
-sn.heatmap(incidents_data.isnull(), cbar=False, xticklabels=True, ax=ax)
+sns.heatmap(incidents_data.isnull(), cbar=False, xticklabels=True, ax=ax)
 
 # %% [markdown]
 # We observe that:
@@ -858,8 +877,9 @@ incidents_data[incidents_data['congressional_district'].notnull()].groupby(['lat
 # %%
 corrected_congr_districts = incidents_data[
     incidents_data['congressional_district'].notnull()
-    ].groupby(['latitude', 'longitude'])['congressional_district'].agg(lambda x: x.value_counts().index[0])
+    ].groupby(['latitude', 'longitude'])['congressional_district'].agg(lambda x: x.value_counts().index[0]) # TODO: stesso val di nulli e non sembra dar priorità ai non nulli
 incidents_data = incidents_data.merge(corrected_congr_districts, on=['latitude', 'longitude'], how='left')
+# where latitude and longitude are null, keep the original value
 incidents_data['congressional_district_y'].fillna(incidents_data['congressional_district_x'], inplace=True)
 incidents_data.rename(columns={'congressional_district_y':'congressional_district'}, inplace=True)
 incidents_data.drop(columns=['congressional_district_x'], inplace=True)
@@ -883,8 +903,27 @@ house_districts.sort()
 house_districts
 
 # %% [markdown]
-# Also this attribute has some errors because the maximum number of state house districts should be 204 (for New Hampshire, see [here](https://ballotpedia.org/State_Legislative_Districts)).
+# Also this attribute has some errors because the maximum number of state house districts should be 204 (for New Hampshire, see [here](https://ballotpedia.org/State_Legislative_Districts)). For now we won't correct this error beacuse this attribute is not useful for our analysis.
 # 
+# We check if given a certain value for the attributes `latitude` and a `longitude`, the attribute `state_house_district` has always the same value:
+
+# %%
+incidents_data[incidents_data['state_house_district'].notnull()].groupby(
+    ['latitude', 'longitude'])['state_house_district'].unique()[lambda x: x.str.len() > 1]
+
+# %% [markdown]
+# We correct the errors:
+
+# %%
+corrected_house_districts = incidents_data[
+    incidents_data['state_house_district'].notnull()
+    ].groupby(['latitude', 'longitude'])['state_house_district'].agg(lambda x: x.value_counts().index[0])
+incidents_data = incidents_data.merge(corrected_house_districts, on=['latitude', 'longitude'], how='left')
+incidents_data['state_house_district_y'].fillna(incidents_data['state_house_district_x'], inplace=True)
+incidents_data.rename(columns={'state_house_district_y':'state_house_district'}, inplace=True)
+incidents_data.drop(columns=['state_house_district_x'], inplace=True)
+
+# %% [markdown]
 # We now print the unique values the attribute `state_senate_district` can take on:
 
 # %%
@@ -893,10 +932,247 @@ senate_districts.sort()
 senate_districts
 
 # %% [markdown]
-# And again we notice some errors because the maximum number of state senate districts should be 67 (for Minnesota, see [here](https://ballotpedia.org/State_Legislative_Districts)).
+# And again we notice some errors because the maximum number of state senate districts should be 67 (for Minnesota, see [here](https://ballotpedia.org/State_Legislative_Districts)). For now we won't correct this error beacuse this attribute is not useful for our analysis.
+# 
+# We correct other possible errors as above:
 
 # %%
-# TODO: devo finire di importare qui il codice che recupera i distretti con KNN ~ Irene
+corrected_senate_districts = incidents_data[
+    incidents_data['state_senate_district'].notnull()
+    ].groupby(['latitude', 'longitude'])['state_senate_district'].agg(lambda x: x.value_counts().index[0])
+incidents_data = incidents_data.merge(corrected_senate_districts, on=['latitude', 'longitude'], how='left')
+incidents_data['state_senate_district_y'].fillna(incidents_data['state_senate_district_x'], inplace=True)
+incidents_data.rename(columns={'state_senate_district_y':'state_senate_district'}, inplace=True)
+incidents_data.drop(columns=['state_senate_district_x'], inplace=True)
+
+# %% [markdown]
+# We check whether given a `state`, `city_or_county` and `state_senate_district`, the value of the attribute `congressional_district` is always the same:
+
+# %%
+incidents_data[incidents_data['congressional_district'].notnull()].groupby(
+    ['state', 'city_or_county', 'state_senate_district'])['congressional_district'].unique()[lambda x: x.str.len() > 1].shape[0]==0
+
+# %% [markdown]
+# Hence we cannot recover the missing values for the attribute `congressional_district` from the values of `state_senate_district`. We check the same for the attribute `state_house_district`:
+
+# %%
+incidents_data[incidents_data['congressional_district'].notnull()].groupby(
+    ['state', 'city_or_county', 'state_house_district'])['congressional_district'].unique()[lambda x: x.str.len() > 1].shape[0]==0
+
+# %% [markdown]
+# We cannot recover the missing values for the attribute `congressional_district` from the values of `state_house_district` either.
+# 
+# We can, instead, recover the missing values from the entries with "similar" `latitude` and `longitude`. We'll do this first for the state of Alabama, showing the results with some plots. Later we will do the same for all the other states.
+# 
+# As a first step, we plot on a map the incidents that happened in Alabama, coloring them according to the value of the attribute `congressional_district`:
+
+# %%
+plot_scattermap_plotly(incidents_data[incidents_data['state']=='ALABAMA'], attribute='congressional_district', width=500, height=600)
+
+# %% [markdown]
+# Many points with missing values for the attribute `congressional_district` (those in light green) are very near to other points for which the congressional district is known. We could use KNN classifier to recover those values. To do so, we define a function to prepare the data for the classification task:
+
+# %%
+def build_X_y_for_district_inference(incidents_data):
+    X_train = np.concatenate((
+        incidents_data[
+            (incidents_data['congressional_district'].notna()) &
+            (incidents_data['latitude'].notna()) & 
+            (incidents_data['longitude'].notna())
+            ]['longitude'].values.reshape(-1, 1),
+        incidents_data[
+            (incidents_data['congressional_district'].notna()) & 
+            (incidents_data['latitude'].notna()) & 
+            (incidents_data['longitude'].notna())
+            ]['latitude'].values.reshape(-1, 1)),
+        axis=1
+    )
+    X_test = np.concatenate((
+        incidents_data[
+            (incidents_data['congressional_district'].isna()) & 
+            (incidents_data['latitude'].notna()) & 
+            (incidents_data['longitude'].notna())
+            ]['longitude'].values.reshape(-1, 1),
+        incidents_data[
+            (incidents_data['congressional_district'].isna()) &
+            (incidents_data['latitude'].notna()) & 
+            (incidents_data['longitude'].notna())
+            ]['latitude'].values.reshape(-1, 1)),
+        axis=1
+    )
+    y_train = incidents_data[
+        (incidents_data['congressional_district'].notna()) & 
+        (incidents_data['latitude'].notna()) & 
+        (incidents_data['longitude'].notna())
+        ]['congressional_district'].values
+    return X_train, X_test, y_train
+
+# %% [markdown]
+# Now we are ready to apply the classifier (using K=3): TODO: k=1?
+
+# %%
+X_train, X_test, y_train = build_X_y_for_district_inference(incidents_data[incidents_data['state']=="ALABAMA"])
+knn_clf = KNeighborsClassifier(n_neighbors=3)
+knn_clf.fit(X_train, y_train)
+knn_pred = knn_clf.predict(X_test)
+incidents_data['KNN_congressional_district'] = incidents_data['congressional_district']
+incidents_data.loc[
+    (incidents_data['state']=="ALABAMA") &
+    (incidents_data['congressional_district'].isna()) &
+    (incidents_data['latitude'].notna()) & 
+    (incidents_data['longitude'].notna()),
+    'KNN_congressional_district'
+    ] = knn_pred
+
+# %% [markdown]
+# We plot the results:
+
+# %%
+plot_scattermap_plotly(incidents_data[incidents_data['state']=='ALABAMA'], attribute='KNN_congressional_district', width=500, height=600)
+
+# %% [markdown]
+# To improve the visualization, we plot on the map the decision boundaries of the classifier:
+
+# %%
+alabama_color_map = {
+    1:'red',
+    2:'orange',
+    3:'yellow',
+    4:'green',
+    5:'lightblue',
+    6:'blue',
+    7:'purple'
+}
+plot_clf_decision_boundary(knn_clf, X_train, y_train, alabama_color_map)
+
+# %% [markdown]
+# We can now compare the boundaries built by the classifier with the actual boundaries (this map was taken [here](https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif/lossless-page1-1256px-United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif.png)):
+# 
+# <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif/lossless-page1-1256px-United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif.png" alt="Alt Text" width="600"/>
+
+# %% [markdown]
+# The result is satisfactory. However, it is important to highlight that if there are no examples available for a specific district, we won't assign the correct label to the points in that districts. We check how many congressional districts have no examples:
+
+# %%
+elections_data[
+    (elections_data['year'].between(2010, 2020, inclusive='right')) &
+    (~elections_data[['state', 'congressional_district']].apply(tuple, axis=1).isin(
+        incidents_data[(incidents_data['latitude'].notna()) & (incidents_data['longitude'].notna())][['state', 'congressional_district']].apply(tuple, axis=1)))
+    ][['state', 'year', 'congressional_district']].shape[0]
+
+# %% [markdown]
+# By the way, missclassification can still occurr, depending on the position of the available examples w.r.t the position of the points to classify. Aware of this limitation, we proceed to apply this method to the other states:
+
+# %%
+for state in incidents_data['state'].unique():
+    if state != "ALABAMA":
+        X_train, X_test, y_train = build_X_y_for_district_inference(incidents_data[incidents_data['state']==state])
+        if X_test.shape[0] == 0:
+            continue
+        knn_clf.fit(X_train, y_train)
+        knn_pred = knn_clf.predict(X_test)
+        incidents_data.loc[
+            (incidents_data['state']==state) &
+            (incidents_data['congressional_district'].isna()) &
+            (incidents_data['latitude'].notna()) & 
+            (incidents_data['longitude'].notna()),
+            'KNN_congressional_district'
+        ] = knn_pred
+
+# %% [markdown]
+# We drop the original column with congressional districts and we replace it with the one with the one we just computed:
+
+# %%
+incidents_data.drop(columns=['congressional_district'], inplace=True)
+incidents_data.rename(columns={'KNN_congressional_district':'congressional_district'}, inplace=True)
+
+# %% [markdown]
+# TAGS EXPLORATION:
+
+# %%
+fig = incidents_data['incident_characteristics1'].value_counts().sort_values().plot(kind='barh', figsize=(5, 15))
+fig.set_xscale("log")
+plt.title("Counts of 'incident_characteristics1'")
+plt.xlabel('Count')
+plt.ylabel('Incident characteristics')
+plt.tight_layout()
+
+# %%
+fig = incidents_data['incident_characteristics2'].value_counts().sort_values().plot(kind='barh', figsize=(5, 18))
+fig.set_xscale("log")
+plt.title("Counts of 'incident_characteristics2'")
+plt.xlabel('Count')
+plt.ylabel('Incident characteristics')
+plt.tight_layout()
+
+# %%
+characteristics_count_matrix = pd.crosstab(incidents_data['incident_characteristics1'], incidents_data['incident_characteristics2'])
+fig, ax = plt.subplots(figsize=(20, 20))
+sns.heatmap(characteristics_count_matrix, cmap='coolwarm', ax=ax)
+ax.set_xlabel('incident_characteristics2')
+ax.set_ylabel('incident_characteristics1')  
+ax.set_title('Counts of incident characteristics')
+plt.tight_layout() # TODO: sono meno aattributi perchè ci sono nan o è un bug?
+
+# %% [markdown]
+# We join the poverty data with the incidents data:
+
+# %%
+incidents_data['year'] = incidents_data['date'].dt.year
+incidents_data = incidents_data.merge(poverty_data, on=['state', 'year'], how='left')
+incidents_data.head()
+
+# %% [markdown]
+# We join the elections data with the incidents data:
+
+# %%
+elections_data_copy = elections_data.copy()
+elections_data_copy['year'] = elections_data_copy['year'] + 1
+elections_data = pd.concat([elections_data, elections_data_copy], ignore_index=True)
+incidents_data = incidents_data.merge(elections_data, on=['state', 'year'], how='left')
+incidents_data.head()
+
+# %% [markdown]
+# We re-order the columns and we save the cleaned dataset:
+
+# %%
+incidents_data = incidents_data[
+    'date',
+    'state',
+    'px_code',
+    'city_or_county',
+    'address',
+    'latitude',
+    'longitude',
+    'congressional_district',
+    'state_house_district',
+    'state_senate_district',
+    'participant_age1',
+    'participant_age_group1',
+    'participant_gender1',
+    'min_age_participants',
+    'avg_age_participants',
+    'max_age_participants',
+    'n_participants_child',
+    'n_participants_teen',
+    'n_participants_adult',
+    'n_males',
+    'n_females',
+    'n_killed',
+    'n_injured',
+    'n_arrested',
+    'n_unharmed',
+    'n_participants',
+    'notes',
+    'incident_characteristics1',
+    'incident_characteristics2',
+    'povertyPercentage',
+    'party',
+    'candidatevotes',
+    'totalvotes',
+    'candidateperc'
+    ]
+#incidents_data.to_csv(DATA_FOLDER_PATH + 'incidents_cleaned.csv')
 
 # %%
 # TODO:
