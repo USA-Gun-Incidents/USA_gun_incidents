@@ -5,10 +5,11 @@ import numpy as np
 import json
 import os
 import sys
+import math
 
 # default variables
-DAMERAU_LEVENSHTEIN_DISTANCE_THRESHOLD = 1
-SAME_WORDS_ADDRESS_THRESHOLD = 3
+EDIT_DISTANCE_RATIO = 6 
+SIMILARITY_PERCENTAGE_ADDRESS_THRESHOLD = 0.33
 FREQUENT_WORDS = ['of', 
     'block', 
     'Street', 
@@ -99,8 +100,10 @@ def check_string_typo(string1, string2):
     if pd.isnull(string1): return -1
     if pd.isnull(string2): return -1
 
-    string_distance = jellyfish.damerau_levenshtein_distance(string1, string2)
-    return int(string_distance <= sensibility)
+    edit_distance = jellyfish.damerau_levenshtein_distance(string1, string2)
+    
+    sensibility = math.ceil(max(len(string1), len(string2))/EDIT_DISTANCE_RATIO)
+    return int(edit_distance <= sensibility)
 
 def check_address(address1, address2_geopy):
     """check if two addresses are the same with at most a typo"""
@@ -118,8 +121,7 @@ def check_address(address1, address2_geopy):
             cardinality_address1_in_address2 += 1
 
     esito = cardinality_address1_in_address2/len(address1)
-
-    return int(esito >= 0.33)
+    return int(esito >= SIMILARITY_PERCENTAGE_ADDRESS_THRESHOLD)
 
 def check_consistency_geopy(row):
     """check consistency between address in incidents dataset and geopy dataset
