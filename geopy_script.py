@@ -18,9 +18,7 @@ import json
 import time
 import random
 import pandas
-
-
-import clean_data_utils as cdu
+#import clean_data_utils as cdu
 
 
 def start_requests():
@@ -290,6 +288,9 @@ OUT_FILE = DIR + 'geopy.csv'
 #unify_files(['giacomo', 'irene', 'luca', 'giulia'])
 #json.dump(check_error(ERR_DIR), STATS_FILE, indent=2)
 
-to_csv(FINAL_DATA, OUT_FILE)
+#to_csv(FINAL_DATA, OUT_FILE)
 
 #remove_dup(FINAL_DATA, FINAL_DATA_2)
+
+#geolocator = Nominatim(user_agent="DM_project")
+#print('39.7462, -105.058', geolocator.reverse('39.7462, -105.058').raw)

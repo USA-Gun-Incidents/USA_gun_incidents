@@ -1,8 +1,9 @@
 import pandas as pd
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
-
-data = pd.read_csv('./data/post_proc/new_columns_geo.csv')
+import os
+dirname = os.path.dirname(__file__)
+data = pd.read_csv(os.path.join(dirname, 'data/post_proc/final_incidents.csv'))
 
 X_train = np.concatenate((
     data[
@@ -49,4 +50,4 @@ data.loc[
     'KNN_county'
 ] = knn_pred
 
-data.to_csv('./data/post_proc/new_columns_geo_KNN.csv', index=False)
+data = pd.read_csv(os.path.join(dirname, 'data/post_proc/final_incidents_KNN.csv'))

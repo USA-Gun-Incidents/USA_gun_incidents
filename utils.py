@@ -8,8 +8,11 @@ import sys
 import math
 
 # default variables
-EDIT_DISTANCE_RATIO = 3 
-SIMILARITY_PERCENTAGE_ADDRESS_THRESHOLD = 0.33
+LEDR_STATES = 10
+LEDR_CITY_OR_COUNTY = 7
+LEDR_ADDRESS = 3
+SIMILARITY_ADDRESS_THRESHOLD = 1
+
 FREQUENT_WORDS = ['of', 
     'block', 
     'Street', 
@@ -94,7 +97,7 @@ def clean_data_geopy(data):
     
     return data.replace('county', '')
 
-def check_string_typo(string1, string2):
+def check_string_typo(string1, string2, len_typo_ratio = 10):
     """check if two strings are the same with at most a typo
     according to the Damerau-Levenshtein distance"""
     if pd.isnull(string1): return -1
@@ -102,7 +105,7 @@ def check_string_typo(string1, string2):
 
     edit_distance = jellyfish.damerau_levenshtein_distance(string1, string2)
     
-    sensibility = math.ceil(max(len(string1), len(string2))/EDIT_DISTANCE_RATIO)
+    sensibility = math.floor(max(len(string1), len(string2))/len_typo_ratio)
     return int(edit_distance <= sensibility)
 
 def check_address(address1, address2_geopy):
@@ -116,12 +119,13 @@ def check_address(address1, address2_geopy):
     address1_splitted = address1.split('|+|')
 
     cardinality_address1_in_address2 = 0
-    for word in address1_splitted:
-        if word in address2_geopy:
-            cardinality_address1_in_address2 += 1
+    address2_geopy_splitted = address2_geopy.replace(' ', ',').split(',')
+    for word_1 in address1_splitted:
+        for word_2 in address2_geopy_splitted:
+            if check_string_typo(word_1, word_2, LEDR_ADDRESS) >= 1:
+                cardinality_address1_in_address2 += 1
 
-    esito = cardinality_address1_in_address2/len(address1)
-    return int(cardinality_address1_in_address2 >= 1)
+    return int(cardinality_address1_in_address2 >= SIMILARITY_ADDRESS_THRESHOLD)
 
 def check_consistency_geopy(row):
     """check consistency between address in incidents dataset and geopy dataset
@@ -136,7 +140,7 @@ def check_consistency_geopy(row):
     state_geopy = clean_data_geopy(row['state_geopy']) # geopy data
 
     for s in state:
-        dummy = check_string_typo(s, state_geopy)
+        dummy = check_string_typo(s, state_geopy, LEDR_STATES)
         if state_consistency == 0:
             state_consistency = dummy
         if dummy == 1:
@@ -152,7 +156,7 @@ def check_consistency_geopy(row):
 
     for cc in incidents_couty_city:
         for i, val in enumerate(geopy_couty_city_town_village):
-            dummy = check_string_typo(cc, val)
+            dummy = check_string_typo(cc, val, LEDR_CITY_OR_COUNTY)
 
             if county_city_consistency == 0:
                 county_city_consistency = dummy
@@ -177,7 +181,7 @@ def check_consistency_additional_data(state, county, additional_data):
         clean_state = clean_data_geopy(state)
         for s in additional_data['State or equivalent'].unique():
             clean_state_wiki = clean_data_geopy(s)
-            if check_string_typo(clean_state, clean_state_wiki) == 1:
+            if check_string_typo(clean_state, clean_state_wiki, LEDR_CITY_OR_COUNTY) == 1:
                 state_consistency = True
                 state_current = s
                 break

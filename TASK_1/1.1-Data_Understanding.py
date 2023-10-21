@@ -99,10 +99,17 @@ data_check_consistency = pd.DataFrame()
 data_check_consistency[['state', 'city_or_county', 'address', 'latitude', 'longitude']] = incidents_data[[
     'state', 'city_or_county', 'address', 'latitude', 'longitude']]
 
+# %%
+row_to_print = []
+
+
+sorted(data_check_consistency['city_or_county'].unique())
+
+
 # %% [markdown]
 # An examination of these columns immediately reveals the following problems
 # - the 'city_or_county' field represents the two different concepts of county and city where the incident took place, which is not effective because it is difficult to understand when the field refers to the former, the latter or both
-# - Both the 'state' and 'bubcity_or_countyu' fields may contain non-unique references to the same abstract object, as is often the case in human language, which is full of synonyms, diminutives of names, etc.
+# - Both the 'state' and 'city_or_county' fields may contain non-unique references to the same abstract object, as is often the case in human language, which is full of synonyms, diminutives of names, etc.
 # - The 'address' field contains information that is not precise or uniform, and it is often useless or complicated to understand its content.
 #
 # Finally, the presence of errors or outliers is obvious, so that the need to check the consistency of the fields arises spontaneously, a task that is difficult to perform with a priori knowledge.
