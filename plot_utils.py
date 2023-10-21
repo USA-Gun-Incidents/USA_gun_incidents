@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import plotly.express as px
 from sklearn.inspection import DecisionBoundaryDisplay
+import matplotlib.dates as mdates
+import pandas as pd
 
 usa_code = {
     'Alabama': 'AL',
@@ -190,6 +192,9 @@ def map_matplotlib_plot(incidents_data, color_map, colors):
     plt.xticks([])
 
 def plot_clf_decision_boundary(clf, X_train, y_train, color_map):
+
+
+
     colors = []
     for c in y_train.astype(int):
         colors.append(color_map[c])
@@ -212,3 +217,22 @@ def plot_clf_decision_boundary(clf, X_train, y_train, color_map):
     plt.yticks([])
     plt.xticks([])
     plt.show()
+
+
+
+def get_box_plot_data(labels, bp):
+    rows_list = []
+
+    for i in range(len(labels)):
+        dict1 = {}
+        dict1['label'] = labels[i]
+        dict1['lower_whisker'] = mdates.num2date(bp['whiskers'][i*2].get_ydata()[1])
+        dict1['lower_quartile'] = mdates.num2date(bp['boxes'][i].get_ydata()[1])
+        dict1['median'] = mdates.num2date(bp['medians'][i].get_ydata()[1])
+        dict1['upper_quartile'] = mdates.num2date(bp['boxes'][i].get_ydata()[2])
+        dict1['upper_whisker'] = mdates.num2date(bp['whiskers'][(i*2)+1].get_ydata()[1])
+        
+        dict1['fliers'] = len(bp['fliers'][i].get_ydata())
+        rows_list.append(dict1)
+
+    return pd.DataFrame(rows_list)

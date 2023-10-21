@@ -17,6 +17,9 @@ import pandas as pd
 import random
 import seaborn as sns
 import os
+import sys
+sys.path.append(os.path.abspath('..\\')) # TODO: c'è un modo per farlo meglio?
+import plot_utils
 
 # %% [markdown]
 # We define constants and settings for the notebook:
@@ -61,30 +64,27 @@ def load_checkpoint(checkpoint_name):
 # %% [markdown]
 # ## Date
 
-# %%
-# TODO GIACOMO: ho copiato il codice che avevi messo nel notebook 'date_exploration.py' e cambiato i nomi dei dataframe 
-# per renderli consistenti con il resto del notebook, quando riesci puoi mettere dei Markdown per spiegare cosa fanno i 
-# vari blocchi di codice? Grazie!
+# %% [markdown]
+# We initially cast the dates to a format that is convenient to manipulate 
 
 # %%
-for col in incidents_data:
-    dummy = incidents_data[col].unique()
-    print( [ col, dummy, len(dummy)] )
-
-# %%
-incidents_data.drop('notes', axis=1, inplace=True)
 incidents_data['date'] = incidents_data.apply(lambda row : pd.to_datetime(row['date'], format="%Y-%m-%d"), axis = 1)
 
 # %% [markdown]
-# ### Checking semantic and syntactic concistency
+# check the result of the operation
 # 
 
 # %%
 print(type(incidents_data['date'][0]))
-incidents_data.head(10)
+incidents_data.head(2)
 
 # %% [markdown]
-# Date distribution before error correction
+# We can observe that all dates are syntactically correct
+# 
+# we check the distribution of dates for obvious errors and outliers
+
+# %% [markdown]
+# ### Distribution analysis
 
 # %%
 # plot range data
@@ -99,14 +99,14 @@ n_bin_2 = int(1 + math.log2(tot_row)) #Sturge's rule
 equal_freq_bins=incidents_data['date'].sort_values().quantile(np.arange(0,1, 1/n_bin)).to_list()
 equal_freq_bins2=incidents_data['date'].sort_values().quantile(np.arange(0,1, 1/n_bin_2)).to_list()
 
-fig, axs = plt.subplots(4, sharex=True, sharey=True)
+fig, axs = plt.subplots(2, sharex=True, sharey=True)
 fig.set_figwidth(14)
 fig.set_figheight(6)
 fig.suptitle('Dates distribution')
 
 colors_palette = iter(mcolors.TABLEAU_COLORS)
-bins = [n_bin, n_bin_2, equal_freq_bins, equal_freq_bins2]
-ylabels = ['fixed #bin', 'Sturge\'s rule', 'f. #bin density', 'S. rule density']
+bins = [n_bin, n_bin_2]
+ylabels = ['fixed binning', 'Sturge\'s rule']
 for i, ax in enumerate(axs):
     ax.hist(incidents_data['date'], bins=bins[i], color=next(colors_palette), density=True)
 
@@ -114,28 +114,13 @@ for i, ax in enumerate(axs):
     ax.grid(axis='y')
     ax.axvline(min_date, color='k', linestyle='dashed', linewidth=1)
     ax.axvline(max_date, color='k', linestyle='dashed', linewidth=1)
-axs[3].set_xlabel('dates')
+axs[1].set_xlabel('dates')
 
 
 print('Range data: ', incidents_data['date'].min(), ' - ', incidents_data['date'].max())
 
-# %%
-def get_box_plot_data(labels, bp):
-    rows_list = []
-
-    for i in range(len(labels)):
-        dict1 = {}
-        dict1['label'] = labels[i]
-        dict1['lower_whisker'] = mdates.num2date(bp['whiskers'][i*2].get_ydata()[1])
-        dict1['lower_quartile'] = mdates.num2date(bp['boxes'][i].get_ydata()[1])
-        dict1['median'] = mdates.num2date(bp['medians'][i].get_ydata()[1])
-        dict1['upper_quartile'] = mdates.num2date(bp['boxes'][i].get_ydata()[2])
-        dict1['upper_whisker'] = mdates.num2date(bp['whiskers'][(i*2)+1].get_ydata()[1])
-        
-        dict1['fliers'] = len(bp['fliers'][i].get_ydata())
-        rows_list.append(dict1)
-
-    return pd.DataFrame(rows_list)
+# %% [markdown]
+# We immediately notice that the dates are distributed over a period (highlighted by the dotted lines) ranging from 2013-01-01 to 2030-11-28, the first error that is easy to notice is that many data exceed the maximum limit of the feature
 
 # %%
 ticks = []
@@ -148,56 +133,24 @@ boxplot = plt.boxplot(x=mdates.date2num(incidents_data['date']), labels=['dates'
 print()
 plt.yticks(ticks, labels)
 plt.grid()
-dates_data = get_box_plot_data(['dates'], boxplot)
+dates_data = plot_utils.get_box_plot_data(['dates'], boxplot)
 dates_data
 
-# %%
-print(type(incidents_data['date']))
-
-# %%
-#inc_cleaned = inc.dropna(axis=0).copy()
-inc_cleaned = incidents_data.copy()
-t = inc_cleaned.dtypes
-for i, c in enumerate(inc_cleaned.columns):
-    if t[i] == 'object':
-        inc_cleaned.insert(len(inc_cleaned.columns), value=inc_cleaned[c].astype("category").cat.codes, column=c + ' codes')
-        inc_cleaned.drop(c, axis=1, inplace=True)
-inc_cleaned['date'] = mdates.date2num(inc_cleaned['date'])
-
-inc_cleaned.info()
+# %% [markdown]
+# From this graph we can see more clearly how the distribution of dates is concentrated between 2015-07-12 and 2017-08-09 (first and third quartiles respectively) and the values that can be considered correct end around 2018-03-31. This is followed by a large period with no pattern, and finally we find all the outliers previously defined as errors.
+# 
+# It is natural to deduce that one must proceed to correct the problems identified. However, it is difficult to define an error correction method because there are no obvious links between the date and the other features in the dataset, so missing or incorrect values cannot be inferred from them. We try to proceed in 2 ways:
+# - the first is to try to find the cause of the error and correct it, based on this assumption: the date could have been entered manually using a numeric keypad, so any errors found could be trivial typos, so let's try subtracting 10 from all dates that are out of range.
+# - The second is to replace the incorrect values with the mean or median of the distribution, accepting the inaccuracy if it does not affect the final distribution too much.
 
 # %% [markdown]
 # in order to calculate the correlation I convert all the data stored as objects into categories, and replace the value with the associated code (it would be better not to do this for numbers but there are errors)
 
-# %%
-corr = inc_cleaned.corr()
-corr.style.background_gradient(cmap='coolwarm')
-#TODO: si riesce a visualizzare tutto il dataframe senza dover scrollare l'immagine?
+# %% [markdown]
+# ### Error correction
 
 # %% [markdown]
-# computing the scatter matrix among the features most correlated with the date
-
-# %%
-corr['date']=corr['date'].apply(lambda x: abs(x))
-corr_dummy = corr.sort_values('date', ascending=False, axis=0).head(6)
-inc_cleaned[corr_dummy.index]
-scatter_axes = pd.plotting.scatter_matrix(inc_cleaned[corr_dummy.index], figsize=(10,10), alpha=0.2)
-for ax in scatter_axes.flatten():
-    ax.xaxis.label.set_rotation(90)
-    ax.yaxis.label.set_rotation(0)
-    ax.yaxis.label.set_ha('right')
-
-# %% [markdown]
-# All the dates are correct, both from a syntactic point of view, in fact they do not present null values ​​or illegible values. Looking at the graph we notice that there are incorrect values, greater than the maximum
-# 
-# 
-# Finally, we find no correlation of any kind between data and other values ​​in the dataset
-
-# %% [markdown]
-# 
-
-# %% [markdown]
-# ### Error correction and distribution analysis
+# Let us then try replacing the values in 3 different ways, the first by subtracting 10 years from all the wrong dates, the second by subtracting 11 and the third by replacing them with the median
 
 # %%
 #let's try to remove 10 years from the wrong dates, considering the error, a typo
@@ -208,11 +161,10 @@ def subtract_ten_if(x):
                 return x['date'] - pd.DateOffset(years=10)
         else: return x['date']
 
-def replace_with_random(x):
-        ret = x['date']
-        while ret > dates_data['upper_whisker'][0].to_datetime64(): 
-                ret = incidents_data['date'][random.choice(actual_index)]
-        return ret
+def subtract_eleven_if(x):
+        if x['date'] > dates_data['upper_whisker'][0].to_datetime64(): 
+                return x['date'] - pd.DateOffset(years=11)
+        else: return x['date']
 
 def replace_with_median(x):
         ret = x['date']
@@ -221,21 +173,27 @@ def replace_with_median(x):
         return ret
 
 mod1 = incidents_data.apply(lambda row : subtract_ten_if(row), axis = 1)
-mod2 = incidents_data.apply(lambda row : replace_with_random(row), axis = 1)
+mod2 = incidents_data.apply(lambda row : subtract_eleven_if(row), axis = 1)
 mod3 = incidents_data.apply(lambda row : replace_with_median(row), axis = 1)
 
 # %%
-print(len(mod1))
+print(len(incidents_data.loc[incidents_data['date'] > dates_data['upper_whisker'][0].to_datetime64()]))
+
+# %% [markdown]
+# We then observe the distributions thus obtained, in comparison with the original one
+# 
+# the dotted lines represent the low whiskers, the first quartile, the median, the third quartile and the high whiskers. 
 
 # %%
 # one binth for every month in the range
 fixed_bin = int((dates_data['upper_whisker'][0] - dates_data['lower_whisker'][0]).days / 30)
-
+fixed_bin_2 = int(1 + math.log2(tot_row)) #Sturge's rule
+'''
 prop_bin = []
 prop_bin.append(incidents_data['date'].sort_values(ascending=False).quantile(np.arange(0,1, 1/n_bin)).to_list())
 prop_bin.append(mod1.sort_values(ascending=False).quantile(np.arange(0,1, 1/n_bin)).to_list())
 prop_bin.append(mod2.sort_values(ascending=False).quantile(np.arange(0,1, 1/n_bin)).to_list())
-prop_bin.append(mod3.sort_values(ascending=False).quantile(np.arange(0,1, 1/n_bin)).to_list())
+prop_bin.append(mod3.sort_values(ascending=False).quantile(np.arange(0,1, 1/n_bin)).to_list())'''
 
 
 fig, axs = plt.subplots(4, 2, sharex=True, sharey=False)
@@ -254,8 +212,8 @@ for i, ax in enumerate(axs):
         ax[1].axvline(el, color='k', linestyle='dashed', linewidth=1, alpha=0.4)
         
     c = next(colors_palette)
-    ax[0].hist(dates[i], bins=fixed_bin, color=c, density=False)
-    ax[1].hist(dates[i], bins=prop_bin[i], color=c, density=True)
+    ax[0].hist(dates[i], bins=fixed_bin, color=c, density=True)
+    ax[1].hist(dates[i], bins=fixed_bin_2, color=c, density=True)
     
 
     ax[0].set_ylabel(ylabels[i])
@@ -263,9 +221,13 @@ for i, ax in enumerate(axs):
     ax[1].grid(axis='y')
     
 plt.show()   
+print('Totale errori:', error_count)
+
+# %% [markdown]
+# dei metodi utilizzati, nessuno risulta soddisfacente perché tutti implementano o grandi variazioni di distribuzione, procedere con altre strategie invece potrebbe rendere la feature inattendibile, quindi procederemo rimuovendo tutti i valori errati. Notiamo anche che il totale degli errori è 23008, il 
 
 # %%
-
+#TODO: GECO!!!! Continua a scrivere da qui
 dates_num = []
 for i in dates:
     dates_num.append(mdates.date2num(i))

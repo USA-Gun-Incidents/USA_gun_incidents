@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Geographic features
 
@@ -69,33 +68,33 @@ geopy_sample.keys()
 
 # %% [markdown]
 # ### GeoPy Keys:
-#
+# 
 # - place_id: identificatore numerico univoco del luogo.
-#
+# 
 # - licence: licenza per uso dei dati geografici.
-#
+# 
 # - osm_type: tipo di oggetto OpenStreetMap (OSM) al quale appartiene la posizione ("node" per un punto, "way" per una strada o "relation" per una relazione tra elementi).
-#
+# 
 # - osm_id: identificatore univoco assegnato all'oggetto OSM.
-#
+# 
 # - lat + lon: latitudine e longitudine della posizione.
-#
+# 
 # - class: classificazione della posizione (es. "place").
-#
+# 
 # - type: classificazione della posizione (es. "city").
-#
+# 
 # - place_rank: Rango o la priorità del luogo nella gerarchia geografica (quanto una posizione è significativa).
-#
+# 
 # - importance: Valore numerico, indica l'importanza della posizione rispetto ad altre posizioni.
-#
+# 
 # - addresstype: tipo di indirizzo (es. "house", "street", "postcode")
-#
+# 
 # - name: nome del luogo (es.nome di una città o di una strada).
-#
+# 
 # - display_name: rappresentazione leggibile per l'utente della posizione, spesso formattata come un indirizzo completo.
-#
+# 
 # - address: indirizzo dettagliato.
-#
+# 
 # - boundingbox: elenco di quattro coordinate (latitudine e longitudine) che definiscono un rettangolo che racchiude la posizione (è un'approx dell'area coperta dalla posizione).
 
 # %% [markdown]
@@ -108,11 +107,11 @@ geopy_sample.keys()
 #     - "state"
 # - class and/or type: to classify incident's place
 # - adresstype: to classify incident's place
-#
+# 
 # Se si vuole fare check per luoghi che corrispondono tra loro:
 # - osm_id
 # - boundingbox
-#
+# 
 
 # %% [markdown]
 # ## Import counties data from Wikipedia 
@@ -276,20 +275,20 @@ print('Number of not nan: ', len(only_nan_coord['county']) - only_nan_coord['cou
 # %%
 dummy_data = clean_geo_data[clean_geo_data['latitude'].notna()]
 print(len(dummy_data))
-plot_utils.map_plotly_plot(dummy_data, 'state')
+plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 
 # %%
-plot_utils.map_plotly_plot(clean_geo_data[(clean_geo_data['latitude'].notna()) & (clean_geo_data['state'] == 'California')], 'county')
+plot_utils.plot_scattermap_plotly(clean_geo_data[(clean_geo_data['latitude'].notna()) & (clean_geo_data['state'] == 'California')], 'county')
 
 # %%
 dummy_data = clean_geo_data[(clean_geo_data['latitude'].notna()) & (clean_geo_data['city'].isna())]
 print(len(dummy_data))
-plot_utils.map_plotly_plot(dummy_data, 'state')
+plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 
 # %%
 dummy_data = clean_geo_data[(clean_geo_data['latitude'].notna()) & (clean_geo_data['city'].isna()) & (clean_geo_data['county'].isna())]
 print(len(dummy_data))
-plot_utils.map_plotly_plot(dummy_data, 'state')
+plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 
 # %%
 print(clean_geo_data.columns)
@@ -305,24 +304,24 @@ print(clean_geo_data.columns)
 # %% [markdown]
 # # FINAL EVALUATIONS:
 # We divided the dataset into several groups depending on what information we were able to demonstrate consistent between the latitude, longitude, state, county, and city fields. And we did this by also making use of the address field, which, however, we decided not to use further because it is not very identifying of the line and is too variable. Finally, we defined strategies to be applied on these groups to fill in the missing data (considered erroneous or missing from the original dataset) in a more or less effective way according to the row information.
-#
+# 
 # We now report the division into disjointed groups in which we indicate the size
-#
+# 
 # ---------- GOOD GROUPS ----------
 # * 174796 = The completely consistent and final rows of the dataset.
 # * 26635 = The rows in which only the city is missing that can be inferred easily from the location (k-nn)
 # * 15000 = The rows in which only the county is missing that can be inferred easily from the location (k-nn)
 # * 33 = The rows where city and county are missing, also in this group the missing information can be inferred from the location (All clustered close to Baltimore)
-#
+# 
 # ---------- BAD GROUPS ----------
 # * 3116 = The rows where latitude and longitude and city are missing, they can be inferred (not faithfully) from the pair county-state
 # * 19844 = The rows in which only the state field is present. difficult to retrieve
-#
+# 
 # missing combinations are not present in the dataset
-#
+# 
 # # Final considerations
 # as many as 216464 lines are either definitive or can be derived with a good degree of fidelity. the remainder must be handled carefully\
-#
+# 
 # CAUTION: EVALUATE THE CHOSEN TRESHOULDS
 
 # %%

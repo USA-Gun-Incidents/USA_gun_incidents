@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 import os
 dirname = os.path.dirname(' ')
-data = pd.read_csv(os.path.join(dirname, 'data/post_proc/final_incidents.csv'), index_col=0)
+data = pd.read_csv(os.path.join(dirname, 'data/post_proc/final_incidents.csv'), index_col=0, low_memory=False)
 
 # %%
 X_train = np.concatenate((
@@ -57,5 +57,4 @@ data.loc[
 # %%
 data.to_csv(os.path.join(dirname, 'data/post_proc/final_incidents_KNN.csv'))
 
-# %%
-data.
+
