@@ -514,13 +514,13 @@ def set_gender_age_consistent_data(row):
     # gender and participants cardinality data
     if consistency_gender:
         new_data_row.loc[['n_males']] = row['n_males']
-        new_data_row.loc[['n_females']] = row['n_females']
-        if consistency_n_participant:
-            new_data_row.loc[['n_participants']] = row['n_participants']
-            new_data_row.loc[['n_killed']] = row['n_killed']
-            new_data_row.loc[['n_injured']] = row['n_injured']
-            new_data_row.loc[['n_arrested']] = row['n_arrested']
-            new_data_row.loc[['n_unharmed']] = row['n_unharmed']
+        new_data_row.loc[['n_females']] = row['n_females']   
+    if consistency_n_participant:
+        new_data_row.loc[['n_participants']] = row['n_participants']
+        new_data_row.loc[['n_killed']] = row['n_killed']
+        new_data_row.loc[['n_injured']] = row['n_injured']
+        new_data_row.loc[['n_arrested']] = row['n_arrested']
+        new_data_row.loc[['n_unharmed']] = row['n_unharmed']
     elif (row['consistency_participant1'] and row['consistency_participants1_wrt_n_participants'] and
             row['participant1_gender_consistency_wrt_all_data']):
         if not consistency_gender:
