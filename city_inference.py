@@ -11,9 +11,18 @@ data = pd.read_csv(os.path.join(dirname, 'data/post_proc/final_incidents_KNN.csv
 
 # %%
 city_data_struct = {}
+print(data.loc[data['city'] == 'Detroit']['latitude'].mean())
+
 
 for city in data['city'].unique():
-    city_data_struct[city] = {'centroid':0, 'count':0, 'max_dist':-math.inf, 'min_dist':math.inf}
-    for i, row in data.loc[['city' == city]].iterrows():
-        city_data_struct[]
+    city_data_struct[city] = {}
+    city_data_struct[city]['centroid_latitude'] = data.loc[data['city'] == city]['latitude'].mean()
+    city_data_struct[city]['centroid_longitude'] = data.loc[data['city'] == city]['longitude'].mean()
+    city_data_struct[city]['distance_array'] = []
+    for lat, long in zip(data.loc[data['city'] == city]['latitude'], data.loc[data['city'] == city]['longitude']):
+        city_data_struct[city]['distance_array'].append(math.dist([lat, long], city_data_struct[city]['centroid_latitude'], city_data_struct[city]['centroid_longitude']))
+    city_data_struct[city]['distance_array'] = sorted(city_data_struct[city]['distance_array'])
+
+print(city_data_struct)
+
 

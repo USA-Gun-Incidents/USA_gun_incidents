@@ -1,10 +1,12 @@
+# %%
 import pandas as pd
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 import os
-dirname = os.path.dirname(__file__)
-data = pd.read_csv(os.path.join(dirname, 'data/post_proc/final_incidents.csv'))
+dirname = os.path.dirname(' ')
+data = pd.read_csv(os.path.join(dirname, 'data/post_proc/final_incidents.csv'), index_col=0)
 
+# %%
 X_train = np.concatenate((
     data[
         (data['latitude'].notna()) &
@@ -37,17 +39,23 @@ y_train = data[
     (data['longitude'].notna())
 ]['county'].values
 
+# %%
 K = 3
 knn_clf = KNeighborsClassifier(n_neighbors=K)
 knn_clf.fit(X_train, y_train)
 knn_pred = knn_clf.predict(X_test)
 
-data['KNN_county'] = data['county']
+# %%
+#data['KNN_county'] = data['county']
 data.loc[
     (data['county'].isna()) &
     (data['latitude'].notna()) & 
     (data['longitude'].notna()),
-    'KNN_county'
+    'county'
 ] = knn_pred
 
-data = pd.read_csv(os.path.join(dirname, 'data/post_proc/final_incidents_KNN.csv'))
+# %%
+data.to_csv(os.path.join(dirname, 'data/post_proc/final_incidents_KNN.csv'))
+
+# %%
+data.
