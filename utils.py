@@ -492,6 +492,8 @@ def check_age_gender_data_consistency(row):
 
     return clean_data_row
 
+#TODO: controllare correttezza funzione
+#TODO: magari renderla più bella
 def set_gender_age_consistent_data(row):
     """return a row with consistent data"""
     # initialize new_data_row

@@ -17,12 +17,14 @@ import numpy as np
 import pandas as pd
 import random
 import seaborn as sns
+import os
 
 # %% [markdown]
 # We define constants and settings for the notebook:
 
 # %%
-DATA_FOLDER_PATH = 'data/'
+DIRNAME = os.path.dirname(' ')
+DATA_FOLDER_PATH = os.path.join(DIRNAME, 'data')
 
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
@@ -31,7 +33,7 @@ pd.set_option('max_colwidth', None)
 # We read the dataset and drop the duplicates rows:
 
 # %%
-incidents_path = DATA_FOLDER_PATH + 'incidents.csv'
+incidents_path = os.path.join(DATA_FOLDER_PATH, 'incidents.csv')
 incidents_data = pd.read_csv(incidents_path, low_memory=False)
 
 incidents_data.drop_duplicates(inplace=True)
