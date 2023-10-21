@@ -1129,14 +1129,14 @@ incidents_data.head()
 elections_data_copy = elections_data.copy()
 elections_data_copy['year'] = elections_data_copy['year'] + 1
 elections_data = pd.concat([elections_data, elections_data_copy], ignore_index=True)
-incidents_data = incidents_data.merge(elections_data, on=['state', 'year'], how='left')
+incidents_data = incidents_data.merge(elections_data, on=['state', 'year', 'congressional_district'], how='left')
 incidents_data.head()
 
 # %% [markdown]
 # We re-order the columns and we save the cleaned dataset:
 
 # %%
-incidents_data = incidents_data[
+incidents_data = incidents_data[[
     'date',
     'state',
     'px_code',
@@ -1171,7 +1171,7 @@ incidents_data = incidents_data[
     'candidatevotes',
     'totalvotes',
     'candidateperc'
-    ]
+    ]]
 #incidents_data.to_csv(DATA_FOLDER_PATH + 'incidents_cleaned.csv')
 
 # %%
