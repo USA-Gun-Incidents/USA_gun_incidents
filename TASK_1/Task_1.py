@@ -15,8 +15,7 @@ import sys
 sys.path.append(os.path.abspath('..')) # TODO: c'è un modo per farlo meglio?
 from plot_utils import *
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.inspection import DecisionBoundaryDisplay
-from sklearn.metrics import confusion_matrix
+from geopy import distance as geopy_distance
 
 # %% [markdown]
 # We define constants and settings for the notebook:
@@ -872,12 +871,12 @@ incidents_data[
 incidents_data[incidents_data['congressional_district'].notnull()].groupby(['latitude', 'longitude'])['congressional_district'].unique()[lambda x: x.str.len() > 1]
 
 # %% [markdown]
-# All these points are probably errors, due to the fact that those points are near the border between two congressional districts. We correct them setting the most frequent value for the attribute `congressional_district` (setting that value also for the entries with missing values):
+# All these points are probably errors, due to the fact that they are near the border between two congressional districts. We correct them setting the most frequent value for the attribute `congressional_district` (setting that value also for the entries with missing values):
 
 # %%
 corrected_congr_districts = incidents_data[
-    incidents_data['congressional_district'].notnull()
-    ].groupby(['latitude', 'longitude'])['congressional_district'].agg(lambda x: x.value_counts().index[0]) # TODO: stesso val di nulli e non sembra dar priorità ai non nulli
+    ~incidents_data['congressional_district'].isna()
+    ].groupby(['latitude', 'longitude'])['congressional_district'].agg(lambda x: x.value_counts().index[0])
 incidents_data = incidents_data.merge(corrected_congr_districts, on=['latitude', 'longitude'], how='left')
 # where latitude and longitude are null, keep the original value
 incidents_data['congressional_district_y'].fillna(incidents_data['congressional_district_x'], inplace=True)
@@ -967,7 +966,15 @@ incidents_data[incidents_data['congressional_district'].notnull()].groupby(
 # As a first step, we plot on a map the incidents that happened in Alabama, coloring them according to the value of the attribute `congressional_district`:
 
 # %%
-plot_scattermap_plotly(incidents_data[incidents_data['state']=='ALABAMA'], attribute='congressional_district', width=500, height=600)
+plot_scattermap_plotly(
+    incidents_data[incidents_data['state']=='ALABAMA'],
+    attribute='congressional_district',
+    width=500,
+    height=600,
+    zoom=5.5,
+    title="Alabama incidents by Congressional Districts",
+    legend_title="Congressional District"
+)
 
 # %% [markdown]
 # Many points with missing values for the attribute `congressional_district` (those in light green) are very near to other points for which the congressional district is known. We could use KNN classifier to recover those values. To do so, we define a function to prepare the data for the classification task:
@@ -1008,11 +1015,19 @@ def build_X_y_for_district_inference(incidents_data):
     return X_train, X_test, y_train
 
 # %% [markdown]
+# We define the function to compute the geodesic distance to pass to the KNN classifier:
+
+# %%
+def geodesic_distance(point1, point2):
+    return geopy_distance.geodesic(point1, point2).km
+
+
+# %% [markdown]
 # Now we are ready to apply the classifier (using K=3): TODO: k=1?
 
 # %%
 X_train, X_test, y_train = build_X_y_for_district_inference(incidents_data[incidents_data['state']=="ALABAMA"])
-knn_clf = KNeighborsClassifier(n_neighbors=3)
+knn_clf = KNeighborsClassifier(n_neighbors=3, metric=geodesic_distance)
 knn_clf.fit(X_train, y_train)
 knn_pred = knn_clf.predict(X_test)
 incidents_data['KNN_congressional_district'] = incidents_data['congressional_district']
@@ -1028,7 +1043,27 @@ incidents_data.loc[
 # We plot the results:
 
 # %%
-plot_scattermap_plotly(incidents_data[incidents_data['state']=='ALABAMA'], attribute='KNN_congressional_district', width=500, height=600)
+plot_scattermap_plotly(
+    incidents_data[incidents_data['state']=='ALABAMA'],
+    attribute='KNN_congressional_district',
+    width=500,
+    height=600,
+    zoom=5.5,
+    title="Alabama incidents by Congressional Districts",
+    legend_title="Congressional District"
+)
+
+# %%
+from pyproj import Transformer
+transformer = Transformer.from_crs("EPSG:4326", "EPSG:26929", always_xy=True)
+
+X_train_converted = []
+
+for i in range(X_train.shape[0]):
+    x, y = transformer.transform(X_train[i][0], X_train[i][1])
+    X_train_converted.append([x,y])
+
+X_train_converted = np.array(X_train_converted)
 
 # %% [markdown]
 # To improve the visualization, we plot on the map the decision boundaries of the classifier:
@@ -1043,7 +1078,9 @@ alabama_color_map = {
     6:'blue',
     7:'purple'
 }
-plot_clf_decision_boundary(knn_clf, X_train, y_train, alabama_color_map)
+knn_eu_clf = KNeighborsClassifier(n_neighbors=3, metric='euclidean')
+knn_eu_clf.fit(X_train_converted, y_train)
+plot_clf_decision_boundary(knn_eu_clf, X_train_converted, y_train, alabama_color_map, "KNN Alabama borders")
 
 # %% [markdown]
 # We can now compare the boundaries built by the classifier with the actual boundaries (this map was taken [here](https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif/lossless-page1-1256px-United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif.png)):
@@ -1051,15 +1088,10 @@ plot_clf_decision_boundary(knn_clf, X_train, y_train, alabama_color_map)
 # <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif/lossless-page1-1256px-United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif.png" alt="Alt Text" width="600"/>
 
 # %% [markdown]
-# The result is satisfactory. However, it is important to highlight that if there are no examples available for a specific district, we won't assign the correct label to the points in that districts. We check how many congressional districts have no examples:
+# The result is satisfactory. However, it is important to highlight that if there are no examples available for a specific district, we won't assign the correct label to the points in that districts. We check how many congressional districts have 2 or less examples:
 
 # %%
-elections_data[
-    (elections_data['year'].between(2010, 2020, inclusive='right')) &
-    (~elections_data[['state', 'congressional_district']].apply(tuple, axis=1).isin(
-        incidents_data[(incidents_data['latitude'].notna()) & (incidents_data['longitude'].notna())][['state', 'congressional_district']].apply(tuple, axis=1)))
-    ][['state', 'year', 'congressional_district']].shape[0]
-
+incidents_data.groupby(['state', 'congressional_district']).size()[lambda x: x <= 2]
 # %% [markdown]
 # By the way, missclassification can still occurr, depending on the position of the available examples w.r.t the position of the points to classify. Aware of this limitation, we proceed to apply this method to the other states:
 

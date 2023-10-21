@@ -75,7 +75,6 @@ def plot_usa_map(
     geo_usa = geopandas.read_file(borders_path)
     geo_merge=geo_usa.merge(df, left_on='NAME', right_on=state_col)
     
-    #fig, continental_ax = plt.subplots(figsize=(20, 10))
     alaska_ax = ax.inset_axes([-128,22,16,8], transform=ax.transData)
     hawaii_ax = ax.inset_axes([-110,22.8,8,5], transform=ax.transData)
 
@@ -158,13 +157,9 @@ def plot_usa_map(
     for ax in [ax, alaska_ax, hawaii_ax]:
         ax.set_yticks([])
         ax.set_xticks([])
-    
-    #return ax
-    #fig.show()
-    #fig.tight_layout()
 
 
-def plot_scattermap_plotly(data, attribute, zoom=6, height=800, width=800):
+def plot_scattermap_plotly(data, attribute, zoom=6, height=800, width=800, title=None, legend_title=None):
     fig = px.scatter_mapbox(
         color=data[attribute].astype(str),
         lat=data['latitude'], 
@@ -172,10 +167,15 @@ def plot_scattermap_plotly(data, attribute, zoom=6, height=800, width=800):
         zoom=zoom, 
         height=height,
         width=width,
-        text=data[attribute].astype(str)
+        title=title,
+        text=data[attribute].astype(str),
+        category_orders={'color': sorted(data[attribute].astype(str).unique())}
     )
-    fig.update_layout(mapbox_style="open-street-map")
-    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    fig.update_layout(
+        mapbox_style="open-street-map",
+        margin={"r":0,"t":100,"l":0,"b":0},
+        legend_title_text=legend_title
+    )
     fig.show()
 
 def map_matplotlib_plot(incidents_data, color_map, colors):
@@ -191,10 +191,7 @@ def map_matplotlib_plot(incidents_data, color_map, colors):
     plt.yticks([])
     plt.xticks([])
 
-def plot_clf_decision_boundary(clf, X_train, y_train, color_map):
-
-
-
+def plot_clf_decision_boundary(clf, X_train, y_train, color_map, title=None):
     colors = []
     for c in y_train.astype(int):
         colors.append(color_map[c])
@@ -214,6 +211,8 @@ def plot_clf_decision_boundary(clf, X_train, y_train, color_map):
         edgecolor="k"
     )
     plt.axis('scaled')
+    plt.axis('scaled')
+    plt.title(title)
     plt.yticks([])
     plt.xticks([])
     plt.show()
