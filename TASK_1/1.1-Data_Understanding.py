@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Task 1.1 Data Understanding
 
@@ -15,12 +14,13 @@ import os
 import sys
 sys.path.append(os.path.abspath('..')) # TODO: c'è un modo per farlo meglio?
 from plot_utils import *
+from utils import *
 
 # %% [markdown]
 # We define constants and settings for the notebook:
 
 # %%
-# %matplotlib inline
+%matplotlib inline
 
 DATA_FOLDER_PATH = '../data/'
 
@@ -45,9 +45,9 @@ incidents_data.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about gun incidents in the USA.
-#
+# 
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas dtype for later analysis.
-#
+# 
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :-----------: |
 # | 0 | date | Numeric (Interval) | Date of incident occurrence| datetime |
@@ -87,7 +87,7 @@ incidents_data.head(n=2)
 
 # %% [markdown]
 # The first group addressed concerns fields describing the geographical location of the recorded incident, and includes:
-#
+# 
 # - state
 # - city_or_county
 # - address
@@ -100,18 +100,14 @@ data_check_consistency[['state', 'city_or_county', 'address', 'latitude', 'longi
     'state', 'city_or_county', 'address', 'latitude', 'longitude']]
 
 # %%
-row_to_print = []
-
-
-sorted(data_check_consistency['city_or_county'].unique())
-
+data_check_consistency.drop(['latitude', 'longitude'], axis=1).loc[[1, 2, 14, 19, 1595, 23900, 70906, 114746]]
 
 # %% [markdown]
 # An examination of these columns immediately reveals the following problems
 # - the 'city_or_county' field represents the two different concepts of county and city where the incident took place, which is not effective because it is difficult to understand when the field refers to the former, the latter or both
-# - Both the 'state' and 'city_or_county' fields may contain non-unique references to the same abstract object, as is often the case in human language, which is full of synonyms, diminutives of names, etc.
+# - The 'city_or_county' feature may contain non-unique references to the same abstract object, as is often the case in human language, which is full of synonyms, diminutives of names, etc.
 # - The 'address' field contains information that is not precise or uniform, and it is often useless or complicated to understand its content.
-#
+# 
 # Finally, the presence of errors or outliers is obvious, so that the need to check the consistency of the fields arises spontaneously, a task that is difficult to perform with a priori knowledge.
 
 # %% [markdown]
@@ -146,33 +142,33 @@ geopy_sample = {
 
 # %% [markdown]
 # GeoPy keys:
-#
+# 
 # - place_id: unique numeric place identifier.
-#
+# 
 # - licence: licence to use the geographic data.
-#
+# 
 # - osm_type: type of OpenStreetMap (OSM) object the place belongs to ('node' for a point, 'way' for a road or 'relation' for a relation between elements).
-#
+# 
 # - osm_id: unique identifier assigned to the OSM object.
-#
+# 
 # - lat + lon: Latitude and longitude of the location.
-#
+# 
 # - class: classification of the location (e.g. 'place').
-#
+# 
 # - type: Classification of the location (e.g. 'city').
-#
+# 
 # - place_rank: Rank or priority of the place in the geographical hierarchy (how important a place is).
-#
+# 
 # - importance: Numerical value indicating the importance of the place in relation to other places.
-#
+# 
 # - addresstype: type of address (e.g. 'house', 'street', 'postcode')
-#
+# 
 # - name: name of place (e.g. name of town or street)
-#
+# 
 # - display_name: user-readable representation of the location, often formatted as a full address.
-#
+# 
 # - address: detailed address.
-#
+# 
 # - boundingbox: list of four coordinates (latitude and longitude) that define a rectangle surrounding the location (this is an approximation of the area covered by the location).
 
 # %% [markdown]
@@ -204,7 +200,7 @@ incidents_data.info()
 # - `congressional_district`, `state_house_district`, `state_senate_district`, `participant_age1`, `n_males`, `n_females`, `n_arrested`, `n_unharmed`, `n_participants` are stored as `float64` while should be `int64`
 # - `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` are stored as `object` while should be `int64`, this probably indicates the presence of out of syntactic errors (not in the domain)
 # - the presence of missing values within many attributes; the only attributes without missing values are the following: `date`, `state`, `city_or_county`, `n_killed`, `n_injured`, `n_participants`
-#
+# 
 # We cast the attributes to the correct type:
 
 # %%
@@ -292,15 +288,15 @@ poverty_data.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about the poverty percentage for each USA state and year.
-#
+# 
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas dtype for later analysis.
-#
+# 
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :------------: |
 # | 0 | state | Categorical (Nominal) | Name of the state | object |
 # | 1 | year | Numeric (Interval) | Year | int64 |
 # | 2 | povertyPercentage | Numeric (Ratio) | Poverty percentage for the corresponding state and year | float64 |
-#
+# 
 
 # %% [markdown]
 # We display a concise summary of the DataFrame:
@@ -361,7 +357,7 @@ poverty_data.loc[
 
 # %% [markdown]
 # Since the tuple <`state`, `year`> uniquely identifies each row we can conclude that there are no missing rows.
-#
+# 
 # Now, we count how many rows have missing values:
 
 # %%
@@ -375,7 +371,7 @@ poverty_data[poverty_data['povertyPercentage'].isnull()]['year'].unique()
 
 # %% [markdown]
 # As expected we have no data from 2012. Later we will fix this issue.
-#
+# 
 # Now we visualize the distribution of poverty percentage for each state.
 
 # %%
@@ -420,7 +416,7 @@ plt.ylabel('Average Poverty (%)')
 
 # %% [markdown]
 # It is evident that New Hampshire's average poverty rate is markedly lower than that of the other states, whereas Mississippi's average poverty rate is notably higher than the rest. 
-#
+# 
 # To inspect and compare the poverty percentage of each state over the year, we plot an interactive line chart:
 
 # %%
@@ -434,7 +430,7 @@ fig.show()
 
 # %% [markdown]
 # TODO: spostare in preparation.
-#
+# 
 # To imputate the missing data from 2012, we calculate the average of the `povertyPercentage` values for the preceding and succeeding year.
 
 # %%
@@ -527,9 +523,9 @@ elections_data.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about the winner of the congressional elections in the USA, for each year, state and congressional district.
-#
+# 
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas `dtype` for later analysis.
-#
+# 
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :------------: |
 # | 0 | year | Numeric (Interval) | Year | int64 |
@@ -585,7 +581,7 @@ print(f'Number of states: {states.size}')
 
 # %% [markdown]
 # All the states (District og Columbia included) are present.
-#
+# 
 # We now display the states and the years for which there are missing rows:
 
 # %%
@@ -604,7 +600,7 @@ elections_data[elections_data['state']=='DISTRICT OF COLUMBIA']
 
 # %% [markdown]
 # Missing values are probably due to the fact that District of Columbia is a non voting delegate district. Anyway, we gathered the missing values from Wikipedia. We noticed that as for the 2020 elecetions, the number of votes received by the winning party coincides, but the number of totalvotes is different (see [here](https://en.wikipedia.org/wiki/2020_United_States_House_of_Representatives_election_in_the_District_of_Columbia)). To be consistent with the other data, we replace the totalvotes value from 2020 with the one from Wikipedia.
-#
+# 
 # Now we import those data:
 
 # %%
@@ -619,7 +615,7 @@ dc_elections_data.info()
 
 # %% [markdown]
 # The inferred types are correct.
-#
+# 
 # We now merge the two dataframes:
 
 # %%
@@ -660,7 +656,7 @@ plt.tight_layout()
 
 # %% [markdown]
 # We can observe that for both total and candidate votes Florida, Louisian and Oklahoma have lower outliers, while Maine has an upper outlier. 
-#
+# 
 # We display the rows relative to Maine:
 
 # %%
@@ -716,7 +712,7 @@ plt.tight_layout()
 
 # %% [markdown]
 # It is evident that in some states the number of votes fluctuates significantly from year to year.
-#
+# 
 # We get the unique names of the parties for the years of interest:
 
 # %%
@@ -747,7 +743,7 @@ elections_data[(elections_data['candidateperc']==100) & (elections_data['year']>
 
 # %% [markdown]
 # Wikipedia reports the same data, in those cases there was not an opponent party.
-#
+# 
 # The histogram above also shows that in some disticts the winner party obtained less than 50% of the votes. We display those districts:
 
 # %%
