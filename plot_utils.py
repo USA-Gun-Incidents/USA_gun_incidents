@@ -162,15 +162,15 @@ def plot_usa_map(
     #fig.tight_layout()
 
 
-def map_plotly_plot(incidents_data, attribute):
+def plot_scattermap_plotly(data, attribute, zoom=6, height=800, width=800):
     fig = px.scatter_mapbox(
-        color=incidents_data[attribute].astype(str),
-        lat=incidents_data['latitude'], 
-        lon=incidents_data['longitude'],
-        zoom=6, 
-        height=800,
-        width=800,
-        text=incidents_data[attribute].astype(str)
+        color=data[attribute].astype(str),
+        lat=data['latitude'], 
+        lon=data['longitude'],
+        zoom=zoom, 
+        height=height,
+        width=width,
+        text=data[attribute].astype(str)
     )
     fig.update_layout(mapbox_style="open-street-map")
     fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
@@ -189,40 +189,6 @@ def map_matplotlib_plot(incidents_data, color_map, colors):
     plt.yticks([])
     plt.xticks([])
 
-def build_X_y_for_district_inference(incidents_data):
-    X_train = np.concatenate((
-        incidents_data[
-            (incidents_data['congressional_district'].notna()) &
-            (incidents_data['latitude'].notna()) & 
-            (incidents_data['longitude'].notna())
-            ]['longitude'].values.reshape(-1, 1),
-        incidents_data[
-            (incidents_data['congressional_district'].notna()) & 
-            (incidents_data['latitude'].notna()) & 
-            (incidents_data['longitude'].notna())
-            ]['latitude'].values.reshape(-1, 1)),
-        axis=1
-    )
-    X_test = np.concatenate((
-        incidents_data[
-            (incidents_data['congressional_district'].isna()) & 
-            (incidents_data['latitude'].notna()) & 
-            (incidents_data['longitude'].notna())
-            ]['longitude'].values.reshape(-1, 1),
-        incidents_data[
-            (incidents_data['congressional_district'].isna()) &
-            (incidents_data['latitude'].notna()) & 
-            (incidents_data['longitude'].notna())
-            ]['latitude'].values.reshape(-1, 1)),
-        axis=1
-    )
-    y_train = incidents_data[
-        (incidents_data['congressional_district'].notna()) & 
-        (incidents_data['latitude'].notna()) & 
-        (incidents_data['longitude'].notna())
-        ]['congressional_district'].values
-    return X_train, X_test, y_train
-
 def plot_clf_decision_boundary(clf, X_train, y_train, color_map):
     colors = []
     for c in y_train.astype(int):
@@ -233,7 +199,7 @@ def plot_clf_decision_boundary(clf, X_train, y_train, color_map):
         X_train,
         response_method="predict",
         colors="lime",
-        plot_method="contour" # "pcolormesh", "pcolormesh"
+        plot_method="contour" # ‘contourf’, ‘pcolormesh’
     )
     
     disp.ax_.scatter(
