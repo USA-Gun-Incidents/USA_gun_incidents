@@ -158,12 +158,11 @@ def plot_usa_map(
         ax.set_yticks([])
         ax.set_xticks([])
 
-
-def plot_scattermap_plotly(data, attribute, zoom=6, height=800, width=800, title=None, legend_title=None):
+def plot_scattermap_plotly(data, attribute, zoom=6, height=800, width=800, title=None, legend_title=None, x_column='latitude', y_column='longitude'):
     fig = px.scatter_mapbox(
         color=data[attribute].astype(str),
-        lat=data['latitude'], 
-        lon=data['longitude'],
+        lat=data[x_column], 
+        lon=data[y_column],
         zoom=zoom, 
         height=height,
         width=width,

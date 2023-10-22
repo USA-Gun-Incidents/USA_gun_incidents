@@ -30,9 +30,10 @@ incidents_data.info()
 # select only relevant columns from incidents_data
 geo_data = incidents_data[['date', 'state', 'city_or_county', 'address', 'latitude', 'longitude',
        'congressional_district', 'state_house_district', 'state_senate_district']]
+geo_data
 
 # %%
-geo_data
+
 
 # %% [markdown]
 # ## GeoPy Data Description
@@ -132,6 +133,11 @@ additional_data.dtypes
 data_check_consistency = pd.DataFrame(columns=['state', 'city_or_county', 'address', 'latitude', 'longitude', 'display_name', 
     'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 'importance_geopy', 'addresstype_geopy', 
     'coord_presence'])
+data_check_consistency[['state', 'city_or_county', 'address', 'latitude', 'longitude']] = incidents_data[[
+    'state', 'city_or_county', 'address', 'latitude', 'longitude']]
+data_check_consistency[['address_geopy', 'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 
+    'importance_geopy', 'addresstype_geopy', 'coord_presence']] = geopy_data[['display_name', 'village', 'town', 'city', 
+    'county', 'state', 'importance', 'addresstype', 'coord_presence']]
 
 # %%
 data_check_consistency[['state', 'city_or_county', 'address', 'latitude', 'longitude']] = incidents_data[[
@@ -201,7 +207,7 @@ clean_geo_data = data_check_consistency.apply(lambda row:
 
 # %%
 final_incidents = clean_geo_data.drop(['state_consistency', 'county_consistency', 'address_consistency'], axis=1)
-#clean_geo_data.to_csv(FOLDER + 'post_proc/new_columns_geo.csv', index=False)
+clean_geo_data.to_csv(FOLDER + 'post_proc/geo_data_stats_columns.csv', index=False)
 final_incidents.to_csv(os.path.join(FOLDER,'post_proc/final_incidents.csv'))
 
 # %%
