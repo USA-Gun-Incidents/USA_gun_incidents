@@ -27,6 +27,12 @@ import plot_utils
 # %%
 DIRNAME = os.path.dirname(' ')
 DATA_FOLDER_PATH = os.path.join(DIRNAME, 'data')
+class counter:
+    count = 0
+    def get(self):
+        self.count += 1
+        return self.count - 1
+RANDOM_STATE = counter()
 
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
@@ -58,8 +64,15 @@ CHECKPOINT_FOLDER_PATH = 'data/checkpoints/'
 def checkpoint(df, checkpoint_name):
     df.to_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv')
 
-def load_checkpoint(checkpoint_name):
-    return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False)
+def load_checkpoint(checkpoint_name, casting={}):
+    #d_p = pd.datetools.to_datetime
+    if casting:
+        return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0, parse_dates=['date'], dtype=casting)
+    else:
+        return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0, parse_dates=['date'])
+
+# %%
+incidents_data.info()
 
 # %% [markdown]
 # ## Date
@@ -76,7 +89,7 @@ incidents_data['date'] = incidents_data.apply(lambda row : pd.to_datetime(row['d
 
 # %%
 print(type(incidents_data['date'][0]))
-incidents_data.head(2)
+incidents_data.sample(3, random_state = RANDOM_STATE.get())
 
 # %% [markdown]
 # We can observe that all dates are syntactically correct
@@ -176,6 +189,10 @@ mod1 = incidents_data.apply(lambda row : subtract_ten_if(row), axis = 1)
 mod2 = incidents_data.apply(lambda row : subtract_eleven_if(row), axis = 1)
 mod3 = incidents_data.apply(lambda row : replace_with_median(row), axis = 1)
 
+# for hist
+dates = [incidents_data['date'],  mod1, mod2, mod3]
+ylabels = ['original', 'mod 1', 'mod2', 'mod3']
+
 # %%
 print(len(incidents_data.loc[incidents_data['date'] > dates_data['upper_whisker'][0].to_datetime64()]))
 
@@ -183,6 +200,24 @@ print(len(incidents_data.loc[incidents_data['date'] > dates_data['upper_whisker'
 # We then observe the distributions thus obtained, in comparison with the original one
 # 
 # the dotted lines represent the low whiskers, the first quartile, the median, the third quartile and the high whiskers. 
+
+# %%
+dates_num = []
+for i in dates:
+    dates_num.append(mdates.date2num(i))
+
+boxplot = plt.boxplot(x=dates_num, labels=ylabels)
+plt.yticks(ticks, labels)
+plt.grid()
+
+dates_data = plot_utils.get_box_plot_data(ylabels, boxplot)
+dates_data
+
+# %%
+dates_data['upper_whisker'][1]
+
+# %%
+int((dates_data['upper_whisker'][1] - dates_data['lower_whisker'][1]).days / 30)
 
 # %%
 # one binth for every month in the range
@@ -203,8 +238,6 @@ fig.suptitle('Dates distribution')
 
 colors_palette = iter(mcolors.TABLEAU_COLORS)
 bins = [n_bin, equal_freq_bins]
-ylabels = ['original', 'mod 1', 'mod2', 'mod3']
-dates = [incidents_data['date'],  mod1, mod2, mod3]
 
 for i, ax in enumerate(axs):
     for el in dates_data.loc[0][1:]:
@@ -212,52 +245,50 @@ for i, ax in enumerate(axs):
         ax[1].axvline(el, color='k', linestyle='dashed', linewidth=1, alpha=0.4)
         
     c = next(colors_palette)
-    ax[0].hist(dates[i], bins=fixed_bin, color=c, density=True)
-    ax[1].hist(dates[i], bins=fixed_bin_2, color=c, density=True)
     
+    if i == 0:
+        n, bins_first_hist, pathces = ax[0].hist(dates[i], bins=fixed_bin, color=c, density=True)
+        n,bins_first_hist_2, pathces = ax[1].hist(dates[i], bins=fixed_bin_2, color=c, density=True)
+    else:
+        ax[0].hist(dates[i], bins=bins_first_hist, color=c, density=True)
+        ax[1].hist(dates[i], bins=bins_first_hist_2, color=c, density=True)
 
     ax[0].set_ylabel(ylabels[i])
     ax[0].grid(axis='y')
     ax[1].grid(axis='y')
     
 plt.show()   
-print('Totale errori:', error_count)
 
 # %% [markdown]
-# dei metodi utilizzati, nessuno risulta soddisfacente perché tutti implementano o grandi variazioni di distribuzione, procedere con altre strategie invece potrebbe rendere la feature inattendibile, quindi procederemo rimuovendo tutti i valori errati. Notiamo anche che il totale degli errori è 23008, il 
+# None of the methods used are satisfactory, as they all introduce either large variations in the distribution. On the other hand, using strategies other than those tested could make the date feature unreliable, also because the total number of errors is 23008, 9.5% of the total. The best solution is to remove all the incorrect values and take this into account when applying the knowledge extraction algorithms.
+# 
+# So we create a new record with the correct date column
 
 # %%
-#TODO: GECO!!!! Continua a scrivere da qui
-dates_num = []
-for i in dates:
-    dates_num.append(mdates.date2num(i))
+def replace_with_none(x):
+        ret = x['date']
+        while ret > dates_data['upper_whisker'][0].to_datetime64(): 
+                ret = pd.NaT
+        return ret
 
-boxplot = plt.boxplot(x=dates_num, labels=ylabels)
-plt.yticks(ticks, labels)
-plt.grid()
-
-dates_data = get_box_plot_data(ylabels, boxplot)
-
-# %% [markdown]
-# Of the three methods used for error correction, only the third is satisfactory for two reasons:
-# 
-# -Is the one that preserves the distribution the most thank's to the rendom sampling approach, and since the values ​​are more than 23K they cannot be replaced with equal values
-# 
-# -Since the date of the incidents is not related in any way to other fields of the dataset, and failing to identify the cause that generated the errors, replacing the dates with random ones from the dataset does not introduce particular inconsistencies
-# 
-# 
+checkpoint_date = pd.DataFrame(index=incidents_data.index, columns=['date'])
+checkpoint_date['date'] = incidents_data.apply(lambda row : replace_with_none(row), axis = 1)
 
 # %%
-dates_data
+checkpoint_date.sample(3, random_state=RANDOM_STATE.get())
 
 # %%
-# TODO GIACOMO: finireeee e salvare la colonna
+checkpoint_date['date'].isna().sum()
+
+# %%
+checkpoint(checkpoint_date, 'checkpoint_date')
 
 # %% [markdown]
 # ## Geographic data
 
 # %%
-#TODO: bisogna copiare tutto dal notebook 'geographic_features_consistency.py', scrivere i markdown e fare dei grafici carinii
+checkpoint_geo = load_checkpoint('checkpoint_date')
+checkpoint_geo.dtypes
 
 # %% [markdown]
 # ## Age, gender and number of participants data

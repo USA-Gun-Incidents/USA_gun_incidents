@@ -217,8 +217,6 @@ def plot_clf_decision_boundary(clf, X_train, y_train, color_map, title=None):
     plt.xticks([])
     plt.show()
 
-
-
 def get_box_plot_data(labels, bp):
     rows_list = []
 
