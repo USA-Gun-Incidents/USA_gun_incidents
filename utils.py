@@ -43,14 +43,14 @@ def lower_case(data):
 
 def delete_space(data):
     """delete all spaces in data"""
-    return data.replace(" ", "")
+    return data.replace(" ", "") # FIX: usare isspace() (sostituisce e.g. anche tab)
 
 def split_where_parenthesis(data):
     """return two strings where parenthesis are present in data"""    
     # split data where parenthesis
     data1, data2 = data.split("(")
     # delete close parenthesis and return two strings
-    return data1, data2.replace(")", "")
+    return data1, data2.replace(")", "") # FIX: se ci sono cose dopo la parentesi chiusa?
 
 def check_parenthesis(data):
     """check if parenthesis are present in data"""
@@ -72,9 +72,9 @@ def clean_data_incidents(data):
     """clean data from incidents dataset"""
     data = delete_space(data)
     data = lower_case(data)
-    data = delete_numbers(data)
+    data = delete_numbers(data) # FIX: i numeri dagli indirizzi non potrebbero essere utili?
 
-    data = data.replace('county', '')
+    data = data.replace('county', '') # FIX: forse c'è anche maiuscola?
 
     if check_parenthesis(data):
         data1, data2 = split_where_parenthesis(data)
@@ -105,7 +105,7 @@ def check_string_typo(string1, string2, len_typo_ratio = 10):
 
     edit_distance = jellyfish.damerau_levenshtein_distance(string1, string2)
     
-    sensibility = math.floor(max(len(string1), len(string2))/len_typo_ratio)
+    sensibility = math.floor(max(len(string1), len(string2))/len_typo_ratio) # FIX: meglio sensitivity
     return int(edit_distance <= sensibility)
 
 def check_address(address1, address2_geopy):
@@ -258,6 +258,10 @@ def check_geographical_data_consistency(row, additional_data):
     return clean_geo_data_row
 
 ####################### Age-gender and categorical data cleaning #######################
+
+# FIX: perchè in [np.nan]? isna() non va bene?
+# FIX: eviterei il one hot encoding, per adesso occupa solo spazio, se ci servirà più avanti lo faremo
+
 def convert_age_to_int(data):
     """return age as a int if it is numeric and between 0 and 100
     else return nan"""
@@ -268,7 +272,7 @@ def convert_age_to_int(data):
 
 def exclude_inconsistent_age(data):
     """return nan if age is negative or greater than 100"""
-    if (data >= 0 and data <= 100):
+    if (data >= 0 and data <= 100): # FIX: buttiamo due esempi in cui c'è un tipo di 101 anni
         return data
     else: return np.nan
 
@@ -302,7 +306,7 @@ def age_groups_consistency(min_age, max_age, avg_age, n_child, n_teen, n_adult):
             if n_child <= 0:
                 return False
         elif 12 <= min_age < 18:
-            if n_child > 0 and n_teen <= 0:
+            if n_child > 0 and n_teen <= 0: # FIX: or
                 return False
         else:
             if n_child > 0 or n_teen > 0 or n_adult <= 0:
@@ -372,7 +376,7 @@ def participant1_age_data_consistency(participant_age1, participant1_child, part
         else:
             if participant1_adult is not True:
                 return False
-    return True
+    return True # FIX: se è nullo è vero?
 
 def participant1_age_consistency_wrt_all_data(participant_age1, min_age, max_age):
     """check consistency between participant1 age and age groups attributes"""
@@ -421,7 +425,7 @@ def check_age_gender_data_consistency(row):
     # convert ot integer participants age range attributes
     clean_data_row.loc[['min_age_participants']] = convert_age_to_int(row['min_age_participants'])
     clean_data_row.loc[['max_age_participants']] = convert_age_to_int(row['max_age_participants'])
-    clean_data_row.loc[['avg_age_participants']] = convert_age_to_int(row['avg_age_participants'])
+    clean_data_row.loc[['avg_age_participants']] = convert_age_to_int(row['avg_age_participants']) # FIX: float and se probabilmente sono interi
     clean_data_row.loc[['n_participants_child']] = convert_group_cardinality_to_int(row['n_participants_child'])
     clean_data_row.loc[['n_participants_teen']] = convert_group_cardinality_to_int(row['n_participants_teen'])
     clean_data_row.loc[['n_participants_adult']] = convert_group_cardinality_to_int(row['n_participants_adult'])
@@ -494,7 +498,7 @@ def check_age_gender_data_consistency(row):
 
 #TODO: controllare correttezza funzione
 #TODO: magari renderla più bella
-def set_gender_age_consistent_data(row):
+def set_gender_age_consistent_data(row): # FIX: non è più comodo inizializzare copiando e togliere dove non è consistente?
     """return a row with consistent data"""
     # initialize new_data_row
     new_data_row = pd.Series(index=['participant_age1', 
@@ -517,28 +521,28 @@ def set_gender_age_consistent_data(row):
         new_data_row.loc[['n_females']] = row['n_females']   
     if consistency_n_participant:
         new_data_row.loc[['n_participants']] = row['n_participants']
-        new_data_row.loc[['n_killed']] = row['n_killed']
-        new_data_row.loc[['n_injured']] = row['n_injured']
-        new_data_row.loc[['n_arrested']] = row['n_arrested']
-        new_data_row.loc[['n_unharmed']] = row['n_unharmed']
+        new_data_row.loc[['n_killed']] = row['n_killed'] # FIX: portare fuori per rendere equivalente (dunque ci disinteressiamo della consistenza e lo settiamo sempre?)
+        new_data_row.loc[['n_injured']] = row['n_injured'] # FIX: portare fuori per rendere equivalente (dunque ci disinteressiamo della consistenza e lo settiamo sempre?)
+        new_data_row.loc[['n_arrested']] = row['n_arrested'] # FIX: portare fuori per rendere equivalente (dunque ci disinteressiamo della consistenza e lo settiamo sempre?)
+        new_data_row.loc[['n_unharmed']] = row['n_unharmed'] # FIX: portare fuori per rendere equivalente (dunque ci disinteressiamo della consistenza e lo settiamo sempre?)
     elif (row['consistency_participant1'] and row['consistency_participants1_wrt_n_participants'] and
-            row['participant1_gender_consistency_wrt_all_data']):
+            row['participant1_gender_consistency_wrt_all_data']): # FIX: questo è già vero se è vero 'consistency_participants1_wrt_n_participants'
         if not consistency_gender:
             if ((row['n_killed'] + row['n_injured'] <= row['n_males'] + row['n_females']) and
                 (row['n_arrested'] <= row['n_males'] + row['n_females']) and
                 (row['n_unharmed'] <= row['n_males'] + row['n_females'])):
                 new_data_row.loc[['n_males']] = row['n_males']
-                new_data_row.loc[['n_females']] = row['n_females']    
+                new_data_row.loc[['n_females']] = row['n_females'] # FIX: qui è l'unico punto dove new_data_row.loc[['n_participants']] non  viene settato, si può uniformare???
             else:
                 new_data_row.loc[['n_participants']] = row['n_participants']
-            new_data_row.loc[['n_killed']] = row['n_killed']
-            new_data_row.loc[['n_injured']] = row['n_injured']
-            new_data_row.loc[['n_arrested']] = row['n_arrested']
-            new_data_row.loc[['n_unharmed']] = row['n_unharmed']
+            new_data_row.loc[['n_killed']] = row['n_killed'] # FIX: portare fuori per rendere equivalente (dunque ci disinteressiamo della consistenza e lo settiamo sempre?)
+            new_data_row.loc[['n_injured']] = row['n_injured'] # FIX: portare fuori per rendere equivalente (dunque ci disinteressiamo della consistenza e lo settiamo sempre?)
+            new_data_row.loc[['n_arrested']] = row['n_arrested'] # FIX: portare fuori per rendere equivalente (dunque ci disinteressiamo della consistenza e lo settiamo sempre?)
+            new_data_row.loc[['n_unharmed']] = row['n_unharmed'] # FIX: portare fuori per rendere equivalente (dunque ci disinteressiamo della consistenza e lo settiamo sempre?)
         else:
-            if (row['n_participants'] == 1 and row['consistency_participant1'] and 
-                row['consistency_participants1_wrt_n_participants'] and
-                row['participant1_gender_consistency_wrt_all_data']):
+            if (row['n_participants'] == 1 and row['consistency_participant1'] and  # FIX: 'consistency_participant1' già controllato sopra
+                row['consistency_participants1_wrt_n_participants'] and # FIX: già controllato sopra
+                row['participant1_gender_consistency_wrt_all_data']): # FIX: già controllato ma non serviva nemmeno
                 if row['participant1_male']:
                     new_data_row.loc[['n_males']] = 1
                     new_data_row.loc[['n_females']] = 0
@@ -546,13 +550,13 @@ def set_gender_age_consistent_data(row):
                     new_data_row.loc[['n_males']] = 0
                     new_data_row.loc[['n_females']] = 1
             new_data_row.loc[['n_participants']] = row['n_participants']
-            new_data_row.loc[['n_killed']] = row['n_killed']
-            new_data_row.loc[['n_injured']] = row['n_injured']
-            new_data_row.loc[['n_arrested']] = row['n_arrested']
-            new_data_row.loc[['n_unharmed']] = row['n_unharmed']
+            new_data_row.loc[['n_killed']] = row['n_killed'] # FIX: portare fuori per rendere equivalente (dunque ci disinteressiamo della consistenza e lo settiamo sempre?)
+            new_data_row.loc[['n_injured']] = row['n_injured'] # FIX: portare fuori per rendere equivalente (dunque ci disinteressiamo della consistenza e lo settiamo sempre?)
+            new_data_row.loc[['n_arrested']] = row['n_arrested'] # FIX: portare fuori per rendere equivalente (dunque ci disinteressiamo della consistenza e lo settiamo sempre?)
+            new_data_row.loc[['n_unharmed']] = row['n_unharmed'] # FIX: portare fuori per rendere equivalente (dunque ci disinteressiamo della consistenza e lo settiamo sempre?)
         if (new_data_row['n_participants'] in [np.nan] and new_data_row['n_males'] not in [np.nan] and
             new_data_row['n_females'] not in [np.nan]):
-            new_data_row.loc[['n_participants']] = new_data_row['n_males'] + new_data_row['n_females']
+            new_data_row.loc[['n_participants']] = new_data_row['n_males'] + new_data_row['n_females'] # FIX: questo si può fare a prescindere dalla consistenza del partecipante 1, forse se il genere è consistente, errore di indentazione?
 
     # age data
     if consistency_age:
@@ -560,7 +564,7 @@ def set_gender_age_consistent_data(row):
         new_data_row.loc[['avg_age_participants']] = row['avg_age_participants']
         new_data_row.loc[['max_age_participants']] = row['max_age_participants']
 
-        if new_data_row['n_participants'] is not np.nan:
+        if new_data_row['n_participants'] is not np.nan: # FIX: delle volte c'è not in [np.nan] e delle volte is not?
             if (row['n_participants_child'] + row['n_participants_teen'] + row['n_participants_adult'] ==
                 new_data_row['n_participants']): # data consistent
                 new_data_row.loc[['n_participants_child']] = row['n_participants_child']
@@ -628,7 +632,7 @@ def check_consistency_tag(row):
         return False
     if row['Injuries'] and row['n_injured'] == 0:
         return False
-    if((row["incident_characteristics1"] == "Non-Shooting Incident" or row["incident_characteristics2"] == 
+    if((row["incident_characteristics1"] == "Non-Shooting Incident" or row["incident_characteristics2"] ==
         "Non-Shooting Incident") and row["Shots"]): #consistency for non-shooting incidents
         return False
     if((row["incident_characteristics1"] == "Non-Aggression Incident" or row["incident_characteristics2"] == 

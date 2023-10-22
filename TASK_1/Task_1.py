@@ -16,6 +16,7 @@ sys.path.append(os.path.abspath('..')) # TODO: c'è un modo per farlo meglio?
 from plot_utils import *
 from sklearn.neighbors import KNeighborsClassifier
 from geopy import distance as geopy_distance
+from pyproj import Transformer
 
 # %% [markdown]
 # We define constants and settings for the notebook:
@@ -151,7 +152,7 @@ plt.ylabel('Poverty (%)')
 plt.title('Poverty (%) over the years')
 
 # %% [markdown]
-# The plot above shows that actually those values are not outliers. TODO: migliorare questo commento
+# The plot above shows that actually those values are not errors.
 
 # %%
 poverty_data.groupby('year')['povertyPercentage'].mean().plot(kind='line', figsize=(15, 5), label='USA average', color='black', style='--')
@@ -287,8 +288,8 @@ elections_data.head(n=2)
 # | 1 | state | Categorical (Nominal) | Name of the state | object |
 # | 2 | congressional_district | Categorical (Nominal) | Congressional district | int64 |
 # | 3 | party | Categorical (Nominal) | Winning party fort the corresponding congressional_district in the state, in the corresponding year | object |
-# | 4 | candidateVotes | Numeric (Ratio) | Number of votes obtained by the winning party in the corresponding election | int64 |
-# | 5 | totalVotes | Numeric (Ratio)| Number total votes for the corresponding election | int64 |
+# | 4 | candidatevotes | Numeric (Ratio) | Number of votes obtained by the winning party in the corresponding election | int64 |
+# | 5 | totalvotes | Numeric (Ratio)| Number total votes for the corresponding election | int64 |
 
 # %% [markdown]
 # We display a concise summary of the DataFrame:
@@ -502,7 +503,7 @@ elections_data[(elections_data['candidateperc']==100) & (elections_data['year']>
 # The histogram above also shows that in some disticts the winner party obtained less than 50% of the votes. We display those districts:
 
 # %%
-elections_data[(elections_data['candidateperc']<=50) & (elections_data['year']>2012)] # TODO: Connecticut 5, 2014  is wrong, Louisiana 5, 2014 is wrong...
+elections_data[(elections_data['candidateperc']<=50) & (elections_data['year']>2012)] # TODO: maybe some are wrong
 
 # %%
 elections_data[(elections_data['candidateperc']<=30) & (elections_data['year']>2012)]
@@ -592,9 +593,9 @@ incidents_data.head(n=2)
 # | 3 | address | Categorical (Nominal) | Address where incident took place | object |
 # | 4 | latitude | Numeric (Interval) | Latitude of the incident | float64 |
 # | 5 | longitude | Numeric (Interval) | Longitude of the incident | float64 |
-# | 6 | congressional_district | Categorical (Ordinal) | Congressional district where the incident took place | int64 |
-# | 7 | state_house_district | Categorical (Ordinal) | State house district | int64 |
-# | 8 | state_senate_district | Categorical (Ordinal) | State senate district where the incident took place | int64 |
+# | 6 | congressional_district | Categorical (Nominal) | Congressional district where the incident took place | int64 |
+# | 7 | state_house_district | Categorical (Nominal) | State house district | int64 |
+# | 8 | state_senate_district | Categorical (Nominal) | State senate district where the incident took place | int64 |
 # | 9 | participant_age1 | Numeric (Ratio) | Exact age of one (randomly chosen) participant in the incident | int64 |
 # | 10 | participant_age_group1 | Categorical (Ordinal) | Exact age group of one (randomly chosen) participant in the incident | object |
 # | 11 | participant_gender1 | Categorical (Nominal) | Exact gender of one (randomly chosen) participant in the incident | object |
@@ -651,7 +652,7 @@ incidents_data['max_age_participants'] = pd.to_numeric(incidents_data['max_age_p
 incidents_data['n_participants_child'] = pd.to_numeric(incidents_data['n_participants_child'], downcast='unsigned', errors='coerce')
 incidents_data['n_participants_teen'] = pd.to_numeric(incidents_data['n_participants_teen'], downcast='unsigned', errors='coerce')
 incidents_data['n_participants_adult'] = pd.to_numeric(incidents_data['n_participants_adult'], downcast='unsigned', errors='coerce')
-# (the following attributes should be categorical and specifically ordinal, but for convenience we keep them as numeric)
+# (the following attributes should be categorical, but for convenience we keep them numeric)
 incidents_data['congressional_district'] = pd.to_numeric(incidents_data['congressional_district'], downcast='unsigned', errors='coerce')
 incidents_data['state_house_district'] = pd.to_numeric(incidents_data['state_house_district'], downcast='unsigned', errors='coerce')
 incidents_data['state_senate_district'] = pd.to_numeric(incidents_data['state_senate_district'], downcast='unsigned', errors='coerce')
@@ -673,25 +674,6 @@ incidents_data['participant_age_group1'] = incidents_data['participant_age_group
 
 # %%
 incidents_data.info()
-
-# %%
-# TODO: rivedere
-
-# trasformare negativi in positivi?
-# trasformare e.g. età=300 in 30?
-# trasformare e.g. età=0.5 in 1?
-# o settare a NaN?
-
-# Bisognerebbe fare qualcosa come sotto per ogni attributo di cui vogliamo fare il downcast
-# incidents_data['min_age_participants_NEW'] = incidents_data['min_age_participants'].apply(lambda x: x if (x.is_integer() and x<np.iinfo(np.uint8).max and x >=0) else np.nan)
-# incidents_data['min_age_participants_NEW'] = incidents_data['min_age_participants_NEW'].astype('UInt8')
-
-# Per gli attributi ordinali bisognerebbe fare come segue
-# max = int(incidents_data[incidents_data['congressional_district'].notna()]['congressional_district'].max())
-# incidents_data['congressional_district_NEW'] = incidents_data['congressional_district'].astype('Int64') # per togliere .0
-# incidents_data['congressional_district_NEW'] = incidents_data['congressional_district_NEW'].astype('string') # perchè l'istruzione successiva funzioni (trovi il match)
-# incidents_data['congressional_district_NEW'] = incidents_data['congressional_district_NEW'].astype(
-#     pd.api.types.CategoricalDtype(categories = [str(i) for i in range(max)], ordered = True))
 
 # %% [markdown]
 # We observe that the downcasting of many attributes has not succeeded. This is due to the presence of missing or out of range values. TODO: to handle
@@ -815,7 +797,7 @@ incidents_data[(incidents_data['latitude'] == 37.6499) & (incidents_data['longit
 # That point has probably the correct values for the attributes `state` and `city_or_county`.
 
 # %%
-# TODO: le ooservazioni sopra dovrebbero giustificare la scelta di usare geopy, importare qui il codice e spiegare cosa è stato fatto.
+# TODO: le oservazioni sopra dovrebbero giustificare la scelta di usare geopy, importare qui il codice e spiegare cosa è stato fatto.
 
 # %% [markdown]
 # We check if the attribute `congressional_district` is numbered consistently (with '0' for states with only one congressional district). To do so we use the data from the dataset containing the data about elections in the period of interest (congressional districts are redrawn when (year%10)==0):
@@ -891,10 +873,6 @@ incidents_data[incidents_data['congressional_district'].notna()].groupby(['state
 
 # %% [markdown]
 # We print the unique values the attribute `state_house_district` can take on:
-
-# %%
-wrong_congr_states = elections_data.groupby('state')['congressional_district'].max()>=incidents_data.groupby('state')['congressional_district'].max()
-wrong_congr_states[wrong_congr_states==False]
 
 # %%
 house_districts = incidents_data['state_house_district'].unique()
@@ -986,12 +964,12 @@ def build_X_y_for_district_inference(incidents_data):
             (incidents_data['congressional_district'].notna()) &
             (incidents_data['latitude'].notna()) & 
             (incidents_data['longitude'].notna())
-            ]['longitude'].values.reshape(-1, 1),
+            ]['latitude'].values.reshape(-1, 1),
         incidents_data[
             (incidents_data['congressional_district'].notna()) & 
             (incidents_data['latitude'].notna()) & 
             (incidents_data['longitude'].notna())
-            ]['latitude'].values.reshape(-1, 1)),
+            ]['longitude'].values.reshape(-1, 1)),
         axis=1
     )
     X_test = np.concatenate((
@@ -999,12 +977,12 @@ def build_X_y_for_district_inference(incidents_data):
             (incidents_data['congressional_district'].isna()) & 
             (incidents_data['latitude'].notna()) & 
             (incidents_data['longitude'].notna())
-            ]['longitude'].values.reshape(-1, 1),
+            ]['latitude'].values.reshape(-1, 1),
         incidents_data[
             (incidents_data['congressional_district'].isna()) &
             (incidents_data['latitude'].notna()) & 
             (incidents_data['longitude'].notna())
-            ]['latitude'].values.reshape(-1, 1)),
+            ]['longitude'].values.reshape(-1, 1)),
         axis=1
     )
     y_train = incidents_data[
@@ -1021,13 +999,12 @@ def build_X_y_for_district_inference(incidents_data):
 def geodesic_distance(point1, point2):
     return geopy_distance.geodesic(point1, point2).km
 
-
 # %% [markdown]
-# Now we are ready to apply the classifier (using K=3): TODO: k=1?
+# Now we are ready to apply the classifier (using K=1):
 
 # %%
 X_train, X_test, y_train = build_X_y_for_district_inference(incidents_data[incidents_data['state']=="ALABAMA"])
-knn_clf = KNeighborsClassifier(n_neighbors=3, metric=geodesic_distance)
+knn_clf = KNeighborsClassifier(n_neighbors=1, metric=geodesic_distance)
 knn_clf.fit(X_train, y_train)
 knn_pred = knn_clf.predict(X_test)
 incidents_data['KNN_congressional_district'] = incidents_data['congressional_district']
@@ -1053,20 +1030,29 @@ plot_scattermap_plotly(
     legend_title="Congressional District"
 )
 
+# %% [markdown]
+# To improve the visualization, we plot on the map the decision boundaries of the classifier. To do so, we convert latitude and longitude to a 2D space:
+
 # %%
-from pyproj import Transformer
 transformer = Transformer.from_crs("EPSG:4326", "EPSG:26929", always_xy=True)
 
 X_train_converted = []
 
 for i in range(X_train.shape[0]):
-    x, y = transformer.transform(X_train[i][0], X_train[i][1])
+    x, y = transformer.transform(X_train[i][1], X_train[i][0])
     X_train_converted.append([x,y])
 
 X_train_converted = np.array(X_train_converted)
 
 # %% [markdown]
-# To improve the visualization, we plot on the map the decision boundaries of the classifier:
+# And now we train the classifier using the euclidean distance:
+
+# %%
+knn_eu_clf = KNeighborsClassifier(n_neighbors=1, metric='euclidean')
+knn_eu_clf.fit(X_train_converted, y_train)
+
+# %% [markdown]
+# We plot the boundaries of the classifier:
 
 # %%
 alabama_color_map = {
@@ -1078,8 +1064,6 @@ alabama_color_map = {
     6:'blue',
     7:'purple'
 }
-knn_eu_clf = KNeighborsClassifier(n_neighbors=3, metric='euclidean')
-knn_eu_clf.fit(X_train_converted, y_train)
 plot_clf_decision_boundary(knn_eu_clf, X_train_converted, y_train, alabama_color_map, "KNN Alabama borders")
 
 # %% [markdown]
@@ -1092,12 +1076,14 @@ plot_clf_decision_boundary(knn_eu_clf, X_train_converted, y_train, alabama_color
 
 # %%
 incidents_data.groupby(['state', 'congressional_district']).size()[lambda x: x <= 2]
+
 # %% [markdown]
 # By the way, missclassification can still occurr, depending on the position of the available examples w.r.t the position of the points to classify. Aware of this limitation, we proceed to apply this method to the other states:
 
 # %%
 for state in incidents_data['state'].unique():
     if state != "ALABAMA":
+        print(f"{state} done.")
         X_train, X_test, y_train = build_X_y_for_district_inference(incidents_data[incidents_data['state']==state])
         if X_test.shape[0] == 0:
             continue
@@ -1139,12 +1125,12 @@ plt.tight_layout()
 
 # %%
 characteristics_count_matrix = pd.crosstab(incidents_data['incident_characteristics1'], incidents_data['incident_characteristics2'])
-fig, ax = plt.subplots(figsize=(20, 20))
-sns.heatmap(characteristics_count_matrix, cmap='coolwarm', ax=ax)
+fig, ax = plt.subplots(figsize=(25, 20))
+sns.heatmap(characteristics_count_matrix, cmap='coolwarm', ax=ax, xticklabels=True, yticklabels=True, linewidths=.5)
 ax.set_xlabel('incident_characteristics2')
 ax.set_ylabel('incident_characteristics1')  
 ax.set_title('Counts of incident characteristics')
-plt.tight_layout() # TODO: sono meno aattributi perchè ci sono nan o è un bug?
+plt.tight_layout()
 
 # %% [markdown]
 # We join the poverty data with the incidents data:
