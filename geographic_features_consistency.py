@@ -19,7 +19,7 @@ import numpy as np
 dirname = os.path.dirname(' ')
 FOLDER = os.path.join(dirname, 'data')
 incidents_path = os.path.join(FOLDER, 'incidents.csv')
-incidents_data = pd.read_csv(incidents_path)
+incidents_data = pd.read_csv(incidents_path, low_memory=False)
 
 # %%
 # drop duplicates rows
@@ -130,20 +130,6 @@ additional_data.dtypes
 # ## 'state', 'city_or_county', 'address', 'latitude', 'longitude' consistency
 
 # %%
-data_check_consistency = pd.DataFrame(columns=['state', 'city_or_county', 'address', 'latitude', 'longitude', 'display_name', 
-    'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 'importance_geopy', 'addresstype_geopy', 
-    'coord_presence'])
-data_check_consistency[['state', 'city_or_county', 'address', 'latitude', 'longitude']] = incidents_data[[
-    'state', 'city_or_county', 'address', 'latitude', 'longitude']]
-data_check_consistency[['address_geopy', 'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 
-    'importance_geopy', 'addresstype_geopy', 'coord_presence']] = geopy_data[['display_name', 'village', 'town', 'city', 
-    'county', 'state', 'importance', 'addresstype', 'coord_presence']]
-
-# %%
-data_check_consistency[['state', 'city_or_county', 'address', 'latitude', 'longitude']] = incidents_data[[
-    'state', 'city_or_county', 'address', 'latitude', 'longitude']]
-
-# %%
 geopy_path = os.path.join(FOLDER, 'geopy/geopy.csv')
 geopy_data = pd.read_csv(geopy_path, index_col=['index'])
 geopy_data.info()
@@ -181,15 +167,20 @@ print('Number of rows in which class is null: ', geopy_data[geopy_data['class'].
 print('Number of rows in which addresstype is null: ', geopy_data[geopy_data['addresstype'].isnull()].shape[0])
 
 # %%
-geopy_data.groupby(['class']).count()
-
-# %%
+data_check_consistency = pd.DataFrame(columns=['state', 'city_or_county', 'address', 'latitude', 'longitude', 'display_name', 
+    'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 'importance_geopy', 'addresstype_geopy', 
+    'coord_presence'])
+data_check_consistency[['state', 'city_or_county', 'address', 'latitude', 'longitude']] = incidents_data[[
+    'state', 'city_or_county', 'address', 'latitude', 'longitude']]
+    
 data_check_consistency[['address_geopy', 'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 
-    'importance_geopy', 'addresstype_geopy', 'coord_presence']] = geopy_data[['display_name', 'village', 'town', 'city', 
+    'importance_geopy', 'addresstype_geopy', 'coord_presence']] = geopy_data.loc[incidents_data.index][['display_name', 'village', 'town', 'city', 
     'county', 'state', 'importance', 'addresstype', 'coord_presence']]
 
+
+
 # %%
-data_check_consistency.head()
+data_check_consistency.head(2)
 
 # %%
 # convert latitude and longitude to float
@@ -207,7 +198,7 @@ clean_geo_data = data_check_consistency.apply(lambda row:
 
 # %%
 final_incidents = clean_geo_data.drop(['state_consistency', 'county_consistency', 'address_consistency'], axis=1)
-clean_geo_data.to_csv(FOLDER + 'post_proc/geo_data_stats_columns.csv', index=False)
+clean_geo_data.to_csv(FOLDER + '/post_proc/geo_data_stats_columns.csv', index=False)
 final_incidents.to_csv(os.path.join(FOLDER,'post_proc/final_incidents.csv'))
 
 # %%
@@ -219,7 +210,7 @@ print('Number of rows with null value for latitude: ', clean_geo_data['latitude'
 print('Number of rows with null value for longitude: ', clean_geo_data['longitude'].isnull().sum())
 
 # %%
-clean_geo_data.head(10)
+clean_geo_data.head(3)
 
 # %%
 print('Number of rows divided by state_consistency:\n', clean_geo_data['state_consistency'].value_counts())
@@ -284,15 +275,25 @@ print(len(dummy_data))
 plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 
 # %%
-plot_utils.plot_scattermap_plotly(clean_geo_data[(clean_geo_data['latitude'].notna()) & (clean_geo_data['state'] == 'California')], 'county')
 
-# %%
-dummy_data = clean_geo_data[(clean_geo_data['latitude'].notna()) & (clean_geo_data['city'].isna())]
+
+dummy_data = clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())]
 print(len(dummy_data))
 plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 
 # %%
+clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())].groupby('city').count()
+
+# %%
+missing_county={'Missouri':'Saint Louis County', 'Denver':'Denver County', 'Juneau': 'Juneau County', 'San Francisco': 'San Francisco County' }
+
+# %%
 dummy_data = clean_geo_data[(clean_geo_data['latitude'].notna()) & (clean_geo_data['city'].isna()) & (clean_geo_data['county'].isna())]
+print(len(dummy_data))
+plot_utils.plot_scattermap_plotly(dummy_data, 'state')
+
+# %%
+dummy_data = clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].isna())]
 print(len(dummy_data))
 plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 

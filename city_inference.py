@@ -3,15 +3,13 @@ import pandas as pd
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 import os
-import math
 import matplotlib.pyplot as plt
 import geopy.distance
 import plot_utils
 
-
 # %%
 dirname = os.path.dirname(' ')
-data = pd.read_csv(os.path.join(dirname, 'data/post_proc/final_incidents_KNN.csv'), index_col=0, dtype={'latitude':float, 'logitude':float})
+data = pd.read_csv(os.path.join(dirname, 'data/post_proc/final_incidents.csv'), index_col=0, dtype={'latitude':float, 'logitude':float})
 data.groupby(['state', 'county', 'city']).count()
 
 # %%
@@ -101,7 +99,6 @@ print(data.iloc[i])
 # %%
 data.sample()
 
-
 # %%
 def substitute_city(row, info_city):
     if pd.isna(row['city']) and not np.isnan(row['latitude']):
@@ -118,7 +115,6 @@ def substitute_city(row, info_city):
 
 
 final_data = data.apply(lambda row: substitute_city(row, info_city), axis=1)
-        
 
 # %%
 a = len(final_data.loc[(final_data['latitude'].notna()) & (final_data['county'].notna()) & (final_data['city'].notna())])
@@ -177,4 +173,6 @@ plot_utils.plot_scattermap_plotly(data.loc[(data['latitude'].notna()) & (data['s
 len(data.loc[(data['latitude'].notna()) & (data['state'] == 'Missouri') & (data['county'] == 'Platte County') & (data['city'] == 'Kansas City')])
 
 # %%
-data.to_csv(os.path.join(dirname, 'data/post_proc/final_incidents_KNN_city.csv'))
+#TODO: plottare le città che ha inserto e i centroidi??
+
+
