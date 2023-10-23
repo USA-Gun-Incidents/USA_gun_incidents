@@ -16,7 +16,10 @@ sys.path.append(os.path.abspath('..')) # TODO: c'è un modo per farlo meglio?
 from plot_utils import *
 from sklearn.neighbors import KNeighborsClassifier
 from geopy import distance as geopy_distance
-from pyproj import Transformer
+import calendar
+import nltk
+from wordcloud import WordCloud
+from nltk.corpus import stopwords
 
 # %% [markdown]
 # We define constants and settings for the notebook:
@@ -1149,6 +1152,78 @@ elections_data_copy['year'] = elections_data_copy['year'] + 1
 elections_data = pd.concat([elections_data, elections_data_copy], ignore_index=True)
 incidents_data = incidents_data.merge(elections_data, on=['state', 'year', 'congressional_district'], how='left')
 incidents_data.head()
+
+# %%
+incidents_data['month'] = incidents_data['date'].dt.month
+incidents_data.groupby('month').size().plot(
+    kind='bar',
+    figsize=(10, 5),
+    title='Number of incidents per month',
+    xlabel='Month',
+    ylabel='Number of incidents'
+)
+plt.xticks(range(12), calendar.month_name[1:13], rotation=45);
+
+# %%
+incidents_data['day_of_week'] = incidents_data['date'].dt.dayofweek
+incidents_data.groupby('day_of_week').size().plot(
+    kind='bar',
+    figsize=(10, 5),
+    title='Number of incidents per day of the week',
+    xlabel='Day of the week',
+    ylabel='Number of incidents'
+)
+plt.xticks(range(7), calendar.day_name[0:7], rotation=45);
+
+# %%
+usa_population = pd.read_csv(DATA_FOLDER_PATH + 'wikipedia/2010_United_States_census.csv')
+
+# %%
+usa_population.info()
+
+# %%
+usa_population.head()
+
+# %%
+usa_population.drop(columns=['Population as of 2000 census', 'Change', 'Percent change'], inplace=True)
+usa_population.rename(columns={'Population as of 2010 census':'population', 'State': 'state'}, inplace=True)
+usa_population['state'] = usa_population['state'].str.upper()
+incidents_data = incidents_data.merge(usa_population, on=['state'], how='left')
+incidents_data.head()
+
+# %%
+incidents_data['population'] = incidents_data['population'].str.replace(',', '').astype('int64')
+incidents_data['population'].min()
+
+# %%
+incidents_per_state = incidents_data.groupby(['state', 'population']).size()
+incidents_per_state = ((incidents_per_state / incidents_per_state.index.get_level_values('population'))*100000).to_frame(name='incidents_per_100k_inhabitants').sort_values(by='incidents_per_100k_inhabitants', ascending=True)
+incidents_per_state.reset_index(inplace=True)
+incidents_per_state.plot(
+    kind='barh',
+    x='state',
+    y='incidents_per_100k_inhabitants',
+    figsize=(15, 10),
+    ylabel='State',
+    xlabel='Incidents per 100k inhabitants',
+    title='Incidents per 100k inhabitants per state'
+)
+
+# %%
+nltk.download('stopwords')
+stopwords = set(stopwords.words('english'))
+
+word_cloud_all_train = WordCloud(
+    width=1500,
+    height=1200,
+    stopwords=stopwords,
+    collocations=False,
+    background_color='white'
+    ).generate(' '.join(incidents_data[incidents_data['notes'].notna()]['notes'].tolist()));
+
+plt.imshow(word_cloud_all_train)
+plt.axis('off')
+plt.title('Word cloud of notes')
 
 # %% [markdown]
 # We re-order the columns and we save the cleaned dataset:
