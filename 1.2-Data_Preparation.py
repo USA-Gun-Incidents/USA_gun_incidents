@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Task 1.2 Data Preparation
 
@@ -54,7 +55,7 @@ incidents_data.head(2)
 
 # %% [markdown]
 # To avoid having to recompute the data every time the kernel is interrupted and to make the results reproducible in a short execution time, we decided to save the data to CSV files at the end of each data preparation phase.
-# 
+#
 # Below, we provide two specific functions to perform this task.
 
 # %%
@@ -85,7 +86,7 @@ incidents_data['date'] = incidents_data.apply(lambda row : pd.to_datetime(row['d
 
 # %% [markdown]
 # check the result of the operation
-# 
+#
 
 # %%
 print(type(incidents_data['date'][0]))
@@ -93,7 +94,7 @@ incidents_data.sample(3, random_state = RANDOM_STATE.get())
 
 # %% [markdown]
 # We can observe that all dates are syntactically correct
-# 
+#
 # we check the distribution of dates for obvious errors and outliers
 
 # %% [markdown]
@@ -151,7 +152,7 @@ dates_data
 
 # %% [markdown]
 # From this graph we can see more clearly how the distribution of dates is concentrated between 2015-07-12 and 2017-08-09 (first and third quartiles respectively) and the values that can be considered correct end around 2018-03-31. This is followed by a large period with no pattern, and finally we find all the outliers previously defined as errors.
-# 
+#
 # It is natural to deduce that one must proceed to correct the problems identified. However, it is difficult to define an error correction method because there are no obvious links between the date and the other features in the dataset, so missing or incorrect values cannot be inferred from them. We try to proceed in 2 ways:
 # - the first is to try to find the cause of the error and correct it, based on this assumption: the date could have been entered manually using a numeric keypad, so any errors found could be trivial typos, so let's try subtracting 10 from all dates that are out of range.
 # - The second is to replace the incorrect values with the mean or median of the distribution, accepting the inaccuracy if it does not affect the final distribution too much.
@@ -198,7 +199,7 @@ print(len(incidents_data.loc[incidents_data['date'] > dates_data['upper_whisker'
 
 # %% [markdown]
 # We then observe the distributions thus obtained, in comparison with the original one
-# 
+#
 # the dotted lines represent the low whiskers, the first quartile, the median, the third quartile and the high whiskers. 
 
 # %%
@@ -348,23 +349,23 @@ age_data['participant_age_group1'].unique()
 
 # %% [markdown]
 # Checks done to evaluate the consistency of data related to the minimum, maximum, and average ages of participants, as well as the composition of the age groups:
-# 
+#
 # - min_age_participants $<$ avg_age_participants $<$ max_age_participants
 # - n_participants_child $+$ n_participants_teen $+$ n_participants_adult $>$ 0
-# 
+#
 # - $if$ min_age_participants $<$ 12 $then$ n_participants_child $>$ 0
 # - $if$ 12 $\leq$ min_age_participants $<$ 18 $then$ n_participants_teen $>$ 0
 # - $if$ min_age_participants $\geq$ 18 $then$ n_participants_adult $>$ 0
-# 
+#
 # - $if$ max_age_participants $<$ 12 $then$ n_participants_child $>$ 0 and n_participants_teen $=$ 0 and n_participants_adult $=$ 0
 # - $if$ max_age_participants $<$ 18 $then$ n_participants_teen $>$ 0 or n_participants_child $>$ 0 and n_participants_adult $=$ 0
 # - $if$ max_age_participants $\geq$ 18 $then$ n_participants_adult $>$ 0
-# 
+#
 # Note that: child = 0-11, teen = 12-17, adult = 18+
 
 # %% [markdown]
 # Checks done to evaluate the consistency of data related to number of participants divided by gender and other participants class:
-# 
+#
 # - n_participants $\geq$ 0
 # - n_participants $==$ n_males $+$ n_females
 # - n_killed $+$ n_injured $\leq$ n_participants
@@ -373,41 +374,41 @@ age_data['participant_age_group1'].unique()
 
 # %% [markdown]
 # We also considered data of participants1, a randomly chosen participant whose data related to gender and age are reported in the dataset. For participants, we have the following features: *participant_age1*, *participant_age_group1*, *participant_gender1*.
-# 
+#
 # Values related to participant_age_group1 and participant_gender1 have been binarized using one-hot encoding, thus creating the boolean features *participant1_child*, *participant1_teen*, *participant1_adult*, *participant1_male*, *participant1_female*.
-# 
+#
 # The following checks are done in order to verify the consistency of the data among them and with respect to the other features of the incident:
-# 
+#
 # - $if$ participant_age1 $<$ 12 $then$ participant_age_group1 $=$ *Child*
 # - $if$ 12 $\leq$ participant_age1 $<$ 18 $then$ participant_age_group1 $=$ *Teen*
 # - $if$ participant_age1 $\geq$ 18 $then$ participant_age_group1 $==$ *Adult*
-# 
+#
 # - $if$ participant_age_group1 $==$ *Child* $then$ n_participants_child $>$ 0
 # - $if$ participant_age_group1 $==$ *Teen* $then$ n_participants_teen $>$ 0
 # - $if$ participant_age_group1 $==$ *Adult* $then$ n_participants_adult $>$ 0
-# 
+#
 # - $if$ participant_gender1 $==$ *Male* $then$ n_males $>$ 0
 # - $if$ participant_gender1 $==$ *Female* $then$ n_females $>$ 0
 
 # %% [markdown]
 # In the initial phase, only the values that were not permissible were set to *NaN*. 
-# 
+#
 # We kept track of the consistency of admissible values by using variables (which could take on the boolean value *True* if they were consistent, *False* if they were not, or *NaN* in cases where data was not present). 
-# 
+#
 # These variables were temporarily included in the dataframe so that we could later replace them with consistent values, if possible, or remove them if they were outside the acceptable range.
-# 
+#
 # Variables:
 # - *consistency_age*: Values related to the minimum, maximum, and average ages consistent with the number of participants by age groups.
 # - *consistency_n_participant*: The number of participants for different categories consistent with each other.
 # - *consistency_gender*: The number of participants by gender consistent with the total number of participants.
 # - *consistency_participant1*: Values of features related to participant1 consistent with each other.
-# 
+#
 # - *consistency_participants1_wrt_n_participants*: If *consistency_participants1_wrt_n_participants*, *participant1_age_range_consistency_wrt_all_data*, and *participant1_gender_consistency_wrt_all_data* are all *True*.
-# 
+#
 # - *participant1_age_consistency_wrt_all_data*: Age of participant1 consistent with the minimum and maximum age values of the participants.
 # - *participant1_age_range_consistency_wrt_all_data*: Value of the age range (*Child*, *Teen*, or *Adult*) consistent with the age groups of the participants.
 # - *participant1_gender_consistency_wrt_all_data*: Gender value of participant1 consistent with the gender breakdown values of the group.
-# 
+#
 # - *nan_values*: Presence of "NaN" values in the row.
 
 # %%
@@ -534,7 +535,7 @@ display(age_temporary_data['n_participants'].describe())
 
 # %% [markdown]
 # From the data above, it is evident that the third quartile is equal to two participants, and the maximum number of participants per incident reaches the value of 103.
-# 
+#
 # Below, we have presented the distribution of the number of participants for each incident. In order to make the histograms more comprehensible, we have chosen to represent the data on two separate histograms.
 
 # %%
@@ -584,7 +585,7 @@ age_temporary_data.iloc[236017]
 
 # %% [markdown]
 # This data visualization has been helpful in understanding the exceptions in the dataset and correcting them when possible, using other data from the same entry.
-# 
+#
 # In cases where we were unable to obtain consistent data for a certain value, we have set the corresponding field to *NaN*.
 
 # %% [markdown]
@@ -633,7 +634,7 @@ print('Total rows with null value for n_females: ', new_age_data['n_females'].is
 
 # %% [markdown]
 # We can observe that only for 209 entries in the dataset, all data related to age and gender are *NaN*, while for 104,736 entries, almost one value is *NaN*. From the plot below, we can visualize the null values (highlighted).
-# 
+#
 # It's important to note that we have complete data for *n_killed* and *n_injured* entries, and the majority of missing data are related to age-related features.
 
 # %%
@@ -708,7 +709,7 @@ plt.show()
 
 # %% [markdown]
 # We observe that in incidents involving children and teenagers under the age of 18, the total number of participants was less than 7 and 27, respectively. In general, incidents involving a single person are much more frequent than other incidents, and most often, they involve teenagers and children, with a smaller percentage involving adults. On the other hand, incidents with multiple participants mostly consist of adults, and as the number of participants increases, the frequency of such incidents decreases. 
-# 
+#
 # Note that the y-axis of the histograms is not equal.
 
 # %% [markdown]
@@ -749,7 +750,7 @@ plt.show()
 
 # %% [markdown]
 # From the plot, we can notice that when women are involved in incidents, most of the time, there is only one woman, while in incidents with more than two participants of the same gender, it is more frequent for the participants to be men.
-# 
+#
 # Note that for 1567 entries in the dataset, we have the total number of participants, but we do not have the number of males and females
 
 # %% [markdown]
@@ -853,22 +854,41 @@ for index, record in characteristics_data.iterrows():
 df_characteristics
 
 # %%
-sns.heatmap(df_characteristics[["Shot - Wounded/Injured"]].sort_values(by="Shot - Wounded/Injured", inplace=False, 
+characteristic_to_check = "Shots Fired - No Injuries"
+
+sns.heatmap(df_characteristics[[characteristic_to_check]].sort_values(by=characteristic_to_check, inplace=False, 
     ascending=False).tail(-1))
 
+# %% [markdown]
+# Changing the characteristic we want to analyze, we see in the heatmap above that every characteristic in "incident_characteristics1" is coupled with a very small subset of characteristics in "incident_characteristics2". Moreover, the ones with an important number of couplings are even a very few subset of them.
+
+# %% [markdown]
+# We create a dictionary to count how many incidents show each certain characteristic
+
 # %%
-all_characteristics = list(incidents_data['incident_characteristics1'].unique()) + list(incidents_data['incident_characteristics2'].unique())
-all_characteristics = np.array(all_characteristics)
-all_characteristics = np.unique(all_characteristics)
+count_c1 = incidents_data.pivot_table(columns=['incident_characteristics1'], aggfunc='size').sort_values(ascending=False)
+count_c2 = incidents_data.pivot_table(columns=['incident_characteristics2'], aggfunc='size').sort_values(ascending=False)
 
-#all_characteristics
+count_dict_c1 = count_c1.to_dict()
+count_dict_c2 = count_c2.to_dict()
 
-print(incidents_data.pivot_table(columns=['incident_characteristics2'], aggfunc='size').sort_values(ascending=False)[39:])
+#merge the two dictionaries to have a list of all the characteristiocs with a count
+for key in count_dict_c2.keys():
+    if not key in count_dict_c1.keys():
+        count_dict_c1[key] = count_dict_c2[key]
+    else:
+        count_dict_c1[key] += count_dict_c2[key]
+
+characteristcs_count = sorted(count_dict_c1.items(), key=lambda x: x[1], reverse=True) #sort the dictionary by value
+characteristcs_count
+
+# %% [markdown]
+# We create a Dataframe that associate the characteristics of every incidents to the relative tags
 
 # %%
 #add tags to dataframe
 
-tags = ["Firearm", "Shots", "Aggression", "Suicide", "Injuries", "Death", "Road", "Illegal holding", "House", "School", "Children", "Drugs", "Officers", "Organized", "Social reasons", "Defensive", "Workplace"]
+tags = ["Firearm", "Air Gun", "Shots", "Aggression", "Suicide", "Injuries", "Death", "Road", "Illegal holding", "House", "School", "Children", "Drugs", "Officers", "Organized", "Social reasons", "Defensive", "Workplace", "Abduction", "Unintentional"]
 zeros = [False] * characteristics_data.shape[0]
 
 for tag in tags:
@@ -909,21 +929,19 @@ for index, record in characteristics_data.iterrows():
     for tag in tags: #set values to tags binary mask
         characteristics_data.at[index, tag] = True
 
-
-characteristics_data
-
-# %%
-tag_consistency_attr_name = "Tag Consistency"
-col = [True] * characteristics_data.shape[0] #tag consistency assumed true
-characteristics_data.insert(characteristics_data.shape[1], tag_consistency_attr_name, col)
-
 characteristics_data
 
 # %% [markdown]
-# ### Check consistency between tag and data
+# We finally check consistency between tag and data
 
 # %%
-characteristics_age_data = pd.concat([characteristics_data, age_data], axis=1)
+#add a tag that shows if tags are consistent with data
+tag_consistency_attr_name = "tag_consistency"
+col = [True] * characteristics_data.shape[0] #tag consistency assumed true
+characteristics_data.insert(characteristics_data.shape[1], tag_consistency_attr_name, col)
+
+# %%
+characteristics_age_data = pd.concat([new_age_data, characteristics_data], axis=1)
 
 # %%
 characteristics_age_data.head(2)
@@ -931,7 +949,7 @@ characteristics_age_data.head(2)
 # %%
 from utils import check_consistency_tag
 for index, row in characteristics_age_data.iterrows():
-    characteristics_age_data.at[index, 'tag_consistency'] = check_consistency_tag(row)
+    characteristics_age_data.at[index, tag_consistency_attr_name] = check_consistency_tag(row)
 
 # %%
 # save data
@@ -939,7 +957,7 @@ checkpoint(characteristics_age_data, 'checkpoint5')
 
 # %%
 print('Number of rows with incosistency btw tags and other attributes: ', characteristics_age_data[
-    characteristics_age_data['tag_consistency'] == False].shape[0])
+    characteristics_age_data[tag_consistency_attr_name] == False].shape[0])
 
 # %% [markdown]
 # TAG: Firearm, Shots, Aggression, Suicide, Injuries, Death, Road, Illegal holding, House, 

@@ -1,14 +1,14 @@
-ATF/LE Confiscation/Raid/Arrest;Firearm;Illegal holding
-Accidental Shooting;Firearm;Shots
-Accidental Shooting - Death;Firearm;Shots;Death
-Accidental Shooting - Injury;Firearm;Shots;Injuries
-Accidental Shooting at a Business;Firearm;Shots;Workplace
-Accidental/Negligent Discharge;Firearm
+ATF/LE Confiscation/Raid/Arrest;Illegal holding
+Accidental Shooting;Firearm;Shots;Unintentional
+Accidental Shooting - Death;Firearm;Shots;Death;Unintentional
+Accidental Shooting - Injury;Firearm;Shots;Injuries;Unintentional
+Accidental Shooting at a Business;Firearm;Shots;Workplace;Unintentional
+Accidental/Negligent Discharge;Firearm;Unintentional
 Animal shot/killed;Firearm;Shots;Death
 Armed robbery with injury/death and/or evidence of DGU found;Firearm;Aggression;Injuries;Illegal holding
 Assault weapon (AR-15, AK-47, and ALL variants defined by law enforcement);Firearm
 Attempted Murder/Suicide (one variable unsuccessful)
-BB/Pellet/Replica gun;Firearm
+BB/Pellet/Replica gun;Air Gun
 Bar/club incident - in or around establishment
 Brandishing/flourishing/open carry/lost/found;Firearm
 Car-jacking;Aggression;Road;Illegal holding
@@ -47,16 +47,16 @@ House party;House
 Hunting accident;Firearm
 Implied Weapon;Firearm
 Institution/Group/Business;Organized
-Kidnapping/abductions/hostage;Aggression
+Kidnapping/abductions/hostage;Aggression;Abduction
 LOCKDOWN/ALERT ONLY: No GV Incident Occurred Onsite
 Mass Murder (4+ deceased victims excluding the subject/suspect/perpetrator , one location);Aggression;Death
 Mass Shooting (4+ victims injured or killed excluding the subject/suspect/perpetrator, one location);Firearm;Shots;Aggression;Injuries
 Murder/Suicide;Death
-Non-Aggression Incident
+Non-Aggression Incident;Firearm
 Non-Shooting Incident
 Officer Involved Incident;Officers
 Officer Involved Incident - Weapon involved but no shots fired;Firearm;Officers
-Officer Involved Shooting - Accidental discharge - no injury required;Firearm;Shots;Officers
+Officer Involved Shooting - Accidental discharge - no injury required;Firearm;Shots;Officers;Unintentional
 Officer Involved Shooting - Officer killed;Firearm;Shots;Aggression;Death;Officers
 Officer Involved Shooting - Officer shot;Firearm;Shots;Aggression;Injuries;Officers
 Officer Involved Shooting - Shots fired, no injury;Firearm;Shots;Aggression;Officers
