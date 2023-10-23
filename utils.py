@@ -10,8 +10,8 @@ import math
 # default variables
 LEDR_STATES = 10
 LEDR_CITY_OR_COUNTY = 7
-LEDR_ADDRESS = 3
-SIMILARITY_ADDRESS_THRESHOLD = 1
+LEDR_ADDRESS = 4
+SIMILARITY_ADDRESS_THRESHOLD = 2
 
 FREQUENT_WORDS = ['of', 
     'block', 
@@ -43,7 +43,7 @@ def lower_case(data):
 
 def delete_space(data):
     """delete all spaces in data"""
-    return data.replace(" ", "") # FIX: usare isspace() (sostituisce e.g. anche tab)
+    return data.replace(" ", "").replace('\t', '')
 
 def split_where_parenthesis(data):
     """return two strings where parenthesis are present in data"""    
@@ -69,12 +69,14 @@ def delete_numbers(data):
 
 
 def clean_data_incidents(data):
-    """clean data from incidents dataset"""
-    data = delete_space(data)
-    data = lower_case(data)
-    data = delete_numbers(data) # FIX: i numeri dagli indirizzi non potrebbero essere utili?
+    """clean state or county_or_city from incidents dataset"""
 
-    data = data.replace('county', '') # FIX: forse c'è anche maiuscola?
+    data = lower_case(data)
+    data = data.replace('county', '').replace('city of',  '')
+    data = delete_space(data)
+    data = delete_numbers(data)
+
+    
 
     if check_parenthesis(data):
         data1, data2 = split_where_parenthesis(data)
@@ -91,32 +93,36 @@ def clean_data_geopy(data):
     if pd.isnull(data): return data
 
     data = lower_case(data)
+    data = data.replace('county', '').replace('city of',  '')
     data = delete_numbers(data)
     data = delete_punctuation(data)
     data = delete_space(data)
+
+    return data.replace('County', '')
     
-    return data.replace('county', '')
+    
 
 def check_string_typo(string1, string2, len_typo_ratio = 10):
     """check if two strings are the same with at most a typo
     according to the Damerau-Levenshtein distance"""
-    if pd.isnull(string1): return -1
-    if pd.isnull(string2): return -1
+    if pd.isnull(string1): return 0
+    if pd.isnull(string2): return 0
 
     edit_distance = jellyfish.damerau_levenshtein_distance(string1, string2)
     
-    sensibility = math.floor(max(len(string1), len(string2))/len_typo_ratio) # FIX: meglio sensitivity
-    return int(edit_distance <= sensibility)
+    sensitivity = math.floor(max(len(string1), len(string2))/len_typo_ratio)
+    if edit_distance <= sensitivity: return 1
+    else: return  -1
 
 def check_address(address1, address2_geopy):
-    """check if two addresses are the same with at most a typo"""
-    if pd.isnull(address1): return -1
-    if pd.isnull(address2_geopy): return -1
+    """check if the first address have "some" words in commond with the second address"""
+    if pd.isnull(address1): return 0
+    if pd.isnull(address2_geopy): return 0
 
     for sep in FREQUENT_WORDS:
         # replace frequent words with a separator
-        address1 = address1.replace(sep, '|+|')
-    address1_splitted = address1.split('|+|')
+        address1 = address1.replace(sep, ' ')
+    address1_splitted = address1.split(' ')
 
     cardinality_address1_in_address2 = 0
     address2_geopy_splitted = address2_geopy.replace(' ', ',').split(',')
@@ -125,15 +131,16 @@ def check_address(address1, address2_geopy):
             if check_string_typo(word_1, word_2, LEDR_ADDRESS) >= 1:
                 cardinality_address1_in_address2 += 1
 
-    return int(cardinality_address1_in_address2 >= SIMILARITY_ADDRESS_THRESHOLD)
+    if cardinality_address1_in_address2 >= SIMILARITY_ADDRESS_THRESHOLD: return 1
+    else: return  -1
 
 def check_consistency_geopy(row):
     """check consistency between address in incidents dataset and geopy dataset
     return 0 if not consistent, 1 if consistent, -1 if null values in one of the two addresses"""
-    state_consistency = 0
-    county_city_consistency = 0
+    state_consistency = -1
+    county_city_consistency = -1
     county_city_match = '-1'
-    address_consistency = 0
+    address_consistency = -1
     
     # set state
     state = clean_data_incidents(row['state']) # our data
@@ -141,9 +148,7 @@ def check_consistency_geopy(row):
 
     for s in state:
         dummy = check_string_typo(s, state_geopy, LEDR_STATES)
-        if state_consistency == 0:
-            state_consistency = dummy
-        if dummy == 1:
+        if state_consistency < dummy:
             state_consistency = dummy
 
    # set city or county
@@ -158,7 +163,7 @@ def check_consistency_geopy(row):
         for i, val in enumerate(geopy_couty_city_town_village):
             dummy = check_string_typo(cc, val, LEDR_CITY_OR_COUNTY)
 
-            if county_city_consistency == 0:
+            if county_city_consistency == -1:
                 county_city_consistency = dummy
             if dummy == 1:
                 county_city_match = geopy_col[i]
@@ -198,7 +203,9 @@ def check_consistency_additional_data(state, county, additional_data):
                 c_clean = clean_data_geopy(c)
                 for county_incidents in county_list:     
                     if check_string_typo(county_incidents, c_clean) == 1:
-                        return state_current, c + ' County'
+                        if 'City of' in c:
+                            return state_current, c.split(',')[0]
+                        else: return state_current, c + ' County'
     
     return state_current, np.nan
     
@@ -219,8 +226,9 @@ def check_geographical_data_consistency(row, additional_data):
     if row['coord_presence']: # if geopy data is present
         state_consistency, county_consistency, county_city_match, address_consistency = check_consistency_geopy(row)
 
-    if ((state_consistency==1 and (county_consistency==1 or (county_consistency==-1 and address_consistency!=0))) 
-        or (county_consistency==1 and address_consistency==1)):
+    if state_consistency+county_consistency+address_consistency >= 1:
+    #if ((state_consistency==1 and (county_consistency==1 or (county_consistency==-1 and address_consistency!=0) or (county_consistency==0 and address_consistency==1))) 
+    #or (county_consistency==1 and address_consistency==1)):
         # set geopy data
         clean_geo_data_row.loc[['state']] = row['state_geopy']
         clean_geo_data_row.loc[['county']] = row['county_geopy']
@@ -239,12 +247,14 @@ def check_geographical_data_consistency(row, additional_data):
         clean_geo_data_row.loc[['longitude']] = row['longitude'] 
         clean_geo_data_row.loc[['importance']] = row['importance_geopy']
         clean_geo_data_row.loc[['address_type']] = row['addresstype_geopy']
-
-    elif (state_consistency==1 and county_consistency==-1 and address_consistency==0 and pd.isnull(row['city_or_county'])):
+    
+        '''
+        elif (state_consistency==1 and county_consistency==-1 and address_consistency==0 and pd.isnull(row['city_or_county'])):
         # set not null geopy data
         clean_geo_data_row.loc[['state']] = row['state_geopy']
         clean_geo_data_row.loc[['importance']] = row['importance_geopy']
         clean_geo_data_row.loc[['address_type']] = row['addresstype_geopy']
+        '''
 
     else: # check consistency with additional data
         state, county = check_consistency_additional_data(row['state'], row['city_or_county'], additional_data)
@@ -259,7 +269,7 @@ def check_geographical_data_consistency(row, additional_data):
 
 ####################### Age-gender and categorical data cleaning #######################
 
-# FIX: perchè in [np.nan]? isna() non va bene?
+# FIX: perchè in [np.nan]? isna() non va bene? 
 # FIX: eviterei il one hot encoding, per adesso occupa solo spazio, se ci servirà più avanti lo faremo
 
 def convert_age_to_int(data):
