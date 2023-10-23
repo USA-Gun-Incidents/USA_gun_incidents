@@ -300,8 +300,6 @@ plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 print(clean_geo_data.columns)
 
 # %%
-#TODO: aggiungere tutte le colonne di 'incidenti' significative e mancanti, e aggiungere colonne aggiuntive geopy solo nelle righe sensatte
-#TODO: per farlo aggiungere booleano della utils per capire se i dati salvati sono o no di geopy
 
 #clean_geo_data = clean_geo_data.astype({"a": int, "b": complex})
 
