@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Task 1 Data Understanding and Preparation
 
@@ -21,12 +20,13 @@ import calendar
 import nltk
 from wordcloud import WordCloud
 from nltk.corpus import stopwords
+from pyproj import Transformer
 
 # %% [markdown]
 # We define constants and settings for the notebook:
 
 # %%
-# %matplotlib inline
+%matplotlib inline
 
 DATA_FOLDER_PATH = '../data/'
 
@@ -51,15 +51,15 @@ poverty_data.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about the poverty percentage for each USA state and year.
-#
+# 
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas dtype for later analysis.
-#
+# 
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :------------: |
 # | 0 | state | Categorical (Nominal) | Name of the state | object |
 # | 1 | year | Numeric (Interval) | Year | int64 |
 # | 2 | povertyPercentage | Numeric (Ratio) | Poverty percentage for the corresponding state and year | float64 |
-#
+# 
 
 # %% [markdown]
 # We display a concise summary of the DataFrame:
@@ -120,7 +120,7 @@ poverty_data.loc[
 
 # %% [markdown]
 # Since the tuple <`state`, `year`> uniquely identifies each row we can conclude that there are no missing rows.
-#
+# 
 # Now, we count how many rows have missing values:
 
 # %%
@@ -134,7 +134,7 @@ poverty_data[poverty_data['povertyPercentage'].isnull()]['year'].unique()
 
 # %% [markdown]
 # As expected we have no data from 2012. Later we will fix this issue.
-#
+# 
 # Now we visualize the distribution of poverty percentage for each state.
 
 # %%
@@ -179,7 +179,7 @@ plt.ylabel('Average Poverty (%)')
 
 # %% [markdown]
 # It is evident that New Hampshire's average poverty rate is markedly lower than that of the other states, whereas Mississippi's average poverty rate is notably higher than the rest. 
-#
+# 
 # To inspect and compare the poverty percentage of each state over the year, we plot an interactive line chart:
 
 # %%
@@ -190,7 +190,7 @@ fig.show()
 
 # %% [markdown]
 # We can oberserve that New Hampshire always had the lowest poverty percentage, whereas Mississippi had the highest till 2009, then it was surpassed by New Mexico and Louisiana.
-#
+# 
 # To imputate the missing data from 2012, we calculate the average of the `povertyPercentage` values for the preceding and succeeding year.
 
 # %%
@@ -283,9 +283,9 @@ elections_data.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about the winner of the congressional elections in the USA, for each year, state and congressional district.
-#
+# 
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas `dtype` for later analysis.
-#
+# 
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :------------: |
 # | 0 | year | Numeric (Interval) | Year | int64 |
@@ -341,7 +341,7 @@ print(f'Number of states: {states.size}')
 
 # %% [markdown]
 # All the states (District of Columbia included) are present.
-#
+# 
 # We now display the states and the years for which there are missing rows:
 
 # %%
@@ -360,7 +360,7 @@ elections_data[elections_data['state']=='DISTRICT OF COLUMBIA']
 
 # %% [markdown]
 # Missing values are probably due to the fact that District of Columbia is a non voting delegate district. Anyway, we gathered the missing values from Wikipedia. We noticed that as for the 2020 elecetions, the number of votes received by the winning party coincides, but the number of totalvotes is different (see [here](https://en.wikipedia.org/wiki/2020_United_States_House_of_Representatives_election_in_the_District_of_Columbia)). To be consistent with the other data, we replace the totalvotes value from 2020 with the one from Wikipedia.
-#
+# 
 # Now we import those data:
 
 # %%
@@ -375,7 +375,7 @@ dc_elections_data.info()
 
 # %% [markdown]
 # The inferred types are correct.
-#
+# 
 # We now merge the two dataframes:
 
 # %%
@@ -416,7 +416,7 @@ plt.tight_layout()
 
 # %% [markdown]
 # We can observe that for both total and candidate votes Florida, Louisian and Oklahoma have lower outliers, while Maine has an upper outlier. 
-#
+# 
 # We display the rows relative to Maine:
 
 # %%
@@ -472,7 +472,7 @@ plt.tight_layout()
 
 # %% [markdown]
 # It is evident that in some states the number of votes fluctuates significantly from year to year.
-#
+# 
 # We get the unique names of the parties for the years of interest:
 
 # %%
@@ -503,7 +503,7 @@ elections_data[(elections_data['candidateperc']==100) & (elections_data['year']>
 
 # %% [markdown]
 # Wikipedia reports the same data, in those cases there was not an opponent party.
-#
+# 
 # The histogram above also shows that in some disticts the winner party obtained less than 50% of the votes. We display those districts:
 
 # %%
@@ -586,9 +586,9 @@ incidents_data.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about gun incidents in the USA.
-#
+# 
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas dtype for later analysis.
-#
+# 
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :-----------: |
 # | 0 | date | Numeric (Interval) | Date of incident occurrence| datetime |
@@ -631,7 +631,7 @@ incidents_data.info()
 # - `congressional_district`, `state_house_district`, `state_senate_district`, `participant_age1`, `n_males`, `n_females`, `n_arrested`, `n_unharmed`, `n_participants` are stored as `float64` while should be `int64`
 # - `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` are stored as `object` while should be `int64`, this probably indicates the presence of out of syntactic errors (not in the domain)
 # - the presence of missing values within many attributes; the only attributes without missing values are the following: `date`, `state`, `city_or_county`, `n_killed`, `n_injured`, `n_participants`
-#
+# 
 # We display descriptive statistics of the DataFrame so to better understand how to cast the data:
 
 # %%
@@ -681,7 +681,7 @@ incidents_data.info()
 
 # %% [markdown]
 # We observe that the downcasting of many attributes has not succeeded. This is due to the presence of missing or out of range values. TODO: to handle
-#
+# 
 # Now we visualize missing values:
 
 # %%
@@ -776,7 +776,7 @@ incidents_data.groupby(['latitude', 'longitude'])['address'].unique()[lambda x: 
 
 # %% [markdown]
 # Still this attribute may be written in different ways (e.g. "Avenue" may also be written as "Ave", or "Highway" as "Hwy"). There could also be some errors (e.g. the same point corresponds to the address "33rd Avenue", "Kamehameha Highway" and "Kilauea Avenue extension").
-#
+# 
 # We plot on a map the location of the incidents:
 
 # %%
@@ -885,7 +885,7 @@ house_districts
 
 # %% [markdown]
 # Also this attribute has some errors because the maximum number of state house districts should be 204 (for New Hampshire, see [here](https://ballotpedia.org/State_Legislative_Districts)). For now we won't correct this error beacuse this attribute is not useful for our analysis.
-#
+# 
 # We check if given a certain value for the attributes `latitude` and a `longitude`, the attribute `state_house_district` has always the same value:
 
 # %%
@@ -914,7 +914,7 @@ senate_districts
 
 # %% [markdown]
 # And again we notice some errors because the maximum number of state senate districts should be 67 (for Minnesota, see [here](https://ballotpedia.org/State_Legislative_Districts)). For now we won't correct this error beacuse this attribute is not useful for our analysis.
-#
+# 
 # We correct other possible errors as above:
 
 # %%
@@ -942,9 +942,9 @@ incidents_data[incidents_data['congressional_district'].notnull()].groupby(
 
 # %% [markdown]
 # We cannot recover the missing values for the attribute `congressional_district` from the values of `state_house_district` either.
-#
+# 
 # We can, instead, recover the missing values from the entries with "similar" `latitude` and `longitude`. We'll do this first for the state of Alabama, showing the results with some plots. Later we will do the same for all the other states.
-#
+# 
 # As a first step, we plot on a map the incidents that happened in Alabama, coloring them according to the value of the attribute `congressional_district`:
 
 # %%
@@ -1038,9 +1038,6 @@ plot_scattermap_plotly(
 # To improve the visualization, we plot on the map the decision boundaries of the classifier. To do so, we convert latitude and longitude to a 2D space:
 
 # %%
-from pyproj import Transformer
-
-
 transformer = Transformer.from_crs("EPSG:4326", "EPSG:26929", always_xy=True)
 
 X_train_converted = []
@@ -1075,7 +1072,7 @@ plot_clf_decision_boundary(knn_eu_clf, X_train_converted, y_train, alabama_color
 
 # %% [markdown]
 # We can now compare the boundaries built by the classifier with the actual boundaries (this map was taken [here](https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif/lossless-page1-1256px-United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif.png)):
-#
+# 
 # <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif/lossless-page1-1256px-United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif.png" alt="Alt Text" width="600"/>
 
 # %% [markdown]
@@ -1139,12 +1136,15 @@ ax.set_ylabel('incident_characteristics1')
 ax.set_title('Counts of incident characteristics')
 plt.tight_layout()
 
+# %%
+incidents_data[incidents_data['state']=='DISTRICT OF COLUMBIA'].size
+
 # %% [markdown]
 # We join the poverty data with the incidents data:
 
 # %%
 incidents_data['year'] = incidents_data['date'].dt.year
-incidents_data = incidents_data.merge(poverty_data, on=['state', 'year'], how='left')
+incidents_data = incidents_data.merge(poverty_data, on=['state', 'year'], how='left', validate="m:1")
 incidents_data.head()
 
 # %% [markdown]
@@ -1192,15 +1192,12 @@ usa_population.head()
 usa_population.drop(columns=['Population as of 2000 census', 'Change', 'Percent change'], inplace=True)
 usa_population.rename(columns={'Population as of 2010 census':'population', 'State': 'state'}, inplace=True)
 usa_population['state'] = usa_population['state'].str.upper()
+usa_population['population'] = usa_population['population'].str.replace(',', '').astype('int64')
 incidents_data = incidents_data.merge(usa_population, on=['state'], how='left')
 incidents_data.head()
 
 # %%
-incidents_data['population'] = incidents_data['population'].str.replace(',', '').astype('int64')
-incidents_data['population'].min()
-
-# %%
-incidents_per_state = incidents_data.groupby(['state', 'population']).size()
+incidents_per_state = incidents_data[incidents_data['year']<=2020].groupby(['state', 'population']).size()
 incidents_per_state = ((incidents_per_state / incidents_per_state.index.get_level_values('population'))*100000).to_frame(name='incidents_per_100k_inhabitants').sort_values(by='incidents_per_100k_inhabitants', ascending=True)
 incidents_per_state.reset_index(inplace=True)
 incidents_per_state.plot(
@@ -1212,6 +1209,15 @@ incidents_per_state.plot(
     xlabel='Incidents per 100k inhabitants',
     title='Incidents per 100k inhabitants per state'
 )
+
+# %%
+incidents_data[incidents_data['state']=='DISTRICT OF COLUMBIA'].groupby(['latitude', 'longitude']).size()[lambda x: x > 1]
+
+# %%
+incidents_data[(incidents_data['latitude']==38.8204) & (incidents_data['longitude']==-77.0076)]
+
+# %%
+incidents_data.groupby(['latitude', 'longitude', 'date']).size()[lambda x: x>1]
 
 # %%
 nltk.download('stopwords')
@@ -1228,6 +1234,56 @@ word_cloud_all_train = WordCloud(
 plt.imshow(word_cloud_all_train)
 plt.axis('off')
 plt.title('Word cloud of notes')
+
+# %%
+incidents_per_month_per_state = incidents_data.groupby(['state', 'month', 'year']).size()
+incidents_per_month_per_state = incidents_per_month_per_state.to_frame(name='incidents').reset_index()
+incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month', 'state'], ignore_index=True)
+incidents_per_month_per_state['incidents_per_100k_inhabitants'] = incidents_per_month_per_state.apply(
+    lambda row: (row['incidents'] / usa_population[usa_population['state']==row['state']]['population'].iloc[0])*100000,
+    axis=1
+)
+fig, ax = plt.subplots(figsize=(20, 10))
+sns.heatmap(
+    incidents_per_month_per_state[incidents_per_month_per_state.year<=2020].pivot(
+        index='state',
+        columns=['year', 'month'],
+        values='incidents_per_100k_inhabitants'
+    ).fillna(0),
+    cmap='coolwarm',
+    ax=ax,
+    xticklabels=True,
+    yticklabels=True,
+    linewidths=.5
+)
+ax.set_xlabel('Month-Year')
+ax.set_ylabel('State')
+ax.set_title('Number of incidents per month per state')
+
+xticks = []
+for label in ax.get_xticklabels():
+    txt_label = label.get_text()
+    month = txt_label[txt_label.find('-')+1:]
+    year = txt_label[:txt_label.find('-')]
+    xticks.append(year+' - '+calendar.month_name[int(month)])
+
+ax.set_xticklabels(xticks);
+
+plt.xticks(rotation=90)
+plt.tight_layout()
+
+# %%
+incidents_per_state_2016 = incidents_data[incidents_data['year']==2016].groupby(['state', 'population', 'povertyPercentage', 'party']).size().to_frame(name='incidents').reset_index()
+incidents_per_state_2016['incidents_per_100k_inhabitants'] = (incidents_per_state_2016['incidents'] / incidents_per_state_2016['population'])*100000
+fig = px.scatter(
+    incidents_per_state_2016,
+    x='povertyPercentage',
+    y='incidents_per_100k_inhabitants',
+    color='party',
+    hover_name='state',
+    hover_data={'povertyPercentage': True, 'incidents_per_100k_inhabitants': True}
+)
+fig.show()
 
 # %% [markdown]
 # We re-order the columns and we save the cleaned dataset:
