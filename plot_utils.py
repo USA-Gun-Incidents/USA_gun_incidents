@@ -6,6 +6,13 @@ from sklearn.inspection import DecisionBoundaryDisplay
 import matplotlib.dates as mdates
 import pandas as pd
 
+# TODO: sostiture questo dizionario con:
+# usa_states = pd.read_csv(
+# 'https://www2.census.gov/geo/docs/reference/state.txt',
+# sep='|',
+# dtype={'STATE': str, 'STATE_NAME': str}
+# )
+# usa_name_alphcode = usa_states.set_index('STATE_NAME').to_dict()['STUSAB']
 usa_code = {
     'Alabama': 'AL',
     'Alaska': 'AK',
@@ -160,7 +167,6 @@ def plot_usa_map(
 
 def plot_scattermap_plotly(data, attribute, zoom=6, height=800, width=800, title=None, legend_title=None, x_column='latitude', y_column='longitude'):
     fig = px.scatter_mapbox(
-        hover_name=data.index,
         color=data[attribute].astype(str),
         lat=data[x_column], 
         lon=data[y_column],
