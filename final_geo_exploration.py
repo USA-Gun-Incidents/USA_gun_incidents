@@ -9,7 +9,7 @@ import plot_utils
 import utils 
 
 dirname = os.path.dirname(' ')
-f_data = pd.read_csv(os.path.join(dirname, 'data/post_proc/final_incidents_2.csv'), index_col=0, low_memory=False)
+f_data = pd.read_csv(os.path.join(dirname, 'data/post_proc/final_incidents_city_inf.csv'), index_col=0, low_memory=False)
 orig_data = pd.read_csv(os.path.join(dirname, 'data/incidents.csv'), low_memory=False).drop_duplicates()
 geopy_data = pd.read_csv(os.path.join(dirname, 'data/geopy/geopy.csv'), index_col=0, low_memory=False)
 
@@ -23,13 +23,13 @@ orig_data.head(3)
 geopy_data.head(3)
 
 # %%
-dummy = orig_data.loc[f_data.loc[f_data['county'].isna()].index]
+dummy = orig_data.loc[f_data.loc[f_data['latitude'].isna()].index]
 interesting_index = dummy.loc[dummy['latitude'].notna()].index
 orig_data.loc[interesting_index][['state', 'city_or_county', 'address', 'latitude', 'longitude']]
 
 # %%
 import random
-new_ii = random.sample(interesting_index.to_list(), 10)
+new_ii = random.sample(interesting_index.to_list(), 15)
 
 # %%
 orig_data.loc[new_ii][['state', 'city_or_county', 'address', 'latitude', 'longitude']]
@@ -57,8 +57,8 @@ geopy_data.loc[(geopy_data['county'].isna()) & (geopy_data['lat'].notna())].grou
 geopy_data.loc[229463]['display_name']
 
 # %%
-for i in geopy_data.loc[75389].index:
-    print(i, geopy_data.loc[75389][i])
+for i in geopy_data.loc[215070].index:
+    print(i, geopy_data.loc[215070][i])
 
 
 
@@ -93,6 +93,6 @@ to_save
 
 # %%
 FOLDER = os.path.join(dirname, 'data')
-to_save.to_csv(os.path.join(FOLDER,'post_proc/final_incidents_2.csv'))
+#to_save.to_csv(os.path.join(FOLDER,'post_proc/incidents_data_geo.csv'))
 
 

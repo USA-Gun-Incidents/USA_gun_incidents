@@ -158,19 +158,32 @@ def plot_usa_map(
         ax.set_yticks([])
         ax.set_xticks([])
 
-def plot_scattermap_plotly(data, attribute, zoom=6, height=800, width=800, title=None, legend_title=None, x_column='latitude', y_column='longitude'):
-    fig = px.scatter_mapbox(
-        hover_name=data.index,
-        color=data[attribute].astype(str),
-        lat=data[x_column], 
-        lon=data[y_column],
-        zoom=zoom, 
-        height=height,
-        width=width,
-        title=title,
-        text=data[attribute].astype(str),
-        category_orders={'color': sorted(data[attribute].astype(str).unique())}
-    )
+def plot_scattermap_plotly(data, attribute, zoom=6, height=800, width=800, title=None, legend_title=None, x_column='latitude', y_column='longitude', hover_name=True):
+    if hover_name:
+        fig = px.scatter_mapbox(
+            hover_name=data.index,
+            color=data[attribute].astype(str),
+            lat=data[x_column], 
+            lon=data[y_column],
+            zoom=zoom, 
+            height=height,
+            width=width,
+            title=title,
+            text=data[attribute].astype(str),
+            category_orders={'color': sorted(data[attribute].astype(str).unique())}
+        )
+    else:
+        fig = px.scatter_mapbox(
+            color=data[attribute].astype(str),
+            lat=data[x_column], 
+            lon=data[y_column],
+            zoom=zoom, 
+            height=height,
+            width=width,
+            title=title,
+            text=data[attribute].astype(str),
+            category_orders={'color': sorted(data[attribute].astype(str).unique())}
+        )
     fig.update_layout(
         mapbox_style="open-street-map",
         margin={"r":0,"t":100,"l":0,"b":0},

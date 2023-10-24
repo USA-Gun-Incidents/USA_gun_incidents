@@ -53,6 +53,9 @@ centroids = data.loc[data['latitude'].notna() & data['city'].notna()][['latitude
 centroids.head(10)
 
 # %%
+print(centroids.index.to_list())
+
+# %%
 centroids.sample()
 
 # %%
@@ -86,7 +89,7 @@ info_city
 info_city.loc[info_city['tot_points'] > 1].info()
 
 # %%
-plot_utils.plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat', y_column='centroid_lon')
+plot_utils.plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat', y_column='centroid_lon', hover_name=False)
 
 # %%
 for i in [  5955,  19567,  22995,  23433,  35631,  39938,  45163,  55557,  55868,
@@ -140,7 +143,9 @@ print( ' ---- GOOD ---\t', a+b+c+d)
 print( ' ---- BAD ----\t', e+f+g+h)
 
 # %%
-final_data.to_csv(os.path.join(dirname, 'data/post_proc/final_incidents_KNN_city.csv'))
+final_data.to_csv(os.path.join(dirname, 'data/post_proc/final_incidents_city_inf.csv'))
+info_city.to_csv(os.path.join(dirname, 'data/post_proc/info_city.csv'))
+
 
 # %%
 a = len(data.loc[(data['latitude'].notna()) & (data['county'].notna()) & (data['city'].notna())])

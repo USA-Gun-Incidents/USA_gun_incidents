@@ -33,9 +33,6 @@ geo_data = incidents_data[['date', 'state', 'city_or_county', 'address', 'latitu
        'congressional_district', 'state_house_district', 'state_senate_district']]
 geo_data
 
-# %%
-
-
 # %% [markdown]
 # ## GeoPy Data Description
 
@@ -132,7 +129,7 @@ additional_data.dtypes
 
 # %%
 geopy_path = os.path.join(FOLDER, 'geopy/geopy.csv')
-geopy_data = pd.read_csv(geopy_path, index_col=['index'])
+geopy_data = pd.read_csv(geopy_path, index_col=['index'], low_memory=False, dtype={})
 geopy_data.info()
 
 # %%
@@ -185,6 +182,12 @@ data_check_consistency['longitude'] = data_check_consistency['longitude'].astype
 
 # %%
 data_check_consistency[(data_check_consistency['coord_presence'] == True) & (data_check_consistency['importance_geopy'].isnull())]
+
+# %%
+data_check_consistency['town_geopy'].loc[0]
+
+# %%
+pd.isnull(data_check_consistency['town_geopy'].loc[0])
 
 # %%
 clean_geo_data = data_check_consistency.apply(lambda row: 
@@ -259,6 +262,9 @@ plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 
 # %%
 clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())].groupby('city').count()
+
+# %%
+clean_geo_data.loc[(clean_geo_data['latitude'].isna())].groupby('city').count()
 
 # %%
 missing_county={'Missouri':'Saint Louis County', 'Denver':'Denver County', 'Juneau': 'Juneau County', 'San Francisco': 'San Francisco County' }

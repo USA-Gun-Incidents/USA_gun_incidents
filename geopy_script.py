@@ -279,6 +279,20 @@ def to_csv(IN, OUT):
     df.drop(['licence', 'osm_type', 'osm_id'],axis=1, inplace=True)
     df.to_csv(OUT)
 
+def get_coord():
+    from geopy import Nominatim
+    import time
+
+    geolocator = Nominatim(user_agent="DM_project_giacomo")
+
+    addr = ['Oklahoma, Tulsa']
+    for line in addr:
+        location = geolocator.geocode(line)
+        print (location.latitude, location.longitude)
+        time.sleep(1)
+
+
+
 DIR = cur_path = os.path.dirname(__file__) + '\\data\\geopy\\'
 ERR_DIR = DIR + 'geopy_error.txt'
 STATS_FILE = DIR + 'geopy_stats.txt'
@@ -292,5 +306,6 @@ OUT_FILE = DIR + 'geopy.csv'
 
 #remove_dup(FINAL_DATA, FINAL_DATA_2)
 
+get_coord()
 #geolocator = Nominatim(user_agent="DM_project")
 #print('39.7462, -105.058', geolocator.reverse('39.7462, -105.058').raw)
