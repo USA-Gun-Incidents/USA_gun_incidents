@@ -262,7 +262,7 @@ plt.show()
 
 # %% [markdown]
 # None of the methods used are satisfactory, as they all introduce either large variations in the distribution. On the other hand, using strategies other than those tested could make the date feature unreliable, also because the total number of errors is 23008, 9.5% of the total. The best solution is to remove all the incorrect values and take this into account when applying the knowledge extraction algorithms.
-# 
+#
 # So we create a new record with the correct date column
 
 # %%

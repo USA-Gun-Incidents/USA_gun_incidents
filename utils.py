@@ -11,6 +11,7 @@ import math
 LEDR_STATES = 10
 LEDR_CITY_OR_COUNTY = 7
 LEDR_ADDRESS = 4
+LEDR_GENERAL_TRESHOLD = 8
 SIMILARITY_ADDRESS_THRESHOLD = 2
 
 FREQUENT_WORDS = ['of', 
@@ -98,7 +99,7 @@ def clean_data_geopy(data):
     data = delete_punctuation(data)
     data = delete_space(data)
 
-    return data.replace('County', '')
+    return data
     
     
 
@@ -173,6 +174,40 @@ def check_consistency_geopy(row):
     address_consistency = check_address(row['address'], row['address_geopy'])
 
     return state_consistency, county_city_consistency, county_city_match, address_consistency
+
+def check_consistency_geopy_display_name(row):
+
+    def contains(word, g_address):
+        ret = -1
+        g_list = g_address.replace(' ', ',').split(',')
+        for el in g_list:
+            check = check_string_typo(word, clean_data_geopy(el), LEDR_GENERAL_TRESHOLD)
+            if ret < check:
+                ret = check
+
+        return ret
+
+    state_consistency = -1
+    county_city_consistency = -1
+    address_consistency = -1
+    
+    # state consistency
+    state = clean_data_incidents(row['state']) # our data
+    for s in state:
+        check = contains(s, row['address_geopy'])
+        if state_consistency < check:
+            state_consistency = check
+
+    # city or county consistency
+    incidents_couty_city = clean_data_incidents(row['city_or_county']) #our data
+    for cc in incidents_couty_city:
+        check = contains(cc, row['address_geopy'])
+        if county_city_consistency < check:
+            county_city_consistency = check
+
+    # address consistency
+    address_consistency = check_address(row['address'], row['address_geopy'])
+    return state_consistency, county_city_consistency, address_consistency
 
 def check_consistency_additional_data(state, county, additional_data):
     """check consistency between address in incidents dataset and additional data"""
@@ -267,6 +302,48 @@ def check_geographical_data_consistency(row, additional_data):
 
     return clean_geo_data_row
 
+def check_geographical_data_consistency_2(row, additional_data):
+    """check consistency between our data, geopty data and additional data
+    return consistent data if consistent, else return nan values"""
+
+    def first_not_null(row, col):
+        for c in col:
+            if not np.isnan(row[c]):
+                return row[c]
+        return row[col[0]]
+    
+    # initialize clean_geo_data
+    clean_geo_data_row = pd.Series(index=['state', 'county', 'city', 'latitude', 'longitude', 'state_consistency', 
+                                'county_consistency', 'address_consistency', 'importance', 'address_type'], dtype=str)
+    
+    # initialize consistency variables
+    state_consistency = -1
+    county_consistency = -1
+    address_consistency = -1
+
+    # check consistency with geopy data
+    if row['coord_presence']: # if geopy data is present
+        state_consistency, county_consistency, county_city_match, address_consistency = check_consistency_geopy_display_name(row)
+
+    if state_consistency+county_consistency+address_consistency >= 1:
+        clean_geo_data_row.loc[['state']] = row['state_geopy']
+        clean_geo_data_row.loc[['county']] = first_not_null(row, ['county_geopy', 'suburb_geopy'])
+        clean_geo_data_row.loc[['city']] = first_not_null(row, ['city_geopy', 'town_geopy', 'village_geopy'])
+        clean_geo_data_row.loc[['latitude']] = row['latitude']
+        clean_geo_data_row.loc[['longitude']] = row['longitude'] 
+        clean_geo_data_row.loc[['importance']] = row['importance_geopy']
+        clean_geo_data_row.loc[['address_type']] = row['addresstype_geopy']
+
+    else: # check consistency with additional data
+        state, county = check_consistency_additional_data(row['state'], row['city_or_county'], additional_data)
+        clean_geo_data_row.loc[['state']] = state
+        clean_geo_data_row.loc[['county']] = county
+
+    clean_geo_data_row.loc[['state_consistency']] = state_consistency
+    clean_geo_data_row.loc[['county_consistency']] = county_consistency
+    clean_geo_data_row.loc[['address_consistency']] = address_consistency
+
+    return clean_geo_data_row
 ####################### Age-gender and categorical data cleaning #######################
 
 # FIX: perchè in [np.nan]? isna() non va bene? 

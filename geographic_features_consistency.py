@@ -10,6 +10,7 @@ import sys
 import os
 sys.path.append(os.path.abspath('..\\')) # TODO: c'è un modo per farlo meglio?
 import plot_utils
+import utils
 import numpy as np
 
 
@@ -135,19 +136,14 @@ geopy_data = pd.read_csv(geopy_path, index_col=['index'])
 geopy_data.info()
 
 # %%
+geopy_data.loc[geopy_data['suburb'].isna()]
+
+# %%
 for col in geopy_data:
     dummy = geopy_data[col].unique()
     print( [ col, dummy, len(dummy)] )
 
 # %%
-'''print('Number of rows in which state is null: ', geopy_data[geopy_data['state'].isnull()].shape[0])
-print('Number of rows in which county is null: ', geopy_data[geopy_data['county'].isnull()].shape[0])
-print('Number of rows in which city is null: ', geopy_data[geopy_data['city'].isnull()].shape[0])
-print('Number of rows in which town is null: ', geopy_data[geopy_data['town'].isnull()].shape[0])
-print('Number of rows in which road is null: ', geopy_data[geopy_data['road'].isnull()].shape[0])
-print('Number of rows in which addresstype is null: ', geopy_data[geopy_data['addresstype'].isnull()].shape[0])
-print('Number of rows in which importance is null: ', geopy_data[geopy_data['importance'].isnull()].shape[0])'''
-
 print('Number of rows without coordinates: ', geopy_data['coord_presence'].value_counts())
 print('Number of rows without importance: ', geopy_data['importance'].isnull().value_counts())
 
@@ -169,13 +165,13 @@ print('Number of rows in which addresstype is null: ', geopy_data[geopy_data['ad
 # %%
 data_check_consistency = pd.DataFrame(columns=['state', 'city_or_county', 'address', 'latitude', 'longitude', 'display_name', 
     'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 'importance_geopy', 'addresstype_geopy', 
-    'coord_presence'])
+    'coord_presence', 'suburb_geopy'])
 data_check_consistency[['state', 'city_or_county', 'address', 'latitude', 'longitude']] = incidents_data[[
     'state', 'city_or_county', 'address', 'latitude', 'longitude']]
     
 data_check_consistency[['address_geopy', 'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 
-    'importance_geopy', 'addresstype_geopy', 'coord_presence']] = geopy_data.loc[incidents_data.index][['display_name', 'village', 'town', 'city', 
-    'county', 'state', 'importance', 'addresstype', 'coord_presence']]
+    'importance_geopy', 'addresstype_geopy', 'coord_presence', 'suburb_geopy']] = geopy_data.loc[incidents_data.index][['display_name', 'village', 'town', 'city', 
+    'county', 'state', 'importance', 'addresstype', 'coord_presence', 'suburb']]
 
 
 
@@ -191,15 +187,12 @@ data_check_consistency['longitude'] = data_check_consistency['longitude'].astype
 data_check_consistency[(data_check_consistency['coord_presence'] == True) & (data_check_consistency['importance_geopy'].isnull())]
 
 # %%
-from utils import check_geographical_data_consistency
-
 clean_geo_data = data_check_consistency.apply(lambda row: 
-    check_geographical_data_consistency(row, additional_data=additional_data), axis=1)
+    utils.check_geographical_data_consistency_2(row, additional_data=additional_data), axis=1)
 
 # %%
 final_incidents = clean_geo_data.drop(['state_consistency', 'county_consistency', 'address_consistency'], axis=1)
-clean_geo_data.to_csv(FOLDER + '/post_proc/geo_data_stats_columns.csv', index=False)
-final_incidents.to_csv(os.path.join(FOLDER,'post_proc/final_incidents.csv'))
+final_incidents.to_csv(os.path.join(FOLDER,'post_proc/final_incidents_2.csv'))
 
 # %%
 print('Number of rows with all null values: ', clean_geo_data.isnull().all(axis=1).sum())
@@ -213,11 +206,8 @@ print('Number of rows with null value for longitude: ', clean_geo_data['longitud
 clean_geo_data.head(3)
 
 # %%
-print('Number of rows divided by state_consistency:\n', clean_geo_data['state_consistency'].value_counts())
-print('Number of rows divided by county_consistency:\n', clean_geo_data['county_consistency'].value_counts())
-print('Number of rows divided by address_consistency:\n', clean_geo_data['address_consistency'].value_counts())
 
-clean_geo_data.info()
+clean_geo_data.groupby(['state_consistency',	'county_consistency','address_consistency']).count().sort_index(ascending=False)
 
 # %%
 dummy = {}
@@ -254,20 +244,6 @@ print( ' 1 --- 1 --- 1\t', h)
 print( ' ---- TOT ----\t', a+b+c+d+e+f+g+h)
 print( ' ---- GOOD ---\t', a+b+c+d)
 print( ' ---- BAD ----\t', e+f+g+h)
-
-# %%
-only_nan_coord = clean_geo_data[clean_geo_data['latitude'].isnull()]
-
-for col in only_nan_coord:
-    dummy = only_nan_coord[col].unique()
-    print( [ col, dummy, len(dummy)] )
-
-# %%
-print('Number of rows divided state:\n', only_nan_coord['state'].value_counts())
-
-# %%
-print('Number of nan: ', only_nan_coord['county'].isna().sum())
-print('Number of not nan: ', len(only_nan_coord['county']) - only_nan_coord['county'].isna().sum())
 
 # %%
 dummy_data = clean_geo_data[clean_geo_data['latitude'].notna()]

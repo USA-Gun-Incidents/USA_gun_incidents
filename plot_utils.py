@@ -160,6 +160,7 @@ def plot_usa_map(
 
 def plot_scattermap_plotly(data, attribute, zoom=6, height=800, width=800, title=None, legend_title=None, x_column='latitude', y_column='longitude'):
     fig = px.scatter_mapbox(
+        hover_name=data.index,
         color=data[attribute].astype(str),
         lat=data[x_column], 
         lon=data[y_column],
