@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
@@ -20,3 +21,10 @@ for i in orig_data.loc[f_data['latitude'].isna()].index:
     s = orig_data.loc[i]['state']
     cc = orig_data.loc[i]['city_or_county']
     datas[(s,cc)] = orig_data.loc[(orig_data['state'] == s) & (orig_data['city_or_county'] == cc)][['latitude', 'longitude']]
+
+# %%
+for i,b in datas:
+    print(len(datas[i,b]))
+
+# %%
+# BEH SI PUç FARE!!!!!
