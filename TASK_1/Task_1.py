@@ -940,6 +940,33 @@ incidents_data[incidents_data['congressional_district'].notnull()].groupby(
 incidents_data[incidents_data['congressional_district'].notnull()].groupby(
     ['state', 'city_or_county', 'state_house_district'])['congressional_district'].unique()[lambda x: x.str.len() > 1].shape[0]==0
 
+# %%
+districts = incidents_data['congressional_district'].unique()
+color_discrete_map={}
+n_colors = len(px.colors.qualitative.Plotly)
+for i, district in enumerate(districts):
+    color_discrete_map[str(district)] = px.colors.qualitative.Plotly[i%n_colors]
+color_discrete_map[str(np.nan)] = '#000000'
+
+fig = px.scatter_mapbox(
+        color=incidents_data['congressional_district'].astype(str),
+        color_discrete_map=color_discrete_map,
+        lat=incidents_data['latitude'], 
+        lon=incidents_data['longitude'],
+        zoom=2, 
+        height=400,
+        width=800,
+        title="USA Congressional districts",
+        text=incidents_data['congressional_district'].astype(str),
+        category_orders={'color': sorted(incidents_data['congressional_district'].astype(str).unique())}
+    )
+fig.update_layout(
+    mapbox_style="open-street-map",
+    margin={"r":0,"t":100,"l":0,"b":0},
+    legend_title_text="Congressional district"
+)
+fig.show()
+
 # %% [markdown]
 # We cannot recover the missing values for the attribute `congressional_district` from the values of `state_house_district` either.
 # 
