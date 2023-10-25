@@ -495,6 +495,15 @@ elections_data['party'] = elections_data['party'].apply(
 elections_data['candidateperc'] = (elections_data['candidatevotes']/elections_data['totalvotes'])*100
 elections_data[elections_data['year']>2012]['candidateperc'].plot.hist(bins=50, figsize=(10, 5), title='Percentage of winner votes')
 
+# %%
+f, (ax_box, ax_hist) = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": (.15, .85)})
+elections_data[elections_data['year']>2012]['candidateperc'].plot.hist(bins=50, figsize=(10, 5), ax=ax_hist)
+elections_data[elections_data['year']>2012].boxplot(ax=ax_box, column='candidateperc', vert=False, grid=False)
+ax_box.set(yticks=[])
+sns.despine(ax=ax_hist, top=True)
+sns.despine(ax=ax_box, left=True)
+plt.suptitle('Percentage of winner votes')
+
 # %% [markdown]
 # It seems that in some districts the winner party obtained 100% of the votes. We disaply those districts:
 
@@ -1112,21 +1121,21 @@ incidents_data.groupby(['state', 'congressional_district']).size()[lambda x: x <
 # By the way, missclassification can still occurr, depending on the position of the available examples w.r.t the position of the points to classify. Aware of this limitation, we proceed to apply this method to the other states:
 
 # %%
-for state in incidents_data['state'].unique():
-    if state != "ALABAMA":
-        print(f"{state} done.")
-        X_train, X_test, y_train = build_X_y_for_district_inference(incidents_data[incidents_data['state']==state])
-        if X_test.shape[0] == 0:
-            continue
-        knn_clf.fit(X_train, y_train)
-        knn_pred = knn_clf.predict(X_test)
-        incidents_data.loc[
-            (incidents_data['state']==state) &
-            (incidents_data['congressional_district'].isna()) &
-            (incidents_data['latitude'].notna()) & 
-            (incidents_data['longitude'].notna()),
-            'KNN_congressional_district'
-        ] = knn_pred
+# for state in incidents_data['state'].unique():
+#     if state != "ALABAMA":
+#         print(f"{state} done.")
+#         X_train, X_test, y_train = build_X_y_for_district_inference(incidents_data[incidents_data['state']==state])
+#         if X_test.shape[0] == 0:
+#             continue
+#         knn_clf.fit(X_train, y_train)
+#         knn_pred = knn_clf.predict(X_test)
+#         incidents_data.loc[
+#             (incidents_data['state']==state) &
+#             (incidents_data['congressional_district'].isna()) &
+#             (incidents_data['latitude'].notna()) & 
+#             (incidents_data['longitude'].notna()),
+#             'KNN_congressional_district'
+#         ] = knn_pred
 
 # %% [markdown]
 # We drop the original column with congressional districts and we replace it with the one with the one we just computed:
@@ -1238,10 +1247,7 @@ incidents_per_state.plot(
 )
 
 # %%
-incidents_data[incidents_data['state']=='DISTRICT OF COLUMBIA'].groupby(['latitude', 'longitude']).size()[lambda x: x > 1]
-
-# %%
-incidents_data[(incidents_data['latitude']==38.8204) & (incidents_data['longitude']==-77.0076)]
+incidents_data[incidents_data['state']=='DISTRICT OF COLUMBIA'].groupby(['latitude', 'longitude', 'date']).size()[lambda x: x > 1].sort_values(ascending=False)
 
 # %%
 incidents_data.groupby(['latitude', 'longitude', 'date']).size()[lambda x: x>1]
@@ -1297,18 +1303,90 @@ for label in ax.get_xticklabels():
 ax.set_xticklabels(xticks);
 
 plt.xticks(rotation=90)
+plt.tight_layout() # 601,723 / 672,602
+
+# %%
+fig, ax = plt.subplots(figsize=(20, 10))
+sns.heatmap(
+    incidents_per_month_per_state[(incidents_per_month_per_state.year<=2020) & (incidents_per_month_per_state['state']!='DISTRICT OF COLUMBIA')].pivot(
+        index='state',
+        columns=['year', 'month'],
+        values='incidents_per_100k_inhabitants'
+    ).fillna(0),
+    cmap='coolwarm',
+    ax=ax,
+    xticklabels=True,
+    yticklabels=True,
+    linewidths=.5
+)
+ax.set_xlabel('Month-Year')
+ax.set_ylabel('State')
+ax.set_title('Number of incidents per month per state')
+
+xticks = []
+for label in ax.get_xticklabels():
+    txt_label = label.get_text()
+    month = txt_label[txt_label.find('-')+1:]
+    year = txt_label[:txt_label.find('-')]
+    xticks.append(year+' - '+calendar.month_name[int(month)])
+
+ax.set_xticklabels(xticks);
+
+plt.xticks(rotation=90)
 plt.tight_layout()
 
 # %%
-incidents_per_state_2016 = incidents_data[incidents_data['year']==2016].groupby(['state', 'population', 'povertyPercentage', 'party']).size().to_frame(name='incidents').reset_index()
+incidents_per_year_per_state = incidents_data.groupby(['state', 'year']).size()
+incidents_per_year_per_state = incidents_per_year_per_state.to_frame(name='incidents').reset_index()
+incidents_per_year_per_state['incidents_per_100k_inhabitants'] = incidents_per_year_per_state.apply(
+    lambda row: (row['incidents'] / usa_population[usa_population['state']==row['state']]['population'].iloc[0])*100000,
+    axis=1
+)
+fig = px.line(
+    incidents_per_year_per_state[incidents_per_year_per_state.year<=2020].pivot(
+        index='year',
+        columns='state',
+        values='incidents_per_100k_inhabitants'
+    ),
+    title='Number of incidents in the US over the years')
+fig.show()
+
+# %%
+fig = px.line(
+    incidents_per_year_per_state[(incidents_per_year_per_state.year<=2020) & (incidents_per_year_per_state['state']!='DISTRICT OF COLUMBIA')].pivot(
+        index='year',
+        columns='state',
+        values='incidents_per_100k_inhabitants'
+    ),
+    title='Number of incidents in the US over the years')
+fig.show()
+
+# %%
+incidents_per_state_2016 = incidents_data[incidents_data['year']==2016].groupby(['state', 'population', 'povertyPercentage']).size()
+incidents_per_state_2016 = incidents_per_state_2016.to_frame(name='incidents').reset_index()
 incidents_per_state_2016['incidents_per_100k_inhabitants'] = (incidents_per_state_2016['incidents'] / incidents_per_state_2016['population'])*100000
+incidents_per_state_2016 = incidents_per_state_2016.merge(poverty_elections_data[['state', 'winningparty']], on=['state'], how='left')
+incidents_per_state_2016['winningparty'] = incidents_per_state_2016['winningparty'].apply(lambda x: 'DEMOCRAT' if x==0 else 'REPUBLICAN') # TODO: fix, sembra che plotly abbia sovrascritto questo campo
 fig = px.scatter(
     incidents_per_state_2016,
     x='povertyPercentage',
     y='incidents_per_100k_inhabitants',
-    color='party',
+    color='winningparty',
     hover_name='state',
     hover_data={'povertyPercentage': True, 'incidents_per_100k_inhabitants': True}
+)
+fig.show() # TODO: controllare se è giusto parlare di partito "vincente" e scrivere meglio
+
+# %%
+# TODO: da togliere, era per fare una prova (in generale ricordare che con px si possono usare solo scale colore continu e non è interattivo)
+incidents_per_state = incidents_data.groupby(['year', 'state', 'population', 'povertyPercentage']).size()
+incidents_per_state = incidents_per_state.to_frame(name='incidents').reset_index()
+incidents_per_state['incidents_per_100k_inhabitants'] = (incidents_per_state['incidents'] / incidents_per_state['population'])*100000
+incidents_per_state.state = incidents_per_state.state.astype("category").cat.codes
+fig = px.parallel_coordinates(
+    incidents_per_state,
+    dimensions=['year', 'povertyPercentage', 'incidents_per_100k_inhabitants'],
+    color="state"
 )
 fig.show()
 
