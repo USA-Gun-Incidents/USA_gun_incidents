@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
@@ -69,6 +70,9 @@ incidents_data['n_injured'] = incidents_data['n_injured'].astype('UInt8')
 incidents_data['n_participants'] = incidents_data['n_participants'].astype('UInt8')
 
 # %%
+incidents_data['n_females'][0:100]
+
+# %%
 incidents_data.info()
 
 # %%
@@ -136,3 +140,25 @@ incidents_data.loc[incidents_data.isnull().any(axis=1), 'nan_values'] = True
 
 
 
+
+# %%
+a = incidents_data['avg_age_participants'].unique()
+for i in a:
+    print(i)
+
+# %%
+incidents_data['min_age_participants'].unique()
+
+# %%
+incidents_data['max_age_participants'].unique()
+
+# %%
+incidents_data['n_males'].unique()
+
+# %%
+incidents_data[['participant_age1', 'participant_age_group1', 'participant_gender1', 
+    'min_age_participants', 'avg_age_participants', 'max_age_participants',
+    'n_participants_child', 'n_participants_teen', 'n_participants_adult', 
+    'n_males', 'n_females',
+    'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 
+    'n_participants']]
