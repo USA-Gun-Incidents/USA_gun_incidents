@@ -5,6 +5,7 @@ import plotly.express as px
 from sklearn.inspection import DecisionBoundaryDisplay
 import matplotlib.dates as mdates
 import pandas as pd
+import seaborn as sns
 
 # TODO: sostiture questo dizionario con:
 # usa_states = pd.read_csv(
@@ -66,6 +67,34 @@ usa_code = {
     'Wisconsin': 'WI',
     'Wyoming': 'WY'
 }
+
+def hist_box_plot(
+    df,
+    col,
+    title,
+    xlabel=None,
+    ylabel=None,
+    bins=50,
+    figsize=(10, 5)
+    ):
+    '''
+    This function plots an histogram and a boxplot of the given column of the given dataframe.
+    
+    :param df: dataframe
+    :param col: column to plot
+    :param title: title of the plot
+    :param xlabel: label of the x axis
+    :param ylabel: label of the y axis
+    :param bins: number of bins for the histogram
+    :param figsize: size of the figure
+    '''
+    _, (ax_box, ax_hist) = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": (.15, .85)})
+    df[col].plot.hist(bins=bins, figsize=figsize, ax=ax_hist)
+    df.boxplot(ax=ax_box, column=col, vert=False, grid=False)
+    ax_box.set(yticks=[])
+    plt.suptitle(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
 
 def plot_usa_map(
     df,
