@@ -129,11 +129,15 @@ def set_tags(row):
             row[tag] = True
     return row
 
-data = pd.read_csv('./data/incidents.csv')
 
-for tag in IncidentTag:
-    data[tag.name] = False
+def build_tagged_dataframe(base_folder): #build the dataframe with tags
+    data = pd.read_csv(base_folder + 'incidents.csv')
 
-data = data.apply(set_tags, axis=1)
+    for tag in IncidentTag:
+        data[tag.name] = False
 
-data.to_csv("./data/incidents_tagged.csv")
+    data = data.apply(set_tags, axis=1)
+
+    data.to_csv(base_folder + 'incidents_tagged.csv')
+
+    return data
