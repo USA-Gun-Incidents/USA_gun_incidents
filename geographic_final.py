@@ -210,12 +210,12 @@ data_check_consistency['town_geopy'].loc[0]
 pd.isnull(data_check_consistency['town_geopy'].loc[0])
 
 # %%
-from utils import check_geographical_data_consistency_2
+from utils import check_geographical_data_consistency
 
 if LOAD_DATA_FROM_CHECKPOINT: # load data
     clean_geo_data = load_checkpoint('checkpoint_age_temporary')
 else: # compute data
-    clean_geo_data = data_check_consistency.apply(lambda row: check_geographical_data_consistency_2(row), axis=1)
+    clean_geo_data = data_check_consistency.apply(lambda row: check_geographical_data_consistency(row), axis=1)
     checkpoint(clean_geo_data, 'checkpoint_geo_temporary') # save data
 
 # %%

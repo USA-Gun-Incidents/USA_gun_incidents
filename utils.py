@@ -99,8 +99,6 @@ def clean_data_geopy(data):
 
     return data
     
-    
-
 def check_string_typo(string1, string2, len_typo_ratio = 10):
     """check if two strings are the same with at most a typo
     according to the Damerau-Levenshtein distance"""
@@ -174,14 +172,15 @@ def check_consistency_geopy(row):
     return state_consistency, county_city_consistency, county_city_match, address_consistency
 
 def check_consistency_geopy_display_name(row):
+    """check consistency between address in incidents dataset and geopy dataset,
+    return 0 if not consistent, 1 if consistent, -1 if null values in one of the two addresses"""
 
-    
     def contains(word, g_address):
+        """check if word is in g_address"""
         def cointains_word(a, b):
             if pd.isnull(a) or pd.isnull(b): return 0
             if a in b: return 1
             else: return -1
-
         ret = -1
         g_list = g_address.split(',')
         for el in g_list:
@@ -192,7 +191,6 @@ def check_consistency_geopy_display_name(row):
             check = cointains_word(word, el)
             if ret < check:
                 ret = check
-
         return ret
 
     state_consistency = -1
@@ -251,66 +249,8 @@ def check_consistency_additional_data(state, county, additional_data):
                         else: return state_current, c + ' County'
     
     return state_current, np.nan
-    
+
 def check_geographical_data_consistency(row, additional_data):
-    """check consistency between our data, geopty data and additional data
-    return consistent data if consistent, else return nan values"""
-    # initialize clean_geo_data
-    clean_geo_data_row = pd.Series(index=['state', 'county', 'city', 'latitude', 'longitude', 'state_consistency', 
-                                'county_consistency', 'address_consistency', 'importance', 'address_type'], dtype=str)
-    
-    # initialize consistency variables
-    state_consistency = -1
-    county_consistency = -1
-    county_city_match = []
-    address_consistency = -1
-
-    # check consistency with geopy data
-    if row['coord_presence']: # if geopy data is present
-        state_consistency, county_consistency, county_city_match, address_consistency = check_consistency_geopy(row)
-
-    if state_consistency+county_consistency+address_consistency >= 1:
-    #if ((state_consistency==1 and (county_consistency==1 or (county_consistency==-1 and address_consistency!=0) or (county_consistency==0 and address_consistency==1))) 
-    #or (county_consistency==1 and address_consistency==1)):
-        # set geopy data
-        clean_geo_data_row.loc[['state']] = row['state_geopy']
-        clean_geo_data_row.loc[['county']] = row['county_geopy']
-
-        if county_city_match == 'county_geopy' or county_city_match == '-1':
-            if row['city_geopy'] is not None:
-                clean_geo_data_row.loc[['city']] = row['city_geopy']
-            elif row['town_geopy'] is not None:
-                clean_geo_data_row.loc[['city']] = row['town_geopy']
-            else:
-                clean_geo_data_row.loc[['city']] = row['village_geopy']
-        else:
-            clean_geo_data_row.loc[['city']] = row[county_city_match]
-
-        clean_geo_data_row.loc[['latitude']] = row['latitude']
-        clean_geo_data_row.loc[['longitude']] = row['longitude'] 
-        clean_geo_data_row.loc[['importance']] = row['importance_geopy']
-        clean_geo_data_row.loc[['address_type']] = row['addresstype_geopy']
-    
-        '''
-        elif (state_consistency==1 and county_consistency==-1 and address_consistency==0 and pd.isnull(row['city_or_county'])):
-        # set not null geopy data
-        clean_geo_data_row.loc[['state']] = row['state_geopy']
-        clean_geo_data_row.loc[['importance']] = row['importance_geopy']
-        clean_geo_data_row.loc[['address_type']] = row['addresstype_geopy']
-        '''
-
-    else: # check consistency with additional data
-        state, county = check_consistency_additional_data(row['state'], row['city_or_county'], additional_data)
-        clean_geo_data_row.loc[['state']] = state
-        clean_geo_data_row.loc[['county']] = county
-
-    clean_geo_data_row.loc[['state_consistency']] = state_consistency
-    clean_geo_data_row.loc[['county_consistency']] = county_consistency
-    clean_geo_data_row.loc[['address_consistency']] = address_consistency
-
-    return clean_geo_data_row
-
-def check_geographical_data_consistency_2(row, additional_data):
     """check consistency between our data, geopty data and additional data
     return consistent data if consistent, else return nan values"""
 
