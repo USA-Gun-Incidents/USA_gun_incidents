@@ -58,7 +58,7 @@ incidents_data.head(2)
 # Below, we provide two specific functions to perform this task.
 
 # %%
-LOAD_DATA_FROM_CHECKPOINT = False # boolean: True if you want to load data, False if you want to compute it
+LOAD_DATA_FROM_CHECKPOINT = True # boolean: True if you want to load data, False if you want to compute it
 CHECKPOINT_FOLDER_PATH = 'data/checkpoints/'
 
 def checkpoint(df, checkpoint_name):
@@ -68,7 +68,7 @@ def load_checkpoint(checkpoint_name, casting={}):
     #d_p = pd.datetools.to_datetime
     if casting:
         return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0, parse_dates=['date'], dtype=casting)
-    else:
+    else: #TODO: sistemare il casting quando ci sono tutte le colonne 
         return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0)#, parse_dates=['date'])
 
 # %%
