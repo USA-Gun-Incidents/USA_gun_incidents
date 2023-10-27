@@ -212,9 +212,10 @@ pd.isnull(data_check_consistency['town_geopy'].loc[0])
 from data_preparation_utils import check_geographical_data_consistency
 
 if LOAD_DATA_FROM_CHECKPOINT: # load data
-    clean_geo_data = load_checkpoint('checkpoint_age_temporary')
+    clean_geo_data = load_checkpoint('checkpoint_geo_temporary')
 else: # compute data
-    clean_geo_data = data_check_consistency.apply(lambda row: check_geographical_data_consistency(row), axis=1)
+    clean_geo_data = data_check_consistency.apply(lambda row: check_geographical_data_consistency(row, 
+        additional_data=additional_data), axis=1)
     checkpoint(clean_geo_data, 'checkpoint_geo_temporary') # save data
 
 # %%
@@ -229,7 +230,6 @@ print('Number of rows with null value for longitude: ', clean_geo_data['longitud
 clean_geo_data.head(3)
 
 # %%
-
 clean_geo_data.groupby(['state_consistency',	'county_consistency','address_consistency']).count().sort_index(ascending=False)
 
 # %%
@@ -300,12 +300,6 @@ plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 # %%
 print(clean_geo_data.columns)
 
-# %%
-
-#clean_geo_data = clean_geo_data.astype({"a": int, "b": complex})
-
-#clean_geo_data.to_csv(FOLDER + 'post_proc/new_columns_geo.csv', index=False)
-
 # %% [markdown]
 # # FINAL EVALUATIONS:
 # We divided the dataset into several groups depending on what information we were able to demonstrate consistent between the latitude, longitude, state, county, and city fields. And we did this by also making use of the address field, which, however, we decided not to use further because it is not very identifying of the line and is too variable. Finally, we defined strategies to be applied on these groups to fill in the missing data (considered erroneous or missing from the original dataset) in a more or less effective way according to the row information.
@@ -330,31 +324,34 @@ print(clean_geo_data.columns)
 # CAUTION: EVALUATE THE CHOSEN TRESHOULDS
 
 
-# %%
-incidents_data.groupby(['state', 'county', 'city']).count()
+# %% [markdown]
+# ## infere city
 
 # %%
-incidents_data['latitude'].isna().sum()
+clean_geo_data.groupby(['state', 'county', 'city']).count()
 
 # %%
-for f in incidents_data['latitude']:
+clean_geo_data['latitude'].isna().sum()
+
+# %%
+for f in clean_geo_data['latitude']:
     a = []
     a.append(np.isnan(f))
 sum(a)
 
 # %%
-for i in incidents_data.loc[incidents_data['city'].isna() & np.isnan(incidents_data['latitude'])].index:
-    print(incidents_data.loc[i]['latitude'])
+for i in clean_geo_data.loc[clean_geo_data['city'].isna() & np.isnan(clean_geo_data['latitude'])].index:
+    print(clean_geo_data.loc[i]['latitude'])
 
 # %%
-a = len(incidents_data.loc[(incidents_data['latitude'].notna()) & (incidents_data['county'].notna()) & (incidents_data['city'].notna())])
-b = len(incidents_data.loc[(incidents_data['latitude'].notna()) & (incidents_data['county'].notna()) & (incidents_data['city'].isna())])
-c = len(incidents_data.loc[(incidents_data['latitude'].notna()) & (incidents_data['county'].isna()) & (incidents_data['city'].notna())])
-d = len(incidents_data.loc[(incidents_data['latitude'].notna()) & (incidents_data['county'].isna()) & (incidents_data['city'].isna())])
-e = len(incidents_data.loc[(incidents_data['latitude'].isna()) & (incidents_data['county'].notna()) & (incidents_data['city'].notna())])
-f = len(incidents_data.loc[(incidents_data['latitude'].isna()) & (incidents_data['county'].notna()) & (incidents_data['city'].isna())])
-g = len(incidents_data.loc[(incidents_data['latitude'].isna()) & (incidents_data['county'].isna()) & (incidents_data['city'].notna())])
-h = len(incidents_data.loc[(incidents_data['latitude'].isna()) & (incidents_data['county'].isna()) & (incidents_data['city'].isna())])
+a = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].notna())])
+b = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].isna())])
+c = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())])
+d = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].isna())])
+e = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].notna())])
+f = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].isna())])
+g = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())])
+h = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].isna())])
 
 print('LAT/LONG --- COUNTY --- CITY')
 print( ' 0 --- 0 --- 0\t', a)
@@ -370,7 +367,7 @@ print( ' ---- GOOD ---\t', a+b+c+d)
 print( ' ---- BAD ----\t', e+f+g+h)
 
 # %%
-centroids = incidents_data.loc[incidents_data['latitude'].notna() & incidents_data['city'].notna()][['latitude', 'longitude', 'city', 'state', 'county']].groupby(['state', 'county', 'city']).mean()
+centroids = clean_geo_data.loc[clean_geo_data['latitude'].notna() & clean_geo_data['city'].notna()][['latitude', 'longitude', 'city', 'state', 'county']].groupby(['state', 'county', 'city']).mean()
 centroids.head(10)
 
 # %%
@@ -384,24 +381,26 @@ info_city = pd.DataFrame(columns=['5', '15', '25', '35', '45', '55', '65', '75',
 info_city.info()
 
 # %%
-for state, county, city in centroids.index:
-    dummy = []
-    for lat, long in zip(incidents_data.loc[(incidents_data['city'] == city) & (incidents_data['state'] == state) & (incidents_data['county'] == county) & incidents_data['latitude'].notna()]['latitude'], 
-                         incidents_data.loc[(incidents_data['city'] == city) & (incidents_data['state'] == state) & (incidents_data['county'] == county) & incidents_data['longitude'].notna()]['longitude']):
-        dummy.append(geopy.distance.geodesic([lat, long], centroids.loc[state, county, city]).km)
-    dummy = sorted(dummy)
-    pc = np.quantile(dummy, np.arange(0,1, 0.05))
-    for i in range(len(info_city.columns) - 6):
-        info_city.loc[state, county, city][i] = pc[i*2 + 1]
-    info_city.loc[state, county, city][len(info_city.columns) - 6] = len(dummy)
-    info_city.loc[state, county, city][len(info_city.columns) - 5] = min(dummy)
-    info_city.loc[state, county, city][len(info_city.columns) - 4] = max(dummy)
-    info_city.loc[state, county, city][len(info_city.columns) - 3] = sum(dummy)/len(dummy)
-    info_city.loc[state, county, city][len(info_city.columns) - 2] = centroids.loc[state, county, city]['latitude']
-    info_city.loc[state, county, city][len(info_city.columns) - 1] = centroids.loc[state, county, city]['longitude']
-
-
-
+if LOAD_DATA_FROM_CHECKPOINT: # load data
+    info_city = load_checkpoint('checkpoint_geo_temporary2')
+else: # compute data
+    for state, county, city in centroids.index:
+        dummy = []
+        for lat, long in zip(clean_geo_data.loc[(clean_geo_data['city'] == city) & (clean_geo_data['state'] == state) & (clean_geo_data['county'] == county) & clean_geo_data['latitude'].notna()]['latitude'], 
+                            clean_geo_data.loc[(clean_geo_data['city'] == city) & (clean_geo_data['state'] == state) & (clean_geo_data['county'] == county) & clean_geo_data['longitude'].notna()]['longitude']):
+            dummy.append(geopy.distance.geodesic([lat, long], centroids.loc[state, county, city]).km)
+        dummy = sorted(dummy)
+        pc = np.quantile(dummy, np.arange(0,1, 0.05))
+        for i in range(len(info_city.columns) - 6):
+            info_city.loc[state, county, city][i] = pc[i*2 + 1]
+        info_city.loc[state, county, city][len(info_city.columns) - 6] = len(dummy)
+        info_city.loc[state, county, city][len(info_city.columns) - 5] = min(dummy)
+        info_city.loc[state, county, city][len(info_city.columns) - 4] = max(dummy)
+        info_city.loc[state, county, city][len(info_city.columns) - 3] = sum(dummy)/len(dummy)
+        info_city.loc[state, county, city][len(info_city.columns) - 2] = centroids.loc[state, county, city]['latitude']
+        info_city.loc[state, county, city][len(info_city.columns) - 1] = centroids.loc[state, county, city]['longitude']
+    checkpoint(info_city, 'checkpoint_geo_temporary2') # save data
+    
 
 # %%
 info_city
@@ -417,11 +416,11 @@ for i in [  5955,  19567,  22995,  23433,  35631,  39938,  45163,  55557,  55868
         60596,  65016,  69992,  70730,  73290,  73949,  78689, 104390, 116673,
        133043, 150273, 153933, 160492, 162559, 178887, 192938, 196820, 206125,
        225494, 227231, 227287, 230283]:
-       print(incidents_data.iloc[i][['latitude', 'longitude']])
-print(incidents_data.iloc[i])
+       print(clean_geo_data.iloc[i][['latitude', 'longitude']])
+print(clean_geo_data.iloc[i])
 
 # %%
-incidents_data.sample()
+clean_geo_data.sample()
 
 # %%
 def substitute_city(row, info_city):
@@ -438,10 +437,12 @@ def substitute_city(row, info_city):
     return row
 
 
-final_geo_data = incidents_data.apply(lambda row: substitute_city(row, info_city), axis=1)
-
 # %%
-checkpoint(final_geo_data, 'checkpoint_geo') # save data
+if LOAD_DATA_FROM_CHECKPOINT: # load data
+    final_geo_data = load_checkpoint('checkpoint_geo_temporary3')
+else: # compute data
+    final_geo_data = clean_geo_data.apply(lambda row: substitute_city(row, info_city), axis=1)
+    checkpoint(final_geo_data, 'checkpoint_geo_temporary3') # save data
 
 # %%
 a = len(final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['county'].notna()) & (final_geo_data['city'].notna())])
@@ -472,62 +473,26 @@ info_city.to_csv(os.path.join(dirname, 'data/post_proc/info_city.csv'))
 
 
 # %%
-a = len(incidents_data.loc[(incidents_data['latitude'].notna()) & (incidents_data['county'].notna()) & (incidents_data['city'].notna())])
-b = len(incidents_data.loc[(incidents_data['latitude'].notna()) & (incidents_data['county'].notna()) & (incidents_data['city'].isna())])
-c = len(incidents_data.loc[(incidents_data['latitude'].notna()) & (incidents_data['county'].isna()) & (incidents_data['city'].notna())])
-d = len(incidents_data.loc[(incidents_data['latitude'].notna()) & (incidents_data['county'].isna()) & (incidents_data['city'].isna())])
-e = len(incidents_data.loc[(incidents_data['latitude'].isna()) & (incidents_data['county'].notna()) & (incidents_data['city'].notna())])
-f = len(incidents_data.loc[(incidents_data['latitude'].isna()) & (incidents_data['county'].notna()) & (incidents_data['city'].isna())])
-g = len(incidents_data.loc[(incidents_data['latitude'].isna()) & (incidents_data['county'].isna()) & (incidents_data['city'].notna())])
-h = len(incidents_data.loc[(incidents_data['latitude'].isna()) & (incidents_data['county'].isna()) & (incidents_data['city'].isna())])
-
-print('LAT/LONG --- COUNTY --- CITY')
-print( ' 0 --- 0 --- 0\t', a)
-print( ' 0 --- 0 --- 1\t', b)
-print( ' 0 --- 1 --- 0\t', c)
-print( ' 0 --- 1 --- 1\t', d)
-print( ' 1 --- 0 --- 0\t', e)
-print( ' 1 --- 0 --- 1\t', f)
-print( ' 1 --- 1 --- 0\t', g)
-print( ' 1 --- 1 --- 1\t', h)
-print( ' ---- TOT ----\t', a+b+c+d+e+f+g+h)
-print( ' ---- GOOD ---\t', a+b+c+d)
-print( ' ---- BAD ----\t', e+f+g+h)
+plot_utils.plot_scattermap_plotly(final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['county'].notna()) & (final_geo_data['city'].isna())], 'state')
 
 # %%
-plot_utils.plot_scattermap_plotly(incidents_data.loc[(incidents_data['latitude'].notna()) & (incidents_data['county'].notna()) & (incidents_data['city'].isna())], 'state')
-
-# %%
-plot_utils.plot_scattermap_plotly(incidents_data.loc[(incidents_data['latitude'].notna()) & (incidents_data['state'] == 'Missouri') & (incidents_data['county'] == 'Platte County') & (incidents_data['city'] == 'Kansas City')], 'latitude')
-len(incidents_data.loc[(incidents_data['latitude'].notna()) & (incidents_data['state'] == 'Missouri') & (incidents_data['county'] == 'Platte County') & (incidents_data['city'] == 'Kansas City')])
+plot_utils.plot_scattermap_plotly(final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['state'] == 'Missouri') & (final_geo_data['county'] == 'Platte County') & (final_geo_data['city'] == 'Kansas City')], 'latitude')
+len(final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['state'] == 'Missouri') & (final_geo_data['county'] == 'Platte County') & (final_geo_data['city'] == 'Kansas City')])
 
 # %%
 #TODO: plottare le città che ha inserto e i centroidi??
 
 
 # %%
-final_geo_data
-
-# %%
-incidents_data.head(3)
+final_geo_data.head(3)
 
 # %%
 geopy_data.head(3)
 
 # %%
-dummy = incidents_data.loc[final_geo_data.loc[final_geo_data['latitude'].isna()].index]
+dummy = incidents_data.loc[incidents_data.loc[incidents_data['latitude'].isna()].index]
 interesting_index = dummy.loc[dummy['latitude'].notna()].index
 incidents_data.loc[interesting_index][['state', 'city_or_county', 'address', 'latitude', 'longitude']]
-
-# %%
-import random
-new_ii = random.sample(interesting_index.to_list(), 15)
-
-# %%
-incidents_data.loc[new_ii][['state', 'city_or_county', 'address', 'latitude', 'longitude']]
-
-# %%
-geopy_data.loc[new_ii][['class', 'type', 'addresstype', 'display_name', 'state', 'county', 'city', 'town', 'suburb', 'neighbourhood']]
 
 # %%
 col_value_count = []
@@ -553,14 +518,10 @@ for i in geopy_data.loc[215070].index:
     print(i, geopy_data.loc[215070][i])
 
 # %%
-incidents_data.loc[(incidents_data['latitude'] == '39.7591')]
+final_geo_data.loc[(final_geo_data['latitude'] == '39.7591')]
 
 # %%
-from data_preparation_utils import check_address
-check_address(incidents_data.loc[239662]['address'], geopy_data.loc[239662]['display_name'])
-
-# %%
-incidents_data.loc[108203]['address']
+final_geo_data.loc[108203]['address']
 
 # %%
 geopy_data.loc[108203]
@@ -574,3 +535,6 @@ plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 dummy_data = final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['city'].isna())]
 print(len(dummy_data))
 plot_utils.plot_scattermap_plotly(dummy_data, 'state')
+
+# %%
+checkpoint(final_geo_data, 'checkpoint_geo') # save data
