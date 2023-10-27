@@ -7,6 +7,8 @@ import os
 import sys
 import math
 
+from tags_mapping import IncidentTag as tag
+
 # default variables
 LEDR_STATES = 10
 LEDR_CITY_OR_COUNTY = 7
@@ -723,17 +725,17 @@ def set_gender_age_consistent_data(row): # FIX: non è più comodo inizializzare
 ####################### Tag Consistency w.r.t. all other data #######################
 def check_consistency_tag(row):
     """Return if tag are consistent w.r.t. other data"""
-    if row['Death'] and row['n_killed'] == 0:
+    if row[tag.death.name] and row['n_killed'] == 0:
         return False
-    if row['Children'] and row['n_participants_child'] == 0:
+    if row[tag.children.name] and row['n_participants_child'] == 0:
         return False
-    if row['Injuries'] and row['n_injured'] == 0:
+    if row[tag.injuries.name] and row['n_injured'] == 0:
         return False
     if((row["incident_characteristics1"] == "Non-Shooting Incident" or row["incident_characteristics2"] ==
-        "Non-Shooting Incident") and row["Shots"]): #consistency for non-shooting incidents
+        "Non-Shooting Incident") and row[tag.shots.name]): #consistency for non-shooting incidents
         return False
     if((row["incident_characteristics1"] == "Non-Aggression Incident" or row["incident_characteristics2"] == 
-        "Non-Aggression Incident") and row["Aggression"]): #consistency for non-aggression incidents
+        "Non-Aggression Incident") and row[tag.aggression.name]): #consistency for non-aggression incidents
         return False
     # TODO LUCA e GIULIA: valutare se fare tutto qua per tag consistency e vedere se sono necessari altri 
     # check (es. mass shooting)
