@@ -441,9 +441,16 @@ def category_consistency(n_killed, n_injured, n_arrested, n_unharmed, n_particip
             (n_unharmed <= n_participants))
     return np.nan
 
-def ages_groups_participant1(participant_age_group1):
+def ages_groups_participant1(participant_age_group1, participant_age1):
     """Binarize participant1 age groups attribute"""
-    if participant_age_group1 == 'Child 0-11':
+    if participant_age_group1 in [np.nan] and participant_age1 not in [np.nan]:
+        if participant_age1 < 12:
+            return [True, False, False]
+        elif 12 <= participant_age1 < 18:
+            return [False, True, False]
+        elif participant_age1 >= 18:
+            return [False, False, True]
+    elif participant_age_group1 == 'Child 0-11':
         return [True, False, False] #'Child 0-11'
     elif participant_age_group1 == 'Teen 12-17':
         return [False, True, False] #'Teen 12-17'
@@ -464,7 +471,7 @@ def gender_participant1(participant_gender1):
 def participant1_age_data_consistency(participant_age1, participant1_child, participant1_teen, participant1_adult):
     """check consistency between participant1 age groups attributes"""
     if participant_age1 in [np.nan]:
-        return False
+        return np.nan
     else:
         if participant_age1 < 12:
             if participant1_child is not True:
@@ -558,7 +565,7 @@ def check_age_gender_data_consistency(row):
     # convert to integer participants1 attributes
     clean_data_row.loc[['participant_age1']] = convert_age_to_int(row['participant_age1'])
     clean_data_row.loc[['participant1_child', 'participant1_teen', 'participant1_adult']] = ages_groups_participant1(
-        row['participant_age_group1'])
+        row['participant_age_group1'], row['participant_age1'])
     clean_data_row.loc[['participant1_male', 'participant1_female']] = gender_participant1(row['participant_gender1'])
 
     # initialize boolean flag
@@ -714,7 +721,7 @@ def set_gender_age_consistent_data(row):
                 new_data_row.loc[['n_participants_child', 'n_participants_teen', 'n_participants_adult']] = [0, 0, 1]
     
     # participant1 data
-    if row['consistency_participant1']:
+    if row['consistency_participant1'] in [True, np.nan]:
         if row['participant1_age_consistency_wrt_all_data']:
             new_data_row.loc[['participant_age1']] = row['participant_age1']
         if row['participant1_age_range_consistency_wrt_all_data']:
@@ -742,6 +749,4 @@ def check_consistency_tag(row):
     if((row["incident_characteristics1"] == "Non-Aggression Incident" or row["incident_characteristics2"] == 
         "Non-Aggression Incident") and row["Aggression"]): #consistency for non-aggression incidents
         return False
-    # TODO: valutare se fare tutto qua per tag consistency e vedere se sono necessari altri 
-    # check (es. mass shooting)
     return True

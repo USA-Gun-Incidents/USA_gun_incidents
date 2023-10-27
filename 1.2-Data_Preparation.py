@@ -58,7 +58,7 @@ incidents_data.head(2)
 # Below, we provide two specific functions to perform this task.
 
 # %%
-LOAD_DATA_FROM_CHECKPOINT = True # boolean: True if you want to load data, False if you want to compute it
+LOAD_DATA_FROM_CHECKPOINT = False # boolean: True if you want to load data, False if you want to compute it
 CHECKPOINT_FOLDER_PATH = 'data/checkpoints/'
 
 def checkpoint(df, checkpoint_name):
@@ -69,7 +69,7 @@ def load_checkpoint(checkpoint_name, casting={}):
     if casting:
         return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0, parse_dates=['date'], dtype=casting)
     else:
-        return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0, parse_dates=['date'])
+        return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0)#, parse_dates=['date'])
 
 # %%
 incidents_data.info()
@@ -377,6 +377,15 @@ age_data[age_data['max_age_participants'] == '101.0']
 # We have set the maximum age threshold at 101 years.
 
 # %% [markdown]
+# We check if we have entries with non-null values for participant_age1 but NaN for participant_age_group1. 
+
+# %%
+age_data[age_data['participant_age1'].notna() & age_data['participant_age_group1'].isna()]
+
+# %% [markdown]
+# These 126 values can be inferred.
+
+# %% [markdown]
 # ### Studying Data Consistency
 
 # %% [markdown]
@@ -501,6 +510,8 @@ print('Number of rows with inconsistent values in participants1 data: ', age_tem
 # %%
 print('Number of rows with inconsistent values for participants1: ', age_temporary_data[age_temporary_data[
     'consistency_participant1'] == False].shape[0])
+print('Number of rows with NaN values for participants1: ', age_temporary_data[age_temporary_data[
+    'consistency_participant1'] == np.nan].shape[0])
 print('Number of rows with inconsistent values in participants1 wrt all other data: ', age_temporary_data[age_temporary_data[
     'consistency_participants1_wrt_n_participants'] == False].shape[0])
 print('Number of rows with inconsistent values in participants1 wrt age data: ', age_temporary_data[age_temporary_data[
@@ -509,6 +520,10 @@ print('Number of rows with inconsistent values in participants1 wrt age range da
     'participant1_age_range_consistency_wrt_all_data'] == False].shape[0])
 print('Number of rows with inconsistent values in participants1 wrt gender data: ', age_temporary_data[age_temporary_data[
     'participant1_gender_consistency_wrt_all_data'] == False].shape[0])
+
+# %%
+age_temporary_data[(age_temporary_data['consistency_participant1'] == True) & (age_temporary_data[
+    'participant1_age_range_consistency_wrt_all_data'] == False)].shape[0]
 
 # %%
 print('Number of rows with null values in age data: ', age_temporary_data[age_temporary_data['consistency_age'].isna()].shape[0])
@@ -523,7 +538,7 @@ print('Number of rows with all null data: ', age_temporary_data.isnull().all(axi
 
 # %% [markdown]
 # We can notice that:
-# - The data in our dataset related to participant1, excluding the 93318 cases where age and age group data were missing or inconsistent with each other, always appear to be consistent with the data in the rest of the dataset and can thus be used to fill in missing or incorrect data.
+# - The data in our dataset related to participant1, excluding the 1099 cases where age and age group data were inconsistent with each other and 190 cases where age range is not consistent, always appear to be consistent with the data in the rest of the dataset and can thus be used to fill in missing or incorrect data.
 # - In the data related to age and gender, some inconsistencies are present, but they account for only 1.88% and 6.01% of the total dataset rows, respectively.
 # - In 93779 rows, at least one field had a *NaN* value.
 
@@ -532,6 +547,9 @@ print('Number of rows with all null data: ', age_temporary_data.isnull().all(axi
 
 # %%
 print('Range age: ', age_temporary_data['min_age_participants'].min(), '-', age_temporary_data['max_age_participants'].max())
+
+# %%
+age_temporary_data[age_temporary_data['consistency_participant1'] == False].head(5)
 
 # %% [markdown]
 # We printed the distribution of participants1 in the age range when age was equal to 18 to verify that the majority of the data were categorized as adults.
@@ -669,7 +687,7 @@ print('Total rows with null value for n_males: ', new_age_data['n_males'].isnull
 print('Total rows with null value for n_females: ', new_age_data['n_females'].isnull().sum())
 
 # %% [markdown]
-# We can observe that only for 209 entries in the dataset, all data related to age and gender are *NaN*, while for 104,736 entries, almost one value is *NaN*. From the plot below, we can visualize the null values (highlighted).
+# We can observe that for any entries in the dataset, all data related to age and gender are *NaN*, while for 98973 entries, almost one value is *NaN*. From the plot below, we can visualize the null values (highlighted).
 # 
 # It's important to note that we have complete data for *n_killed* and *n_injured* entries, and the majority of missing data are related to age-related features.
 
@@ -803,21 +821,6 @@ plt.show()
 
 # %%
 new_age_data.describe()
-
-# %% [markdown]
-# ### Final check
-
-# %%
-print('Total rows with all values null: ', new_age_data.isnull().all(axis=1).sum())
-print('Total rows with null value for n_participants: ', new_age_data['n_participants'].isnull().sum())
-print('Total rows with null value for n_participants_child: ', new_age_data['n_participants_child'].isnull().sum())
-print('Total rows with null value for n_participants_teen: ', new_age_data['n_participants_teen'].isnull().sum())
-print('Total rows with null value for n_participants_adult: ', new_age_data['n_participants_adult'].isnull().sum())
-print('Total rows with null value for n_males: ', new_age_data['n_males'].isnull().sum())
-print('Total rows with null value for n_females: ', new_age_data['n_females'].isnull().sum())
-
-# %%
-age_data.info()
 
 # %% [markdown]
 # ## Incident Characteristics Data
