@@ -27,7 +27,7 @@ class IncidentTag(Enum):
 
 tags_map = {
     # when a gun was not used?
-    'ATF/LE Confiscation/Raid/Arrest': [IncidentTag.illegal_holding.name], # officer?
+    'ATF/LE Confiscation/Raid/Arrest': [IncidentTag.illegal_holding.name, IncidentTag.officers.name],
     'Accidental Shooting': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.unintentional.name],
     'Accidental Shooting - Death': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.death.name, IncidentTag.unintentional.name],
     'Accidental Shooting - Injury': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.injuries.name, IncidentTag.unintentional.name],
@@ -36,15 +36,15 @@ tags_map = {
     'Animal shot/killed': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.death.name],
     'Armed robbery with injury/death and/or evidence of DGU found': [IncidentTag.firearm.name, IncidentTag.aggression.name, IncidentTag.injuries.name, IncidentTag.illegal_holding.name],
     'Assault weapon (AR-15, AK-47, and ALL variants defined by law enforcement)': [IncidentTag.firearm.name],
-    'Attempted Murder/Suicide (one variable unsuccessful)': [], # death? + suicide?
+    'Attempted Murder/Suicide (one variable unsuccessful)': [],
     'BB/Pellet/Replica gun': [IncidentTag.air_gun.name],
-    'Bar/club incident - in or around establishment': [], # + drug-alcool
+    'Bar/club incident - in or around establishment': [],
     'Brandishing/flourishing/open carry/lost/found': [IncidentTag.firearm.name],
     'Car-jacking': [IncidentTag.aggression.name, IncidentTag.road.name, IncidentTag.illegal_holding.name],
     'Child Involved Incident': [IncidentTag.children.name],
     'Child picked up & fired gun': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.children.name],
     'Child with gun - no shots fired': [IncidentTag.firearm.name, IncidentTag.children.name],
-    'Cleaning gun': [IncidentTag.firearm.name, IncidentTag.illegal_holding.name], # viene indicato come accidental shooting, sembra davvero un incidente avvenuto mentre veniva ripulita un'arma, vedere qui https://www.gunviolencearchive.org/incident/1116415, unintentional?
+    'Cleaning gun': [IncidentTag.firearm.name, IncidentTag.shots.name],
     'Concealed Carry License - Perpetrator': [IncidentTag.firearm.name],
     'Concealed Carry License - Victim': [IncidentTag.firearm.name],
     'Criminal act with stolen gun': [IncidentTag.firearm.name, IncidentTag.illegal_holding.name],
@@ -72,10 +72,10 @@ tags_map = {
     'Home Invasion - Resident killed': [IncidentTag.aggression.name, IncidentTag.death.name, IncidentTag.house.name],
     'Home Invasion - subject/suspect/perpetrator injured': [IncidentTag.injuries.name, IncidentTag.house.name],
     'Home Invasion - subject/suspect/perpetrator killed': [IncidentTag.death.name, IncidentTag.house.name],
-    'House party': [IncidentTag.house.name], # drug-alcool?
-    'Hunting accident': [IncidentTag.firearm.name], # unintentional?
+    'House party': [IncidentTag.house.name],
+    'Hunting accident': [IncidentTag.firearm.name, IncidentTag.unintentional.name],
     'Implied Weapon': [IncidentTag.firearm.name],
-    'Institution/Group/Business': [IncidentTag.organized.name], # workplace?
+    'Institution/Group/Business': [IncidentTag.workplace.name],
     'Kidnapping/abductions/hostage': [IncidentTag.aggression.name, IncidentTag.abduction.name],
     'LOCKDOWN/ALERT ONLY: No GV Incident Occurred Onsite': [],
     'Mass Murder (4+ deceased victims excluding the subject/suspect/perpetrator , one location)': [IncidentTag.aggression.name, IncidentTag.death.name],
@@ -87,17 +87,17 @@ tags_map = {
     'Officer Involved Incident - Weapon involved but no shots fired': [IncidentTag.firearm.name, IncidentTag.officers.name],
     'Officer Involved Shooting - Accidental discharge - no injury required': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.officers.name, IncidentTag.unintentional.name],
     'Officer Involved Shooting - Officer killed': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.aggression.name, IncidentTag.death.name, IncidentTag.officers.name],
-    'Officer Involved Shooting - Officer shot': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.aggression.name, IncidentTag.injuries.name, IncidentTag.officers.name], # perchè injuries?
+    'Officer Involved Shooting - Officer shot': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.aggression.name, IncidentTag.officers.name],
     'Officer Involved Shooting - Shots fired, no injury': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.aggression.name, IncidentTag.officers.name],
     'Officer Involved Shooting - subject/suspect/perpetrator killed': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.death.name, IncidentTag.officers.name],
-    'Officer Involved Shooting - subject/suspect/perpetrator shot': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.injuries.name, IncidentTag.officers.name], # perchè injuries?
+    'Officer Involved Shooting - subject/suspect/perpetrator shot': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.officers.name],
     'Officer Involved Shooting - subject/suspect/perpetrator suicide at standoff': [IncidentTag.suicide.name, IncidentTag.officers.name],
     'Officer Involved Shooting - subject/suspect/perpetrator surrender at standoff': [IncidentTag.officers.name],
     'Officer Involved Shooting - subject/suspect/perpetrator unarmed': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.officers.name],
     'Pistol-whipping': [IncidentTag.firearm.name, IncidentTag.aggression.name],
     'Police Targeted': [IncidentTag.officers.name],
     'Political Violence': [IncidentTag.aggression.name, IncidentTag.social_reasons.name],
-    'Possession (gun(s) found during commission of other crimes)': [IncidentTag.firearm.name], # illegal holding?
+    'Possession (gun(s) found during commission of other crimes)': [IncidentTag.firearm.name],
     'Possession of gun by felon or prohibited person': [IncidentTag.firearm.name, IncidentTag.illegal_holding.name],
     'Road rage': [IncidentTag.road.name],
     'School Incident': [IncidentTag.school.name],
@@ -113,8 +113,8 @@ tags_map = {
     'Stolen/Illegally owned gun{s} recovered during arrest/warrant': [IncidentTag.firearm.name, IncidentTag.illegal_holding.name],
     'Suicide - Attempt': [IncidentTag.suicide.name],
     'Suicide^': [IncidentTag.suicide.name, IncidentTag.death.name],
-    'TSA Action': [IncidentTag.road.name], # officer? perchè road? ho visto che spesso accade all'aeroporto
-    'Terrorism Involvement': [IncidentTag.aggression.name, IncidentTag.organized.name], # social reasons?
+    'TSA Action': [IncidentTag.officers.name],
+    'Terrorism Involvement': [IncidentTag.aggression.name, IncidentTag.organized.name],
     'Under the influence of alcohol or drugs (only applies to the subject/suspect/perpetrator )': [IncidentTag.drugs.name],
     'Unlawful purchase/sale': [IncidentTag.illegal_holding.name],
     'Workplace shooting (disgruntled employee)': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.aggression.name, IncidentTag.workplace.name]
