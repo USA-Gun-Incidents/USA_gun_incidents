@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Geographic features
 
@@ -12,9 +11,9 @@ import numpy as np
 import os
 import pandas as pd
 import plot_utils
+import plotly.express as px
 import sys
 sys.path.append(os.path.abspath('..\\')) # TODO: c'è un modo per farlo meglio?
-
 
 # %%
 # read data
@@ -22,11 +21,6 @@ dirname = os.path.dirname(' ')
 FOLDER = os.path.join(dirname, 'data')
 incidents_path = os.path.join(FOLDER, 'incidents.csv')
 incidents_data = pd.read_csv(incidents_path, low_memory=False)
-
-# %%
-# drop duplicates rows
-incidents_data.drop_duplicates(inplace=True)
-incidents_data.info()
 
 # %%
 LOAD_DATA_FROM_CHECKPOINT = True # boolean: True if you want to load data, False if you want to compute it
@@ -42,97 +36,111 @@ def load_checkpoint(checkpoint_name, casting={}):
     else: #TODO: sistemare il casting quando ci sono tutte le colonne 
         return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0)#, parse_dates=['date'])
 
+# %% [markdown]
+# ## Geographic data
 
 # %% [markdown]
-# ## Da qua
+# Columns of the dataset are considered in order to verify the correctness and consistency of data related to geographical features:
+# - *state*
+# - *city_or_county*
+# - *address*
+# - *latitude*
+# - *longitude*
 
 # %%
 # select only relevant columns from incidents_data
-geo_data = incidents_data[['date', 'state', 'city_or_county', 'address', 'latitude', 'longitude',
-       'congressional_district', 'state_house_district', 'state_senate_district']]
-geo_data
+incidents_data[['state', 'city_or_county', 'address', 'latitude', 'longitude',
+       'congressional_district', 'state_house_district', 'state_senate_district']].head(5)
 
 # %% [markdown]
-# ## GeoPy Data Description
+# We display a concise summary of the DataFrame:
 
 # %%
-# geopy data esample
-geopy_sample = {
-    "place_id": 327684232, 
-    "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright", 
-    "osm_type": "way", 
-    "osm_id": 437510561, 
-    "lat": "39.832221333801186", 
-    "lon": "-86.24921127905256", 
-    "class": "highway", 
-    "type": "secondary", 
-    "place_rank": 26, 
-    "importance": 0.10000999999999993, 
-    "addresstype": "road", 
-    "name": "Pike Plaza Road", 
-    "display_name": "Pike Plaza Road, Indianapolis, Marion County, Indiana, 46254, United States", 
-    "address": {"road": "Pike Plaza Road", 
-                "city": "Indianapolis", 
-                "county": "Marion County", 
-                "state": "Indiana", 
-                "ISO3166-2-lvl4": "US-IN", 
-                "postcode": "46254", 
-                "country": "United States", 
-                "country_code": "us"}, 
-    "boundingbox": ["39.8322034", "39.8324807", "-86.2492452", "-86.2487207"]}
+incidents_data[['state', 'city_or_county', 'address', 'latitude', 'longitude']].info()
 
 # %%
-geopy_sample.keys()
+print('Number of rows with missing latitude: ', incidents_data['latitude'].isnull().sum())
+print('Number of rows with missing longitude: ', incidents_data['longitude'].isnull().sum())
 
 # %% [markdown]
-# ### GeoPy Keys:
-#
-# - place_id: identificatore numerico univoco del luogo.
-#
-# - licence: licenza per uso dei dati geografici.
-#
-# - osm_type: tipo di oggetto OpenStreetMap (OSM) al quale appartiene la posizione ("node" per un punto, "way" per una strada o "relation" per una relazione tra elementi).
-#
-# - osm_id: identificatore univoco assegnato all'oggetto OSM.
-#
-# - lat + lon: latitudine e longitudine della posizione.
-#
-# - class: classificazione della posizione (es. "place").
-#
-# - type: classificazione della posizione (es. "city").
-#
-# - place_rank: Rango o la priorità del luogo nella gerarchia geografica (quanto una posizione è significativa).
-#
-# - importance: Valore numerico, indica l'importanza della posizione rispetto ad altre posizioni.
-#
-# - addresstype: tipo di indirizzo (es. "house", "street", "postcode")
-#
-# - name: nome del luogo (es.nome di una città o di una strada).
-#
-# - display_name: rappresentazione leggibile per l'utente della posizione, spesso formattata come un indirizzo completo.
-#
-# - address: indirizzo dettagliato.
-#
-# - boundingbox: elenco di quattro coordinate (latitudine e longitudine) che definiscono un rettangolo che racchiude la posizione (è un'approx dell'area coperta dalla posizione).
+# Plot incidents' location on a map:
+
+# %%
+fig = px.scatter_mapbox(
+    lat=incidents_data['latitude'],
+    lon=incidents_data['longitude'],
+    zoom=0, 
+    height=500,
+    width=800
+)
+fig.update_layout(mapbox_style="open-street-map")
+fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+fig.show()
 
 # %% [markdown]
-# Usefull additional features from GeoPy:
-# - importance and/or rank
-# - address: to check with our dataset
-#     - "road"
-#     - "city"
-#     - "county"
-#     - "state"
-# - class and/or type: to classify incident's place
-# - adresstype: to classify incident's place
-#
-# Se si vuole fare check per luoghi che corrispondono tra loro:
-# - osm_id
-# - boundingbox
-#
+# We note that, excluding 7923 entries in the dataset where latitude and longitude data are missing and 4 entries outside the borders of the USA, the remaining dataset entries have latitude and longitude values. The *state* field is non-null for all entries.
+# 
+# Therefore, we decided to use external sources to verify the data consistency in the dataset. For the fields where latitude and longitude were present within the United States, we utilized GeoPy data, while for the remaining data and those that did not have a positive match with GeoPy's results, we used data from Wikipedia.
+# 
+# In the following sections of the notebook, we provide a summary of the additional data used and the methodologies for verifying data consistency.
 
 # %% [markdown]
-# ## Import counties data from Wikipedia 
+# ### Additional dataset: GeoPy
+
+# %% [markdown]
+# In order to check the data consistency of our dataset, we use [GeoPy](https://geopy.readthedocs.io/en/stable/). We have previously saved the necessary data for performing these checks using the latitude and longitude data from our dataset.
+
+# %% [markdown]
+# We load GeoPy data from the CSV file where it is stored.
+
+# %%
+geopy_path = os.path.join(FOLDER, 'geopy/geopy.csv')
+geopy_data = pd.read_csv(geopy_path, index_col=['index'], low_memory=False, dtype={})
+
+# %% [markdown]
+# geopy_data is a data frame containing one row for each row in our dataset, with matching indices.
+
+# %% [markdown]
+# **GeoPy Keys** we saved and used:
+# 
+# - *lat* and *lon*: Latitude and longitude of the location.
+# 
+# - *importance*: Numerical value $\in [0,1]$, indicates the importance of the location relative to other locations.
+# 
+# - *addresstype*: Address type (e.g., "house," "street," "postcode") to classify the incident's place.
+# 
+# - *address*: A dictionary containing detailed address information. \
+#     Dictionary keys included in the data frame are: *state*, *county*, *suburb*, *city*, *town*, *village*.
+# 
+# - *display_name*: User-friendly representation of the location, often formatted as a complete address. Used by us to cross-reference with the address in case we are unable to find a match between our data and the GeoPy data set using other information from the address.
+# 
+# Additional columns we added to the dataframe:
+# 
+# - *coord_presence*: Boolean, false if the corresponding row in the original dataset did not have latitude and longitude values, making it impossible to query GeoPy.
+
+# %%
+print('Number of rows without surburbs: ', geopy_data.loc[geopy_data['suburb'].isna()].shape[0])
+display(geopy_data.loc[geopy_data['suburb'].isna()].head(2))
+
+# %%
+print('Number of rows without coordinates: \n', geopy_data['coord_presence'].value_counts())
+print('\nNumber of rows without importance: \n', geopy_data['importance'].isnull().value_counts())
+
+# %%
+print('Number of rows in which city is null and town is not null: ', 
+    geopy_data[(geopy_data['city'].isnull()) & (geopy_data['town'].notnull())].shape[0])
+
+# %%
+print(geopy_data['addresstype'].unique())
+print('Number of rows in which addresstype is null: ', geopy_data[geopy_data['addresstype'].isnull()].shape[0])
+
+# %% [markdown]
+# ### Additional dataset: Wikipedia
+
+# %% [markdown]
+# We also downloaded data from [Wikipedia](https://en.wikipedia.org/wiki/County_(United_States)) containing the states and counties (or the equivalent) for each state in the USA. This data was used in cases where no consistency was found with GeoPy data.
+# 
+# This dataset made it possible to verify the data consistency for the *state* and *county* fields without the need for *latitude* and *longitude* values.
 
 # %%
 counties_path = os.path.join(FOLDER, 'wikipedia/counties.csv')
@@ -144,39 +152,10 @@ additional_data.head()
 additional_data.dtypes
 
 # %% [markdown]
-# ## 'state', 'city_or_county', 'address', 'latitude', 'longitude' consistency
+# ### Studying Data Consistency
 
-# %%
-geopy_path = os.path.join(FOLDER, 'geopy/geopy.csv')
-geopy_data = pd.read_csv(geopy_path, index_col=['index'], low_memory=False, dtype={})
-geopy_data.info()
-
-# %%
-geopy_data.loc[geopy_data['suburb'].isna()]
-
-# %%
-for col in geopy_data:
-    dummy = geopy_data[col].unique()
-    print( [ col, dummy, len(dummy)] )
-
-# %%
-print('Number of rows without coordinates: ', geopy_data['coord_presence'].value_counts())
-print('Number of rows without importance: ', geopy_data['importance'].isnull().value_counts())
-
-# %%
-print('Number of rows in which city is null and town is not null: ', 
-    geopy_data[(geopy_data['city'].isnull()) & (geopy_data['town'].notnull())].shape[0])
-
-# %%
-geopy_data['addresstype'].unique()
-
-# %%
-print('Number of rows in which class is null: ', geopy_data[geopy_data['class'].isnull()].shape[0])
-print('Number of rows in which addresstype is null: ', geopy_data[geopy_data['addresstype'].isnull()].shape[0])
-
-# %%
-print('Number of rows in which class is null: ', geopy_data[geopy_data['class'].isnull()].shape[0])
-print('Number of rows in which addresstype is null: ', geopy_data[geopy_data['addresstype'].isnull()].shape[0])
+# %% [markdown]
+# We concatenate geographic data from our dataset and GeoPy data into a single DataFrame.
 
 # %%
 data_check_consistency = pd.DataFrame(columns=['state', 'city_or_county', 'address', 'latitude', 'longitude', 'display_name', 
@@ -194,19 +173,68 @@ data_check_consistency[['address_geopy', 'village_geopy', 'town_geopy', 'city_ge
 # %%
 data_check_consistency.head(2)
 
+# %% [markdown]
+# Convert latitude and longitude to float type.
+
 # %%
 # convert latitude and longitude to float
 data_check_consistency['latitude'] = data_check_consistency['latitude'].astype(float)
 data_check_consistency['longitude'] = data_check_consistency['longitude'].astype(float)
 
-# %%
-data_check_consistency[(data_check_consistency['coord_presence'] == True) & (data_check_consistency['importance_geopy'].isnull())]
+# %% [markdown]
+# Print the first 10 occurrences of city_or_county values where parentheses are present in the string:
 
 # %%
-data_check_consistency['town_geopy'].loc[0]
+[c for c in data_check_consistency['city_or_county'].unique() if '(' in c][:10]
 
 # %%
-pd.isnull(data_check_consistency['town_geopy'].loc[0])
+len([c for c in data_check_consistency['city_or_county'].unique() if '(' in c and 'county' not in c])
+
+# %% [markdown]
+# We can note that in 1782 entries, both city and county values are present in city_or_county, so we need to take this into consideration.
+
+# %% [markdown]
+# We created some functions to check the consistency of geographic data using the external sources we mentioned earlier. We also replaced the values for State, County, and City with a string in title case, without punctuation or numbers, to obtain a dataset of clean and consistent data.
+# 
+# Below, we provide a brief summary of all the functions used to check data consistency and replace values when necessary.
+
+# %% [markdown]
+# **String Preprocessing**
+# - Initially, we convert the values for state, county, and city to lowercase for both our dataset and external dataset.
+# - For cases where the *city_or_county* field contained values for both city and county, we split the string into two and used both new strings to match with both county and city.
+# - We removed the words 'city of' and 'county' from the strings in the *city_or_county* field.
+# - We removed punctuation and numerical values from the string, if present, in the *state* and *city_or_county* fields.
+# 
+# **If We Had GeoPy Data**
+# - We attempted direct comparisons with GeoPy data:
+#     - Our data's *state* was compared with *state* from GeoPy.
+#     - To assign the value of *county*, we compared with *county_geopy* and with *suburb_geopy*.
+#     - The *city* was compared with *city_geopy*, *town_geopy* and *village_geopy*.
+# - If direct comparisons were not positive:
+#     - We checked for potential typos in the string using the Damerau-Levenshtein distance (definition below).
+#     - Thresholds to decide the maximum distance for two strings to be considered equal were set after several preliminary tests. We decided to use different thresholds for state and city/county.
+# - In cases where previous comparisons were not sufficient, we also used the *address* field from our dataset, comparing it with GeoPy's *display_name*, from which commonly occurring words throughout the column were removed (e.g., "Street," "Avenue," "Boulevard"). Again, we used the Damerau-Levenshtein distance with an appropriate threshold to verify address consistency.
+# 
+# In cases where we were able to evaluate data consistency through these comparisons, we set the values for the fields *state*, *county*, *city*, *latitude*, *longitude*, *importance*, *address_type* using GeoPy values. Additionally, we also saved values reflecting the consistency with the fields evaluated earlier in: *state_consistency*, *county_consistency*, *address_consistency* (0 if not consistent, 1 if consistent, -1 if null values are presents)
+# 
+# If the fields in our dataset were not consistent through the previously described checks or could not be verified due to the absence of latitude and longitude values, we attempted to assess consistency using Wikipedia data, with similar checks as before. In this case, we could only retrieve the *state* and *county* fields.
+
+# %% [markdown]
+# General formula for calculating the **Damerau-Levenshtein distance** between two strings $s$ and $t$ \
+# $D(i, j) = \min
+# \begin{cases}
+# D(i-1, j) + 1 \\
+# D(i, j-1) + 1 \\
+# D(i-1, j-1) + \delta \\
+# D(i-2, j-2) + \delta & \text{if } s[i] = t[j] \text{ and } s[i-1] = t[j-1]
+# \end{cases}$
+# 
+# where:
+# - $D(i, j)$ is the Damerau-Levenshtein distance between the first $i$ letters of a string $s$ and the first $j$ letters of a string $t$.
+# - $\delta$ is 0 if the current letters $s[i]$ and $t[j]$ are equal, otherwise, it is 1.
+# - $D(i-2, j-2) + \delta$ represents transposition (swapping two adjacent letters) if the current letters $s[i]$ and $t[j]$ are equal, and the preceding letters $s[i-1]$ and $t[j-1]$ are also equal.
+# 
+# 
 
 # %%
 from data_preparation_utils import check_geographical_data_consistency
@@ -218,6 +246,12 @@ else: # compute data
         additional_data=additional_data), axis=1)
     checkpoint(clean_geo_data, 'checkpoint_geo_temporary') # save data
 
+# %% [markdown]
+# ### Visualize Consistent Geographical Data
+
+# %%
+clean_geo_data.head(2)
+
 # %%
 print('Number of rows with all null values: ', clean_geo_data.isnull().all(axis=1).sum())
 print('Number of rows with null value for state: ', clean_geo_data['state'].isnull().sum())
@@ -227,21 +261,26 @@ print('Number of rows with null value for latitude: ', clean_geo_data['latitude'
 print('Number of rows with null value for longitude: ', clean_geo_data['longitude'].isnull().sum())
 
 # %%
-clean_geo_data.head(3)
+clean_geo_data['state'].unique().shape[0]
+
+# %% [markdown]
+# After this check, all the entries in the dataset have at least the state value not null and consistent. Only 12,796 data points, which account for 4.76% of the dataset, were found to have inconsistent latitude and longitude values.
+
+# %% [markdown]
+# Below, we have included some plots to visualize the inconsistency values in the dataset.
 
 # %%
-clean_geo_data.groupby(['state_consistency',	'county_consistency','address_consistency']).count().sort_index(ascending=False)
+clean_geo_data.groupby(['state_consistency','county_consistency','address_consistency']).count().sort_index(ascending=False)
 
 # %%
 dummy = {}
-stats_columns = ['null_val', 'not_null', 'value_count']
+stats_columns = ['#null_val', '#not_null', '#value_count']
 for col in clean_geo_data.columns:
     dummy[col] = []
     dummy[col].append(clean_geo_data[col].isna().sum())
     dummy[col].append(len(clean_geo_data[col]) - clean_geo_data[col].isna().sum())
     dummy[col].append(len(clean_geo_data[col].value_counts()))
     
-print(dummy)
 clean_geo_stat_stats = pd.DataFrame(dummy, index=stats_columns).transpose()
 clean_geo_stat_stats
 
@@ -255,123 +294,82 @@ f = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data
 g = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())])
 h = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].isna())])
 
-print('LAT/LONG --- COUNTY --- CITY')
-print( ' 0 --- 0 --- 0\t', a)
-print( ' 0 --- 0 --- 1\t', b)
-print( ' 0 --- 1 --- 0\t', c)
-print( ' 0 --- 1 --- 1\t', d)
-print( ' 1 --- 0 --- 0\t', e)
-print( ' 1 --- 0 --- 1\t', f)
-print( ' 1 --- 1 --- 0\t', g)
-print( ' 1 --- 1 --- 1\t', h)
-print( ' ---- TOT ----\t', a+b+c+d+e+f+g+h)
-print( ' ---- GOOD ---\t', a+b+c+d)
-print( ' ---- BAD ----\t', e+f+g+h)
+print('LAT/LONG     COUNTY     CITY             \t#samples')
+print( 'not null    not null   not null         \t', a)
+print( 'not null    not null   null             \t', b)
+print( 'not null    null       not null         \t', c)
+print( 'not null    null       null             \t', d)
+print( 'null        not null   not null         \t', e)
+print( 'null        not null   null             \t', f)
+print( 'null        null       null             \t', g)
+print( 'null        null       null             \t', h)
+print('\n')
+print( 'TOT samples                             \t', a+b+c+d+e+f+g+h)
+print( 'Samples with not null values for lat/lon\t', a+b+c+d)
+print( 'Samples with null values for lat/lon    \t', e+f+g+h)
 
 # %%
 dummy_data = clean_geo_data[clean_geo_data['latitude'].notna()]
-print(len(dummy_data))
+print('Number of entries with not null values for latitude and longitude: ', len(dummy_data))
 plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 
 # %%
 dummy_data = clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())]
-print(len(dummy_data))
+print('Number of entries with not null values for latitude, longitude, county and city: ', len(dummy_data))
 plot_utils.plot_scattermap_plotly(dummy_data, 'state')
+
+# %% [markdown]
+# Visualize the number of entries for each city where we have the *city* value but not the *county*
 
 # %%
 clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())].groupby('city').count()
 
 # %%
-clean_geo_data.loc[(clean_geo_data['latitude'].isna())].groupby('city').count()
-
-# %%
 missing_county={'Missouri':'Saint Louis County', 'Denver':'Denver County', 'Juneau': 'Juneau County', 'San Francisco': 'San Francisco County' }
 
 # %%
-dummy_data = clean_geo_data[(clean_geo_data['latitude'].notna()) & (clean_geo_data['city'].isna()) & (clean_geo_data['county'].isna())]
-print(len(dummy_data))
-plot_utils.plot_scattermap_plotly(dummy_data, 'state')
+clean_geo_data[(clean_geo_data['latitude'].notna()) & (clean_geo_data['city'].isna()) & (clean_geo_data['county'].isna())]
 
 # %%
 dummy_data = clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].isna())]
-print(len(dummy_data))
+print('Number of rows with null values for city, but not for lat/lon and county: ', len(dummy_data))
 plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 
-# %%
-print(clean_geo_data.columns)
-
 # %% [markdown]
-# # FINAL EVALUATIONS:
-# We divided the dataset into several groups depending on what information we were able to demonstrate consistent between the latitude, longitude, state, county, and city fields. And we did this by also making use of the address field, which, however, we decided not to use further because it is not very identifying of the line and is too variable. Finally, we defined strategies to be applied on these groups to fill in the missing data (considered erroneous or missing from the original dataset) in a more or less effective way according to the row information.
-#
-# We now report the division into disjointed groups in which we indicate the size
-#
+# **Final evaluation**:
+# We segmented the dataset into distinct groups based on the consistency we could establish among the latitude, longitude, state, county, and city fields. We also considered the address field in our analysis, but its variability and limited identifiability led us to set it aside for further use. In the end, we formulated strategies to address the missing data in these groups, considering the quality of available information.
+# 
+# Below, we provide a breakdown of these groups, along with their sizes:
+# 
 # ---------- GOOD GROUPS ----------
-# * 174796 = The completely consistent and final rows of the dataset.
-# * 26635 = The rows in which only the city is missing that can be inferred easily from the location (k-nn)
-# * 15000 = The rows in which only the county is missing that can be inferred easily from the location (k-nn)
-# * 33 = The rows where city and county are missing, also in this group the missing information can be inferred from the location (All clustered close to Baltimore)
-#
+# * 174,796 entries: These are the fully consistent and finalized rows in the dataset.
+# * 26,635 entries: Rows where only the city is missing, but it can be easily inferred from the location (k-nn).
+# * 15,000 entries: Rows where only the county is missing, but it can be easily inferred from the location (k-nn).
+# * 33 entries: Rows where both the city and county are missing. Even in this group, the missing information can be inferred from the location, as they are all closely clustered around Baltimore.
+# 
 # ---------- BAD GROUPS ----------
-# * 3116 = The rows where latitude and longitude and city are missing, they can be inferred (not faithfully) from the pair county-state
-# * 19844 = The rows in which only the state field is present. difficult to retrieve
-#
-# missing combinations are not present in the dataset
-#
-# # Final considerations
-# as many as 216464 lines are either definitive or can be derived with a good degree of fidelity. the remainder must be handled carefully\
-#
-# CAUTION: EVALUATE THE CHOSEN TRESHOULDS
-
+# * 3,116 entries: Rows where latitude, longitude, and city are missing. They can be inferred (though not perfectly) from the county-state pair.
+# * 19,844 entries: Rows where only the state field is present, making it challenging to retrieve missing information.
+# 
+# The dataset does not contain any missing combinations beyond those mentioned.
+# Out of the total of 216,464 lines, either the information is definitive or can be derived with a high degree of accuracy.
 
 # %% [markdown]
-# ## infere city
+# ### Infer Missing City Values
 
 # %%
 clean_geo_data.groupby(['state', 'county', 'city']).count()
 
-# %%
-clean_geo_data['latitude'].isna().sum()
+# %% [markdown]
+# Compute the centroid for each city and visualize the first 10 centroids in alphabetical order.
 
 # %%
-for f in clean_geo_data['latitude']:
-    a = []
-    a.append(np.isnan(f))
-sum(a)
-
-# %%
-for i in clean_geo_data.loc[clean_geo_data['city'].isna() & np.isnan(clean_geo_data['latitude'])].index:
-    print(clean_geo_data.loc[i]['latitude'])
-
-# %%
-a = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].notna())])
-b = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].isna())])
-c = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())])
-d = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].isna())])
-e = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].notna())])
-f = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].isna())])
-g = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())])
-h = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].isna())])
-
-print('LAT/LONG --- COUNTY --- CITY')
-print( ' 0 --- 0 --- 0\t', a)
-print( ' 0 --- 0 --- 1\t', b)
-print( ' 0 --- 1 --- 0\t', c)
-print( ' 0 --- 1 --- 1\t', d)
-print( ' 1 --- 0 --- 0\t', e)
-print( ' 1 --- 0 --- 1\t', f)
-print( ' 1 --- 1 --- 0\t', g)
-print( ' 1 --- 1 --- 1\t', h)
-print( ' ---- TOT ----\t', a+b+c+d+e+f+g+h)
-print( ' ---- GOOD ---\t', a+b+c+d)
-print( ' ---- BAD ----\t', e+f+g+h)
-
-# %%
-centroids = clean_geo_data.loc[clean_geo_data['latitude'].notna() & clean_geo_data['city'].notna()][['latitude', 'longitude', 'city', 'state', 'county']].groupby(['state', 'county', 'city']).mean()
+centroids = clean_geo_data.loc[clean_geo_data['latitude'].notna() & clean_geo_data['city'].notna()][[
+    'latitude', 'longitude', 'city', 'state', 'county']].groupby(['state', 'county', 'city']).mean()
 centroids.head(10)
 
 # %%
-print(centroids.index.to_list())
+print('Number of distinct cities:', len(centroids.index.to_list()))
 
 # %%
 centroids.sample()
@@ -399,8 +397,7 @@ else: # compute data
         info_city.loc[state, county, city][len(info_city.columns) - 3] = sum(dummy)/len(dummy)
         info_city.loc[state, county, city][len(info_city.columns) - 2] = centroids.loc[state, county, city]['latitude']
         info_city.loc[state, county, city][len(info_city.columns) - 1] = centroids.loc[state, county, city]['longitude']
-    checkpoint(info_city, 'checkpoint_geo_temporary2') # save data
-    
+    checkpoint(info_city, 'checkpoint_geo_temporary2') # save data 
 
 # %%
 info_city
@@ -436,7 +433,6 @@ def substitute_city(row, info_city):
                     
     return row
 
-
 # %%
 if LOAD_DATA_FROM_CHECKPOINT: # load data
     final_geo_data = load_checkpoint('checkpoint_geo_temporary3')
@@ -471,7 +467,6 @@ print( ' ---- BAD ----\t', e+f+g+h)
 final_geo_data.to_csv(os.path.join(dirname, 'data/post_proc/final_incidents_city_inf.csv'))
 info_city.to_csv(os.path.join(dirname, 'data/post_proc/info_city.csv'))
 
-
 # %%
 plot_utils.plot_scattermap_plotly(final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['county'].notna()) & (final_geo_data['city'].isna())], 'state')
 
@@ -481,7 +476,6 @@ len(final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['s
 
 # %%
 #TODO: plottare le città che ha inserto e i centroidi??
-
 
 # %%
 final_geo_data.head(3)
@@ -538,3 +532,5 @@ plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 
 # %%
 checkpoint(final_geo_data, 'checkpoint_geo') # save data
+
+
