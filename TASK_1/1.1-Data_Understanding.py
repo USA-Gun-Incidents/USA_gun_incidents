@@ -14,7 +14,7 @@ import os
 import sys
 sys.path.append(os.path.abspath('..')) # TODO: c'è un modo per farlo meglio?
 from plot_utils import *
-from utils import *
+from data_preparation_utils import *
 
 # %% [markdown]
 # We define constants and settings for the notebook:

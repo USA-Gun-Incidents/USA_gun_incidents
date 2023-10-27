@@ -7,7 +7,7 @@ import os
 import matplotlib.pyplot as plt
 import geopy.distance
 import plot_utils
-import utils 
+import data_preparation_utils
 
 dirname = os.path.dirname(' ')
 f_data = pd.read_csv(os.path.join(dirname, 'data/post_proc/incidents_date_geo.csv'), index_col=0, low_memory=False)

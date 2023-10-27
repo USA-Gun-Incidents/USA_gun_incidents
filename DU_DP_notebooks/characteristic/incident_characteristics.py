@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import math
-from utils import *
+from data_preparation_utils import *
 
 FOLDER = './data/'
 incidents_path = FOLDER + 'incidents.csv'

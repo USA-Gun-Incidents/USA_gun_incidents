@@ -143,7 +143,7 @@ data['participant_age_group1'].unique()
 # - *nan_values*: Presence of "NaN" values in the row.
 
 # %%
-from utils import check_age_gender_data_consistency
+from data_preparation_utils import check_age_gender_data_consistency
 def compute_clean_data(data):
     clean_data = data.apply(lambda row: check_age_gender_data_consistency(row), axis=1)
     # save data
@@ -312,7 +312,7 @@ clean_data.iloc[236017]
 # ### Fix incosistente data
 
 # %% [markdown]
-# We have created a new DataFrame where we have recorded the corrected and consistent data. The functions and checks necessary for this process are documented in the 'utils.py' file. \
+# We have created a new DataFrame where we have recorded the corrected and consistent data. The functions and checks necessary for this process are documented in the 'check_address.py' file. \
 # Below, we have provided a brief documentation of the methods used.
 
 # %%
@@ -327,7 +327,7 @@ new_data = pd.DataFrame(columns=[
     'n_participants'])
 
 # %%
-from utils import  set_gender_age_consistent_data
+from data_preparation_utils import  set_gender_age_consistent_data
 
 def compute_new_data(clean_data):
     new_data = clean_data.apply(lambda row:  set_gender_age_consistent_data(row), axis=1)
@@ -510,7 +510,7 @@ df.head(10)
 print('Number of rows in which tag are incosistent: ', df[df['Tag Consistency']==False].count())
 
 # %%
-from utils import check_consistency_tag
+from data_preparation_utils import check_consistency_tag
 
 count = 0
 for index, row in df.iterrows():

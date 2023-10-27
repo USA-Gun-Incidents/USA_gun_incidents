@@ -6,7 +6,6 @@
 # ## Import data
 
 # %%
-import utils
 import geopy.distance
 import matplotlib.pyplot as plt
 import numpy as np
@@ -210,7 +209,7 @@ data_check_consistency['town_geopy'].loc[0]
 pd.isnull(data_check_consistency['town_geopy'].loc[0])
 
 # %%
-from utils import check_geographical_data_consistency
+from data_preparation_utils import check_geographical_data_consistency
 
 if LOAD_DATA_FROM_CHECKPOINT: # load data
     clean_geo_data = load_checkpoint('checkpoint_age_temporary')
@@ -557,7 +556,8 @@ for i in geopy_data.loc[215070].index:
 incidents_data.loc[(incidents_data['latitude'] == '39.7591')]
 
 # %%
-utils.check_address(incidents_data.loc[239662]['address'], geopy_data.loc[239662]['display_name'])
+from data_preparation_utils import check_address
+check_address(incidents_data.loc[239662]['address'], geopy_data.loc[239662]['display_name'])
 
 # %%
 incidents_data.loc[108203]['address']

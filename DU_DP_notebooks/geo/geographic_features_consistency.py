@@ -10,7 +10,6 @@ import sys
 import os
 sys.path.append(os.path.abspath('..\\')) # TODO: c'è un modo per farlo meglio?
 import plot_utils
-import utils
 import numpy as np
 
 
@@ -190,8 +189,9 @@ data_check_consistency['town_geopy'].loc[0]
 pd.isnull(data_check_consistency['town_geopy'].loc[0])
 
 # %%
+from data_preparation_utils import check_geographical_data_consistency
 clean_geo_data = data_check_consistency.apply(lambda row: 
-    utils.check_geographical_data_consistency(row, additional_data=additional_data), axis=1)
+    check_geographical_data_consistency(row, additional_data=additional_data), axis=1)
 
 # %%
 final_incidents = clean_geo_data.drop(['state_consistency', 'county_consistency', 'address_consistency'], axis=1)

@@ -213,7 +213,7 @@ fig.show()
 
 # %%
 poverty_data.sort_values(by=['state', 'year'], inplace=True)
-poverty_data['px_code'] = poverty_data['state'].map(usa_code) # retrieve the code associated to each state (the map is defined in the file utils.py)
+poverty_data['px_code'] = poverty_data['state'].map(usa_code) # retrieve the code associated to each state (the map is defined in the file data_preparation_utils.py)
 fig = px.choropleth(
     poverty_data[poverty_data['state']!='United States'],
     locations='px_code',

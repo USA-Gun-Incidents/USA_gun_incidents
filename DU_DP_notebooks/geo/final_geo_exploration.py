@@ -6,7 +6,7 @@ import os
 import matplotlib.pyplot as plt
 import geopy.distance
 import plot_utils
-import utils 
+import data_preparation_utils
 
 dirname = os.path.dirname(' ')
 f_data = pd.read_csv(os.path.join(dirname, 'data/post_proc/final_incidents_city_inf.csv'), index_col=0, low_memory=False)
@@ -66,7 +66,8 @@ for i in geopy_data.loc[215070].index:
 orig_data.loc[(orig_data['latitude'] == '39.7591')]
 
 # %%
-utils.check_address(orig_data.loc[239662]['address'], geopy_data.loc[239662]['display_name'])
+from data_preparation_utils import check_address
+check_address(orig_data.loc[239662]['address'], geopy_data.loc[239662]['display_name'])
 
 # %%
 orig_data.loc[108203]['address']

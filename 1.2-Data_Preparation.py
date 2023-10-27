@@ -460,7 +460,7 @@ age_data[age_data['participant_age1'].notna() & age_data['participant_age_group1
 # - *nan_values*: Presence of "NaN" values in the row.
 
 # %%
-from utils import check_age_gender_data_consistency
+from data_preparation_utils import check_age_gender_data_consistency
 
 if LOAD_DATA_FROM_CHECKPOINT: # load data
     age_temporary_data = load_checkpoint('checkpoint_age_temporary')
@@ -649,11 +649,11 @@ age_temporary_data.iloc[42353]
 # ### Fix Inconsistent Data
 
 # %% [markdown]
-# We have created a new DataFrame where we have recorded the corrected and consistent data. The functions and checks necessary for this process are documented in the 'utils.py' file. \
+# We have created a new DataFrame where we have recorded the corrected and consistent data. The functions and checks necessary for this process are documented in the 'data_preparation_utils.py' file. \
 # It's important to note that all these checks are performed based on the assumptions made in previous stages of the analysis.
 
 # %%
-from utils import  set_gender_age_consistent_data
+from data_preparation_utils import  set_gender_age_consistent_data
 
 if LOAD_DATA_FROM_CHECKPOINT: # load data
     new_age_data = load_checkpoint('checkpoint_age')
@@ -976,7 +976,7 @@ characteristics_age_data = pd.concat([new_age_data, characteristics_data], axis=
 characteristics_age_data.head(2)
 
 # %%
-from utils import check_consistency_tag
+from data_preparation_utils import check_consistency_tag
 for index, row in characteristics_age_data.iterrows():
     characteristics_age_data.at[index, tag_consistency_attr_name] = check_consistency_tag(row)
 
