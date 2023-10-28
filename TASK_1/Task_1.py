@@ -7,26 +7,24 @@
 
 # %%
 import pandas as pd
-import math
+import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import matplotlib.colors as mcolors
 import matplotlib.dates as mdates
-import numpy as np
-import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
+import math
 import os
 import sys
-sys.path.append(os.path.abspath('..\\')) # TODO: c'è un modo per farlo meglio?
+import calendar
+sys.path.append(os.path.abspath('..')) # TODO: c'è un modo per farlo meglio?
 from plot_utils import *
-import plot_utils #TODO: CAMBIARE
 from sklearn.neighbors import KNeighborsClassifier
 from geopy import distance as geopy_distance
-import geopy.distance # TODO: CAMBIARE
-import calendar
 import nltk
-from wordcloud import WordCloud
 from nltk.corpus import stopwords
+from wordcloud import WordCloud
 from pyproj import Transformer
 
 # %% [markdown]
@@ -36,19 +34,6 @@ from pyproj import Transformer
 # %matplotlib inline
 
 DATA_FOLDER_PATH = '../data/'
-
-pd.set_option('display.max_columns', None)
-pd.set_option('max_colwidth', None)
-
-# %%
-DIRNAME = os.path.dirname(' ')
-DATA_FOLDER_PATH = os.path.join(DIRNAME, 'data')
-class counter:
-    count = 0
-    def get(self):
-        self.count += 1
-        return self.count - 1
-RANDOM_STATE = counter()
 
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
@@ -258,32 +243,32 @@ fig.show()
 # %%
 # TODO: usare unica color bar e aggiustare dimensioni in modo che si leggano gli stati (questa versione potrebbe servire per il report)
 
-fig, axs = plt.subplots(ncols=3, nrows=6, figsize=(30, 40))
-vmin, vmax = poverty_data['povertyPercentage'].agg(['min', 'max'])
+# fig, axs = plt.subplots(ncols=3, nrows=6, figsize=(30, 40))
+# vmin, vmax = poverty_data['povertyPercentage'].agg(['min', 'max'])
 
-row_count = 0
-col_count = 0
-for year in poverty_data['year'].unique():
-    plot_usa_map(
-        poverty_data[poverty_data['year']==year],
-        col_to_plot='povertyPercentage',
-        ax=axs[row_count][col_count],
-        state_col='state',
-        vmin=vmin,
-        vmax=vmax,
-        title=str(year),
-        cbar_title="Poverty (%)",
-        cmap='RdBu',
-        borders_path="../cb_2018_us_state_500k"
-    )
-    col_count += 1
-    if col_count == 3:
-        col_count = 0
-        row_count += 1
+# row_count = 0
+# col_count = 0
+# for year in poverty_data['year'].unique():
+#     plot_usa_map(
+#         poverty_data[poverty_data['year']==year],
+#         col_to_plot='povertyPercentage',
+#         ax=axs[row_count][col_count],
+#         state_col='state',
+#         vmin=vmin,
+#         vmax=vmax,
+#         title=str(year),
+#         cbar_title="Poverty (%)",
+#         cmap='RdBu',
+#         borders_path="../cb_2018_us_state_500k"
+#     )
+#     col_count += 1
+#     if col_count == 3:
+#         col_count = 0
+#         row_count += 1
 
-fig.delaxes(axs[5][2])
-fig.suptitle("Povery percentage over the years", fontsize=25)
-fig.tight_layout()
+# fig.delaxes(axs[5][2])
+# fig.suptitle("Povery percentage over the years", fontsize=25)
+# fig.tight_layout()
 
 # %% [markdown]
 # # Elections Data
@@ -685,7 +670,7 @@ incidents_data['state_senate_district'] = pd.to_numeric(incidents_data['state_se
 # float
 incidents_data['avg_age_participants'] = pd.to_numeric(incidents_data['avg_age_participants'], errors='coerce')
 
-# DATE
+# DATE FIX: dopo?
 incidents_data['date'] = pd.to_datetime(incidents_data['date'], format='%Y-%m-%d')
 
 # CATEGORICAL ATTRIBUTES
@@ -758,6 +743,7 @@ incidents_data.describe(include='all', datetime_is_numeric=True)
 # Below, we provide two specific functions to perform this task.
 
 # %%
+# FIX: spostare
 LOAD_DATA_FROM_CHECKPOINT = True # boolean: True if you want to load data, False if you want to compute it
 CHECKPOINT_FOLDER_PATH = '../data/checkpoints/'
 
@@ -765,239 +751,90 @@ def checkpoint(df, checkpoint_name):
     df.to_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv')
 
 def load_checkpoint(checkpoint_name, casting={}):
-    #d_p = pd.datetools.to_datetime
     if casting:
         return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0, parse_dates=['date'], dtype=casting)
     else: #TODO: sistemare il casting quando ci sono tutte le colonne 
         return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0)#, parse_dates=['date'])
 
 # %% [markdown]
-# ## Date
+# ## Date attribute: exploration and preparation
 
 # %% [markdown]
-# We initially cast the dates to a format that is convenient to manipulate 
+# We plot the distribution of the dates using different binning strategies:
 
 # %%
-incidents_data['date'] = incidents_data.apply(lambda row : pd.to_datetime(row['date'], format="%Y-%m-%d"), axis = 1)
+def plot_dates(df_column, title=None, color=None):
+    n_items = len(df_column.index)
+    min = df_column.min()
+    max = df_column.max()
 
-# %% [markdown]
-# check the result of the operation
-#
+    fig, axs = plt.subplots(3, sharex=True, figsize=(14, 6))
+    fig.suptitle(title)
 
-# %%
-print(type(incidents_data['date'][0]))
-incidents_data.sample(3, random_state = RANDOM_STATE.get())
+    # one bin per month
+    n_bin = int((max - min).days / 30)
+    axs[0].hist(df_column, bins=n_bin, density=True, color=color)
+    axs[0].set_ylabel("One bin per month")
+    axs[0].grid(axis='y')
 
-# %% [markdown]
-# We can observe that all dates are syntactically correct
-#
-# we check the distribution of dates for obvious errors and outliers
+    # number of bins computed using Sturge's rule
+    n_bin = int(1 + math.log2(n_items))
+    axs[1].hist(df_column, bins=n_bin, density=True, color=color)
+    axs[1].set_ylabel("Sturge\'s rule binning")
+    axs[1].grid(axis='y')
 
-# %% [markdown]
-# ### Distribution analysis
+    axs[2].boxplot(x=mdates.date2num(df_column), labels=[''], vert=False)
+    axs[2].set_xlabel('date')
 
-# %%
-# plot range data
-tot_row = len(incidents_data.index)
-
-# one binth for every month in the range
-min_date = incidents_data['date'].min()
-max_date = incidents_data['date'].max()
-n_bin = int((max_date - min_date).days / 30) 
-n_bin_2 = int(1 + math.log2(tot_row)) #Sturge's rule
-
-equal_freq_bins=incidents_data['date'].sort_values().quantile(np.arange(0,1, 1/n_bin)).to_list()
-equal_freq_bins2=incidents_data['date'].sort_values().quantile(np.arange(0,1, 1/n_bin_2)).to_list()
-
-fig, axs = plt.subplots(2, sharex=True, sharey=True)
-fig.set_figwidth(14)
-fig.set_figheight(6)
-fig.suptitle('Dates distribution')
-
-colors_palette = iter(mcolors.TABLEAU_COLORS)
-bins = [n_bin, n_bin_2]
-ylabels = ['fixed binning', 'Sturge\'s rule']
-for i, ax in enumerate(axs):
-    ax.hist(incidents_data['date'], bins=bins[i], color=next(colors_palette), density=True)
-
-    ax.set_ylabel(ylabels[i])
-    ax.grid(axis='y')
-    ax.axvline(min_date, color='k', linestyle='dashed', linewidth=1)
-    ax.axvline(max_date, color='k', linestyle='dashed', linewidth=1)
-axs[1].set_xlabel('dates')
-
-
+plot_dates(incidents_data['date'], title='Dates distribution')
 print('Range data: ', incidents_data['date'].min(), ' - ', incidents_data['date'].max())
+num_oor = incidents_data[incidents_data['date'].dt.year>2018].shape[0]
+print(f'Number of rows with out of range value for the attribute date: {num_oor} ({num_oor/incidents_data.shape[0]*100:.2f}%)')
 
 # %% [markdown]
-# We immediately notice that the dates are distributed over a period (highlighted by the dotted lines) ranging from 2013-01-01 to 2030-11-28, the first error that is easy to notice is that many data exceed the maximum limit of the feature
-
-# %%
-ticks = []
-labels = []
-for i in range(2012, 2032):
-    ticks.append(mdates.date2num(pd.to_datetime(str(i) + '-01-01', format="%Y-%m-%d")))
-    labels.append(str(i))
-
-boxplot = plt.boxplot(x=mdates.date2num(incidents_data['date']), labels=['dates'])
-print()
-plt.yticks(ticks, labels)
-plt.grid()
-dates_data = plot_utils.get_box_plot_data(['dates'], boxplot)
-dates_data
-
-# %% [markdown]
-# From this graph we can see more clearly how the distribution of dates is concentrated between 2015-07-12 and 2017-08-09 (first and third quartiles respectively) and the values that can be considered correct end around 2018-03-31. This is followed by a large period with no pattern, and finally we find all the outliers previously defined as errors.
+# These plots show that the number of incidents with an out of range value for the attribute date is non negligible (9.6%) and, excluding these points, there are no incidents happened after the year 2018.
+# Instead of discarding rows with out-of-range dates, we will correct the errors to prevent excessive data loss.
+# Since there are no other features that could suggest the timeframe of the incident, we can only proceed using one of the following approaches:
+# - check if those records have duplicates with a correct date
+# - suppose dates were entered manually using a numeric keypad and that the errors are typos (e.g. 2030 is actually 2020)
+# - replace the errors with the mean or median value
 #
-# It is natural to deduce that one must proceed to correct the problems identified. However, it is difficult to define an error correction method because there are no obvious links between the date and the other features in the dataset, so missing or incorrect values cannot be inferred from them. We try to proceed in 2 ways:
-# - the first is to try to find the cause of the error and correct it, based on this assumption: the date could have been entered manually using a numeric keypad, so any errors found could be trivial typos, so let's try subtracting 10 from all dates that are out of range.
-# - The second is to replace the incorrect values with the mean or median of the distribution, accepting the inaccuracy if it does not affect the final distribution too much.
+# Let's check if there are duplicates with a correct date:
+
+# %%
+incidents_future = incidents_data[incidents_data['date'].dt.year>2018].drop(columns=['date'])
+incidents_past = incidents_data[incidents_data['date'].dt.year<2019].drop(columns=['date'])
+incidents_past[incidents_past.isin(incidents_future).any(axis=1)].size!=0
 
 # %% [markdown]
-# in order to calculate the correlation I convert all the data stored as objects into categories, and replace the value with the associated code (it would be better not to do this for numbers but there are errors)
+# Since there are no duplicates, we proceed with the second and third approach:
+
+# %%
+incidents_data['year'] = incidents_data['date'].dt.year
+mean_date = incidents_data[incidents_data['year']<2019]['date'].mean()
+median_date = incidents_data[incidents_data['year']<2019]['date'].median()
+
+incidents_data['date_minus10'] = incidents_data['date']
+incidents_data['date_minus10'] = incidents_data['date'].apply(lambda x : x - pd.DateOffset(years=10) if x.year>2018 else x)
+incidents_data['date_minus11'] = incidents_data['date']
+incidents_data['date_minus11'] = incidents_data['date'].apply(lambda x : x - pd.DateOffset(years=11) if x.year>2018 else x)
+incidents_data['date_mean'] = incidents_data['date']
+incidents_data['date_mean'] = incidents_data['date'].apply(lambda x : mean_date if x.year>2018 else x)
+incidents_data['date_mean'] = pd.to_datetime(incidents_data['date_mean'], format='%Y-%m-%d') # discard hours, minutes and seconds
+incidents_data['date_median'] = incidents_data['date']
+incidents_data['date_median'] = incidents_data['date'].apply(lambda x : median_date if x.year>2018 else x)
+
+# %%
+plot_dates(incidents_data['date_minus10'], 'Dates distribution (year - 10 for oor)')
+plot_dates(incidents_data['date_minus11'], 'Dates distribution (year - 11 for oor)', color='orange')
+plot_dates(incidents_data['date_mean'], 'Dates distribution (oor replaced with mean)', color='green')
+plot_dates(incidents_data['date_median'], 'Dates distribution (oor replaced with median)', color='red')
 
 # %% [markdown]
-# ### Error correction
+# Unfortunately, these methods lead to unsatisfactory results, as they all remarkably alter the distribution. Therefore, we will keep the errors and take them into account in subsequent analyses. 
 
 # %% [markdown]
-# Let us then try replacing the values in 3 different ways, the first by subtracting 10 years from all the wrong dates, the second by subtracting 11 and the third by replacing them with the median
-
-# %%
-#let's try to remove 10 years from the wrong dates, considering the error, a typo
-actual_index = incidents_data.index.tolist()
-
-def subtract_ten_if(x):
-        if x['date'] > dates_data['upper_whisker'][0].to_datetime64(): 
-                return x['date'] - pd.DateOffset(years=10)
-        else: return x['date']
-
-def subtract_eleven_if(x):
-        if x['date'] > dates_data['upper_whisker'][0].to_datetime64(): 
-                return x['date'] - pd.DateOffset(years=11)
-        else: return x['date']
-
-def replace_with_median(x):
-        ret = x['date']
-        while ret > dates_data['upper_whisker'][0].to_datetime64(): 
-                ret = dates_data['median'][0].to_datetime64()
-        return ret
-
-mod1 = incidents_data.apply(lambda row : subtract_ten_if(row), axis = 1)
-mod2 = incidents_data.apply(lambda row : subtract_eleven_if(row), axis = 1)
-mod3 = incidents_data.apply(lambda row : replace_with_median(row), axis = 1)
-
-# for hist
-dates = [incidents_data['date'],  mod1, mod2, mod3]
-ylabels = ['original', 'mod 1', 'mod2', 'mod3']
-
-# %%
-print(len(incidents_data.loc[incidents_data['date'] > dates_data['upper_whisker'][0].to_datetime64()]))
-
-# %% [markdown]
-# We then observe the distributions thus obtained, in comparison with the original one
-#
-# the dotted lines represent the low whiskers, the first quartile, the median, the third quartile and the high whiskers. 
-
-# %%
-dates_num = []
-for i in dates:
-    dates_num.append(mdates.date2num(i))
-
-boxplot = plt.boxplot(x=dates_num, labels=ylabels)
-plt.yticks(ticks, labels)
-plt.grid()
-
-dates_data = plot_utils.get_box_plot_data(ylabels, boxplot)
-dates_data
-
-# %%
-dates_data['upper_whisker'][1]
-
-# %%
-int((dates_data['upper_whisker'][1] - dates_data['lower_whisker'][1]).days / 30)
-
-# %%
-# one binth for every month in the range
-fixed_bin = int((dates_data['upper_whisker'][0] - dates_data['lower_whisker'][0]).days / 30)
-fixed_bin_2 = int(1 + math.log2(tot_row)) #Sturge's rule
-'''
-prop_bin = []
-prop_bin.append(incidents_data['date'].sort_values(ascending=False).quantile(np.arange(0,1, 1/n_bin)).to_list())
-prop_bin.append(mod1.sort_values(ascending=False).quantile(np.arange(0,1, 1/n_bin)).to_list())
-prop_bin.append(mod2.sort_values(ascending=False).quantile(np.arange(0,1, 1/n_bin)).to_list())
-prop_bin.append(mod3.sort_values(ascending=False).quantile(np.arange(0,1, 1/n_bin)).to_list())'''
-
-
-fig, axs = plt.subplots(4, 2, sharex=True, sharey=False)
-fig.set_figwidth(14)
-fig.set_figheight(5)
-fig.suptitle('Dates distribution')
-
-colors_palette = iter(mcolors.TABLEAU_COLORS)
-bins = [n_bin, equal_freq_bins]
-
-for i, ax in enumerate(axs):
-    for el in dates_data.loc[0][1:]:
-        ax[0].axvline(el, color='k', linestyle='dashed', linewidth=1, alpha=0.4)
-        ax[1].axvline(el, color='k', linestyle='dashed', linewidth=1, alpha=0.4)
-        
-    c = next(colors_palette)
-    
-    if i == 0:
-        n, bins_first_hist, pathces = ax[0].hist(dates[i], bins=fixed_bin, color=c, density=True)
-        n,bins_first_hist_2, pathces = ax[1].hist(dates[i], bins=fixed_bin_2, color=c, density=True)
-    else:
-        ax[0].hist(dates[i], bins=bins_first_hist, color=c, density=True)
-        ax[1].hist(dates[i], bins=bins_first_hist_2, color=c, density=True)
-
-    ax[0].set_ylabel(ylabels[i])
-    ax[0].grid(axis='y')
-    ax[1].grid(axis='y')
-    
-plt.show()   
-
-# %% [markdown]
-# None of the methods used are satisfactory, as they all introduce either large variations in the distribution. On the other hand, using strategies other than those tested could make the date feature unreliable, also because the total number of errors is 23008, 9.5% of the total. The best solution is to remove all the incorrect values and take this into account when applying the knowledge extraction algorithms.
-#
-# So we create a new record with the correct date column
-
-# %%
-def replace_with_none(x):
-        ret = x['date']
-        while ret > dates_data['upper_whisker'][0].to_datetime64(): 
-                ret = pd.NaT
-        return ret
-
-checkpoint_date = pd.DataFrame(index=incidents_data.index, columns=['date'])
-checkpoint_date['date'] = incidents_data.apply(lambda row : replace_with_none(row), axis = 1)
-
-# %%
-checkpoint_date.sample(3, random_state=RANDOM_STATE.get())
-
-# %%
-checkpoint_date['date'].isna().sum()
-
-# %%
-checkpoint(checkpoint_date, 'checkpoint_date')
-
-# %% [markdown]
-# Visualize the final date distribution
-
-# %%
-checkpoint_date.max()
-print('Closest date: ', checkpoint_date.max()[0])
-print('Furthest date: ', checkpoint_date.min()[0])
-
-# %%
-plt.hist(checkpoint_date['date'], bins=51, edgecolor='black', linewidth=0.8)
-plt.title('Dates distribution')
-plt.xlabel('dates')
-plt.ylabel('frequency')
-plt.show()
-
-
-# %% [markdown]
-# ## Geographic data
+# ## Geospatial features: exploration and preparation
 
 # %% [markdown]
 # Columns of the dataset are considered in order to verify the correctness and consistency of data related to geographical features:
@@ -1006,21 +843,6 @@ plt.show()
 # - *address*
 # - *latitude*
 # - *longitude*
-
-# %%
-# select only relevant columns from incidents_data
-incidents_data[['state', 'city_or_county', 'address', 'latitude', 'longitude',
-       'congressional_district', 'state_house_district', 'state_senate_district']].head(5)
-
-# %% [markdown]
-# We display a concise summary of the DataFrame:
-
-# %%
-incidents_data[['state', 'city_or_county', 'address', 'latitude', 'longitude']].info()
-
-# %%
-print('Number of rows with missing latitude: ', incidents_data['latitude'].isnull().sum())
-print('Number of rows with missing longitude: ', incidents_data['longitude'].isnull().sum())
 
 # %% [markdown]
 # Plot incidents' location on a map:
@@ -1280,7 +1102,7 @@ plot_utils.plot_scattermap_plotly(dummy_data, 'state', zoom=2,)
 dummy_data = clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & 
     (clean_geo_data['city'].notna())]
 print('Number of entries with not null values for county but not for lat/lon and city: ', len(dummy_data))
-plot_utils.plot_scattermap_plotly(dummy_data, 'state', zoom=2, title='Missing county')
+plot_scattermap_plotly(dummy_data, 'state', zoom=2, title='Missing county')
 
 # %% [markdown]
 # Visualize the number of entries for each city where we have the *city* value but not the *county*
@@ -1367,7 +1189,7 @@ else: # compute data
             clean_geo_data.loc[(clean_geo_data['city'] == city) & 
             (clean_geo_data['state'] == state) & (clean_geo_data['county'] == county) & 
             clean_geo_data['longitude'].notna()]['longitude']):
-            dummy.append(geopy.distance.geodesic([lat, long], centroids.loc[state, county, city]).km)
+            dummy.append(geopy_distance.geodesic([lat, long], centroids.loc[state, county, city]).km)
             
         dummy = sorted(dummy)
         pc = np.quantile(dummy, np.arange(0, 1, 0.05))
@@ -1391,7 +1213,7 @@ info_city.head()
 info_city.loc[info_city['tot_points'] > 1].info()
 
 # %%
-plot_utils.plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat', 
+plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat', 
     y_column='centroid_lon', hover_name=False, zoom=2, title='Number of points per city')
 
 # %% [markdown]
@@ -1406,7 +1228,7 @@ def substitute_city(row, info_city):
                     max_radius = info_city.loc[state, county, city]['75'] # terzo quantile
                     centroid_coord = [info_city.loc[state, county, city]['centroid_lat'], 
                         info_city.loc[state, county, city]['centroid_lon']]
-                    if (geopy.distance.geodesic([row['latitude'], row['longitude']], centroid_coord).km <= 
+                    if (geopy_distance.geodesic([row['latitude'], row['longitude']], centroid_coord).km <= 
                         max_radius):
                         row['city'] = city
                         break
@@ -2248,7 +2070,7 @@ age_temporary_data.iloc[42353]
 # - In instances with a single participant and consistent data for *participants1*, we used that data to derive values related to age (max, min, average) and gender.
 
 # %%
-from utils import  set_gender_age_consistent_data
+from data_preparation_utils import  set_gender_age_consistent_data
 
 if LOAD_DATA_FROM_CHECKPOINT: # load data
     new_age_data = load_checkpoint('checkpoint_age')
@@ -2453,7 +2275,7 @@ incidents_data[incidents_data['state']=='DISTRICT OF COLUMBIA'].size
 # We join the poverty data with the incidents data:
 
 # %%
-incidents_data['year'] = incidents_data['date'].dt.year
+incidents_data['year'] = incidents_data['date'].dt.year # FIX: già fatto?
 incidents_data = incidents_data.merge(poverty_data, on=['state', 'year'], how='left', validate="m:1")
 incidents_data.head()
 
@@ -2707,14 +2529,6 @@ incidents_data = incidents_data[[
 #incidents_data.to_csv(DATA_FOLDER_PATH + 'incidents_cleaned.csv')
 
 # %%
-# TODO:
-# importare qui i controlli su età e partecipanti
-# importare qui considerazioni su tag per le caratteristiche
-# fare plot sui dati puliti
-
-
-
-# %%
 # da capire meglio come inserire il tutto
 
 # create all the tags for each record
@@ -2731,7 +2545,7 @@ col = [True] * tagged_incidents_data.shape[0] #tag consistency assumed true
 tagged_incidents_data.insert(tagged_incidents_data.shape[1], tag_consistency_attr_name, col)
 
 # %%
-from data_preparation_utils import tagged_incidents_data
+from data_preparation_utils import check_consistency_tag
 
 #consistency check
 unconsistencies = 0
@@ -2743,3 +2557,7 @@ for index, record in tagged_incidents_data.iterrows():
 print(unconsistencies)
 
 
+
+# %%
+# fare in modo che i tag vengano messi sui dati puliti
+# concatenare date, particpanti, geo, e integrare con le cose dei distretti
