@@ -40,6 +40,19 @@ DATA_FOLDER_PATH = '../data/'
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 
+# %%
+DIRNAME = os.path.dirname(' ')
+DATA_FOLDER_PATH = os.path.join(DIRNAME, 'data')
+class counter:
+    count = 0
+    def get(self):
+        self.count += 1
+        return self.count - 1
+RANDOM_STATE = counter()
+
+pd.set_option('display.max_columns', None)
+pd.set_option('max_colwidth', None)
+
 # %% [markdown]
 # # Poverty Data
 
@@ -741,12 +754,12 @@ incidents_data.describe(include='all', datetime_is_numeric=True)
 
 # %% [markdown]
 # To avoid having to recompute the data every time the kernel is interrupted and to make the results reproducible in a short execution time, we decided to save the data to CSV files at the end of each data preparation phase.
-# 
+#
 # Below, we provide two specific functions to perform this task.
 
 # %%
 LOAD_DATA_FROM_CHECKPOINT = True # boolean: True if you want to load data, False if you want to compute it
-CHECKPOINT_FOLDER_PATH = 'data/checkpoints/'
+CHECKPOINT_FOLDER_PATH = '../data/checkpoints/'
 
 def checkpoint(df, checkpoint_name):
     df.to_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv')
@@ -1041,7 +1054,7 @@ fig.show()
 # We load GeoPy data from the CSV file where it is stored.
 
 # %%
-geopy_path = os.path.join(FOLDER, 'geopy/geopy.csv')
+geopy_path = os.path.join(DATA_FOLDER_PATH, 'geopy/geopy.csv')
 geopy_data = pd.read_csv(geopy_path, index_col=['index'], low_memory=False, dtype={})
 
 # %% [markdown]
@@ -1090,7 +1103,7 @@ print('Number of rows in which addresstype is null: ', geopy_data[geopy_data['ad
 # This dataset made it possible to verify the data consistency for the *state* and *county* fields without the need for *latitude* and *longitude* values.
 
 # %%
-counties_path = os.path.join(FOLDER, 'wikipedia/counties.csv')
+counties_path = os.path.join(DATA_FOLDER_PATH, 'wikipedia/counties.csv')
 
 additional_data = pd.read_csv(counties_path)
 additional_data.head()
@@ -1975,23 +1988,23 @@ age_data[age_data['participant_age1'].notna() & age_data['participant_age_group1
 
 # %% [markdown]
 # Checks done to evaluate the consistency of data related to the minimum, maximum, and average ages of participants, as well as the composition of the age groups:
-# 
+#
 # - min_age_participants $<$ avg_age_participants $<$ max_age_participants
 # - n_participants_child $+$ n_participants_teen $+$ n_participants_adult $>$ 0
-# 
+#
 # - $if$ min_age_participants $<$ 12 $then$ n_participants_child $>$ 0
 # - $if$ 12 $\leq$ min_age_participants $<$ 18 $then$ n_participants_teen $>$ 0
 # - $if$ min_age_participants $\geq$ 18 $then$ n_participants_adult $>$ 0
-# 
+#
 # - $if$ max_age_participants $<$ 12 $then$ n_participants_child $>$ 0 and n_participants_teen $=$ 0 and n_participants_adult $=$ 0
 # - $if$ max_age_participants $<$ 18 $then$ n_participants_teen $>$ 0 or n_participants_child $>$ 0 and n_participants_adult $=$ 0
 # - $if$ max_age_participants $\geq$ 18 $then$ n_participants_adult $>$ 0
-# 
+#
 # Note that: child = 0-11, teen = 12-17, adult = 18+
 
 # %% [markdown]
 # Checks done to evaluate the consistency of data related to number of participants divided by gender and other participants class:
-# 
+#
 # - n_participants $\geq$ 0
 # - n_participants $==$ n_males $+$ n_females
 # - n_killed $+$ n_injured $\leq$ n_participants
@@ -2000,45 +2013,45 @@ age_data[age_data['participant_age1'].notna() & age_data['participant_age_group1
 
 # %% [markdown]
 # We also considered data of participants1, a randomly chosen participant whose data related to gender and age are reported in the dataset. For participants, we have the following features: *participant_age1*, *participant_age_group1*, *participant_gender1*.
-# 
+#
 # Values related to participant_age_group1 and participant_gender1 have been binarized using one-hot encoding, thus creating the boolean features *participant1_child*, *participant1_teen*, *participant1_adult*, *participant1_male*, *participant1_female*.
-# 
+#
 # The following checks are done in order to verify the consistency of the data among them and with respect to the other features of the incident:
-# 
+#
 # - $if$ participant_age1 $<$ 12 $then$ participant_age_group1 $=$ *Child*
 # - $if$ 12 $\leq$ participant_age1 $<$ 18 $then$ participant_age_group1 $=$ *Teen*
 # - $if$ participant_age1 $\geq$ 18 $then$ participant_age_group1 $==$ *Adult*
-# 
+#
 # - $if$ participant_age_group1 $==$ *Child* $then$ n_participants_child $>$ 0
 # - $if$ participant_age_group1 $==$ *Teen* $then$ n_participants_teen $>$ 0
 # - $if$ participant_age_group1 $==$ *Adult* $then$ n_participants_adult $>$ 0
-# 
+#
 # - $if$ participant_gender1 $==$ *Male* $then$ n_males $>$ 0
 # - $if$ participant_gender1 $==$ *Female* $then$ n_females $>$ 0
 
 # %% [markdown]
 # In the initial phase, only the values that were not permissible were set to *NaN*. 
-# 
+#
 # We kept track of the consistency of admissible values by using variables (which could take on the boolean value *True* if they were consistent, *False* if they were not, or *NaN* in cases where data was not present). 
-# 
+#
 # These variables were temporarily included in the dataframe so that we could later replace them with consistent values, if possible, or remove them if they were outside the acceptable range.
-# 
+#
 # Variables:
 # - *consistency_age*: Values related to the minimum, maximum, and average ages consistent with the number of participants by age groups.
 # - *consistency_n_participant*: The number of participants for different categories consistent with each other.
 # - *consistency_gender*: The number of participants by gender consistent with the total number of participants.
 # - *consistency_participant1*: Values of features related to participant1 consistent with each other.
-# 
+#
 # - *consistency_participants1_wrt_n_participants*: If *consistency_participants1_wrt_n_participants*, *participant1_age_range_consistency_wrt_all_data*, and *participant1_gender_consistency_wrt_all_data* are all *True*.
-# 
+#
 # - *participant1_age_consistency_wrt_all_data*: Age of participant1 consistent with the minimum and maximum age values of the participants.
 # - *participant1_age_range_consistency_wrt_all_data*: Value of the age range (*Child*, *Teen*, or *Adult*) consistent with the age groups of the participants.
 # - *participant1_gender_consistency_wrt_all_data*: Gender value of participant1 consistent with the gender breakdown values of the group.
-# 
+#
 # - *nan_values*: Presence of "NaN" values in the row.
 
 # %%
-from utils import check_age_gender_data_consistency
+from data_preparation_utils import check_age_gender_data_consistency
 
 if LOAD_DATA_FROM_CHECKPOINT: # load data
     age_temporary_data = load_checkpoint('checkpoint_age_temporary')
@@ -2170,7 +2183,7 @@ display(age_temporary_data['n_participants'].describe())
 
 # %% [markdown]
 # From the data above, it is evident that the third quartile is equal to two participants, and the maximum number of participants per incident reaches the value of 103.
-# 
+#
 # Below, we have presented the distribution of the number of participants for each incident. In order to make the histograms more comprehensible, we have chosen to represent the data on two separate histograms.
 
 # %%
@@ -2220,7 +2233,7 @@ age_temporary_data.iloc[42353]
 
 # %% [markdown]
 # This data visualization has been helpful in understanding the exceptions in the dataset and correcting them when possible, using other data from the same entry.
-# 
+#
 # In cases where we were unable to obtain consistent data for a certain value, we have set the corresponding field to *NaN*.
 
 # %% [markdown]
@@ -2228,14 +2241,14 @@ age_temporary_data.iloc[42353]
 
 # %% [markdown]
 # We have created a new DataFrame in which we have recorded the corrected and consistent data. Note that all these checks are performed based on the assumptions made in previous stages of the analysis.
-# 
+#
 # For entries with missing or inconsistent data, when possible, we have inferred or derived the missing values from other available data. Specifically:
-# 
+#
 # - In cases where we had the number of males (n_males) and number of females (n_females), we calculated the total number of participants as n_participants = n_males + n_females.
 # - In instances with a single participant and consistent data for *participants1*, we used that data to derive values related to age (max, min, average) and gender.
 
 # %%
-from utils import  set_gender_age_consistent_data
+from data_preparation_utils import  set_gender_age_consistent_data
 
 if LOAD_DATA_FROM_CHECKPOINT: # load data
     new_age_data = load_checkpoint('checkpoint_age')
@@ -2270,7 +2283,7 @@ print('Total rows with null value for n_females: ', new_age_data['n_females'].is
 
 # %% [markdown]
 # We can observe that for any entries in the dataset, all data related to age and gender are *NaN*, while for 98973 entries, almost one value is *NaN*. From the plot below, we can visualize the null values (highlighted).
-# 
+#
 # It's important to note that we have complete data for *n_killed* and *n_injured* entries, and the majority of missing data are related to age-related features.
 
 # %%
@@ -2345,7 +2358,7 @@ plt.show()
 
 # %% [markdown]
 # We observe that in incidents involving children and teenagers under the age of 18, the total number of participants was less than 7 and 27, respectively. In general, incidents involving a single person are much more frequent than other incidents, and most often, they involve teenagers and children, with a smaller percentage involving adults. On the other hand, incidents with multiple participants mostly consist of adults, and as the number of participants increases, the frequency of such incidents decreases. 
-# 
+#
 # Note that the y-axis of the histograms is not equal.
 
 # %% [markdown]
@@ -2386,7 +2399,7 @@ plt.show()
 
 # %% [markdown]
 # From the plot, we can notice that when women are involved in incidents, most of the time, there is only one woman, while in incidents with more than two participants of the same gender, it is more frequent for the participants to be men.
-# 
+#
 # Note that for 1567 entries in the dataset, we have the total number of participants, but we do not have the number of males and females
 
 # %% [markdown]
@@ -2718,7 +2731,7 @@ col = [True] * tagged_incidents_data.shape[0] #tag consistency assumed true
 tagged_incidents_data.insert(tagged_incidents_data.shape[1], tag_consistency_attr_name, col)
 
 # %%
-from utils import *
+from data_preparation_utils import tagged_incidents_data
 
 #consistency check
 unconsistencies = 0
