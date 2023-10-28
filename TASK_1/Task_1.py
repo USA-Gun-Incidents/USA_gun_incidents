@@ -2248,7 +2248,7 @@ age_temporary_data.iloc[42353]
 # - In instances with a single participant and consistent data for *participants1*, we used that data to derive values related to age (max, min, average) and gender.
 
 # %%
-from data_preparation_utils import  set_gender_age_consistent_data
+from utils import  set_gender_age_consistent_data
 
 if LOAD_DATA_FROM_CHECKPOINT: # load data
     new_age_data = load_checkpoint('checkpoint_age')
@@ -2731,7 +2731,7 @@ col = [True] * tagged_incidents_data.shape[0] #tag consistency assumed true
 tagged_incidents_data.insert(tagged_incidents_data.shape[1], tag_consistency_attr_name, col)
 
 # %%
-from data_preparation_utils import tagged_incidents_data
+from utils import *
 
 #consistency check
 unconsistencies = 0
