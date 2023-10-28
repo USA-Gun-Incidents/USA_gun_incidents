@@ -13,6 +13,7 @@ import pandas as pd
 import plot_utils
 import plotly.express as px
 import sys
+import seaborn as sns
 sys.path.append(os.path.abspath('..\\')) # TODO: c'è un modo per farlo meglio?
 
 # %%
@@ -263,6 +264,9 @@ print('Number of rows with null value for longitude: ', clean_geo_data['longitud
 # %%
 clean_geo_data['state'].unique().shape[0]
 
+# %%
+sns.heatmap(clean_geo_data.isnull(), cbar=False, xticklabels=True)
+
 # %% [markdown]
 # After this check, all the entries in the dataset have at least the state value not null and consistent. Only 12,796 data points, which account for 4.76% of the dataset, were found to have inconsistent latitude and longitude values.
 
@@ -311,12 +315,13 @@ print( 'Samples with null values for lat/lon    \t', e+f+g+h)
 # %%
 dummy_data = clean_geo_data[clean_geo_data['latitude'].notna()]
 print('Number of entries with not null values for latitude and longitude: ', len(dummy_data))
-plot_utils.plot_scattermap_plotly(dummy_data, 'state')
+plot_utils.plot_scattermap_plotly(dummy_data, 'state', zoom=2,)
 
 # %%
-dummy_data = clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())]
-print('Number of entries with not null values for latitude, longitude, county and city: ', len(dummy_data))
-plot_utils.plot_scattermap_plotly(dummy_data, 'state')
+dummy_data = clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & 
+    (clean_geo_data['city'].notna())]
+print('Number of entries with not null values for county but not for lat/lon and city: ', len(dummy_data))
+plot_utils.plot_scattermap_plotly(dummy_data, 'state', zoom=2, title='Missing county')
 
 # %% [markdown]
 # Visualize the number of entries for each city where we have the *city* value but not the *county*
@@ -325,15 +330,12 @@ plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())].groupby('city').count()
 
 # %%
-missing_county={'Missouri':'Saint Louis County', 'Denver':'Denver County', 'Juneau': 'Juneau County', 'San Francisco': 'San Francisco County' }
-
-# %%
 clean_geo_data[(clean_geo_data['latitude'].notna()) & (clean_geo_data['city'].isna()) & (clean_geo_data['county'].isna())]
 
 # %%
 dummy_data = clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].isna())]
 print('Number of rows with null values for city, but not for lat/lon and county: ', len(dummy_data))
-plot_utils.plot_scattermap_plotly(dummy_data, 'state')
+plot_utils.plot_scattermap_plotly(dummy_data, 'state', zoom=2, title='Missing city')
 
 # %% [markdown]
 # **Final evaluation**:
@@ -357,8 +359,14 @@ plot_utils.plot_scattermap_plotly(dummy_data, 'state')
 # %% [markdown]
 # ### Infer Missing City Values
 
+# %% [markdown]
+# For entries where we have missing values for *city* but not for *latitude* and *longitude*, we attempt to assign the *city* value based on the entry's distance from the centroid.
+
+# %% [markdown]
+# Visualize data group by *state*, *county* and *city*
+
 # %%
-clean_geo_data.groupby(['state', 'county', 'city']).count()
+clean_geo_data.groupby(['state', 'county', 'city']).size().reset_index(name='count')
 
 # %% [markdown]
 # Compute the centroid for each city and visualize the first 10 centroids in alphabetical order.
@@ -371,12 +379,22 @@ centroids.head(10)
 # %%
 print('Number of distinct cities:', len(centroids.index.to_list()))
 
-# %%
-centroids.sample()
+# %% [markdown]
+# Create new DataFrame:
 
 # %%
-info_city = pd.DataFrame(columns=['5', '15', '25', '35', '45', '55', '65', '75', '85', '95', 'tot_points', 'min', 'max', 'avg', 'centroid_lat', 'centroid_lon'], index=centroids.index)
-info_city.info()
+info_city = pd.DataFrame(columns=['5', '15', '25', '35', '45', '55', '65', '75', '85', '95', 
+    'tot_points', 'min', 'max', 'avg', 'centroid_lat', 'centroid_lon'], index=centroids.index)
+info_city.head(2)
+
+# %% [markdown]
+# The code below generates descriptive statistics related to geographical distances and updates the 'info_city' DataFrame for different city, county, and state combinations with the aim of using this data to infer missing city values.
+# 
+# For each tuple (state, county, city) in 'centroids', it extracts all values for latitude and longitude corresponding coordinates from the 'clean_geo_data' DataFrame, if present. 
+# 
+# It then calculates the distance between these coordinates and the centroid using the geodesic distance (in kilometers) and saves this distance in a sorted list. 
+# 
+# After calculating percentiles (at 0.05 intervals), maximum, minimum, and average distances, all of these values are saved in the new DataFrame along with latitude and longitude coordinates.
 
 # %%
 if LOAD_DATA_FROM_CHECKPOINT: # load data
@@ -384,11 +402,16 @@ if LOAD_DATA_FROM_CHECKPOINT: # load data
 else: # compute data
     for state, county, city in centroids.index:
         dummy = []
-        for lat, long in zip(clean_geo_data.loc[(clean_geo_data['city'] == city) & (clean_geo_data['state'] == state) & (clean_geo_data['county'] == county) & clean_geo_data['latitude'].notna()]['latitude'], 
-                            clean_geo_data.loc[(clean_geo_data['city'] == city) & (clean_geo_data['state'] == state) & (clean_geo_data['county'] == county) & clean_geo_data['longitude'].notna()]['longitude']):
+        for lat, long in zip(clean_geo_data.loc[(clean_geo_data['city'] == city) & 
+            (clean_geo_data['state'] == state) & (clean_geo_data['county'] == county) & 
+            clean_geo_data['latitude'].notna()]['latitude'], 
+            clean_geo_data.loc[(clean_geo_data['city'] == city) & 
+            (clean_geo_data['state'] == state) & (clean_geo_data['county'] == county) & 
+            clean_geo_data['longitude'].notna()]['longitude']):
             dummy.append(geopy.distance.geodesic([lat, long], centroids.loc[state, county, city]).km)
+            
         dummy = sorted(dummy)
-        pc = np.quantile(dummy, np.arange(0,1, 0.05))
+        pc = np.quantile(dummy, np.arange(0, 1, 0.05))
         for i in range(len(info_city.columns) - 6):
             info_city.loc[state, county, city][i] = pc[i*2 + 1]
         info_city.loc[state, county, city][len(info_city.columns) - 6] = len(dummy)
@@ -400,24 +423,20 @@ else: # compute data
     checkpoint(info_city, 'checkpoint_geo_temporary2') # save data 
 
 # %%
-info_city
+info_city.head()
+
+# %% [markdown]
+# We display a concise summary of the DataFrame:
 
 # %%
 info_city.loc[info_city['tot_points'] > 1].info()
 
 # %%
-plot_utils.plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat', y_column='centroid_lon', hover_name=False)
+plot_utils.plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat', 
+    y_column='centroid_lon', hover_name=False, zoom=2, title='Number of points per city')
 
-# %%
-for i in [  5955,  19567,  22995,  23433,  35631,  39938,  45163,  55557,  55868,
-        60596,  65016,  69992,  70730,  73290,  73949,  78689, 104390, 116673,
-       133043, 150273, 153933, 160492, 162559, 178887, 192938, 196820, 206125,
-       225494, 227231, 227287, 230283]:
-       print(clean_geo_data.iloc[i][['latitude', 'longitude']])
-print(clean_geo_data.iloc[i])
-
-# %%
-clean_geo_data.sample()
+# %% [markdown]
+# We utilize the previously calculated data to infer missing values for the *city* field in entries of the dataset where latitude and longitude are available. The *city* field is assigned if the distance of the entry from the centroid falls within the third quartile of all points assigned to that centroid.
 
 # %%
 def substitute_city(row, info_city):
@@ -425,20 +444,35 @@ def substitute_city(row, info_city):
         for state, county, city in info_city.index:
             if row['state'] == state and row['county'] == county:
                 if info_city.loc[state, county, city]['tot_points'] > 1:
-                    max_radius = info_city.loc[state, county, city]['75'] #0.75 esimo quantile
-                    centroid_coord = [info_city.loc[state, county, city]['centroid_lat'], info_city.loc[state, county, city]['centroid_lon']]
-                    if geopy.distance.geodesic([row['latitude'], row['longitude']], centroid_coord).km <= max_radius:
-                            row['city'] = city
-                            break
+                    max_radius = info_city.loc[state, county, city]['75'] # terzo quantile
+                    centroid_coord = [info_city.loc[state, county, city]['centroid_lat'], 
+                        info_city.loc[state, county, city]['centroid_lon']]
+                    if (geopy.distance.geodesic([row['latitude'], row['longitude']], centroid_coord).km <= 
+                        max_radius):
+                        row['city'] = city
+                        break
                     
     return row
 
 # %%
 if LOAD_DATA_FROM_CHECKPOINT: # load data
-    final_geo_data = load_checkpoint('checkpoint_geo_temporary3')
+    final_geo_data = load_checkpoint('checkpoint_geo')
 else: # compute data
     final_geo_data = clean_geo_data.apply(lambda row: substitute_city(row, info_city), axis=1)
-    checkpoint(final_geo_data, 'checkpoint_geo_temporary3') # save data
+    checkpoint(final_geo_data, 'checkpoint_geo') # save data
+
+# %%
+final_geo_data.head(2)
+
+# %%
+print('Number of rows with null values for city before: ', clean_geo_data['city'].isnull().sum())
+print('Number of rows with null values for city: ', final_geo_data['city'].isnull().sum())
+
+# %% [markdown]
+# From this process, we infer 2248 *city* values.
+
+# %% [markdown]
+# ### Visualize new data
 
 # %%
 a = len(final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['county'].notna()) & (final_geo_data['city'].notna())])
@@ -450,87 +484,28 @@ f = len(final_geo_data.loc[(final_geo_data['latitude'].isna()) & (final_geo_data
 g = len(final_geo_data.loc[(final_geo_data['latitude'].isna()) & (final_geo_data['county'].isna()) & (final_geo_data['city'].notna())])
 h = len(final_geo_data.loc[(final_geo_data['latitude'].isna()) & (final_geo_data['county'].isna()) & (final_geo_data['city'].isna())])
 
-print('LAT/LONG --- COUNTY --- CITY')
-print( ' 0 --- 0 --- 0\t', a)
-print( ' 0 --- 0 --- 1\t', b)
-print( ' 0 --- 1 --- 0\t', c)
-print( ' 0 --- 1 --- 1\t', d)
-print( ' 1 --- 0 --- 0\t', e)
-print( ' 1 --- 0 --- 1\t', f)
-print( ' 1 --- 1 --- 0\t', g)
-print( ' 1 --- 1 --- 1\t', h)
-print( ' ---- TOT ----\t', a+b+c+d+e+f+g+h)
-print( ' ---- GOOD ---\t', a+b+c+d)
-print( ' ---- BAD ----\t', e+f+g+h)
+print('LAT/LONG     COUNTY     CITY             \t#samples')
+print( 'not null    not null   not null         \t', a)
+print( 'not null    not null   null             \t', b)
+print( 'not null    null       not null         \t', c)
+print( 'not null    null       null             \t', d)
+print( 'null        not null   not null         \t', e)
+print( 'null        not null   null             \t', f)
+print( 'null        null       null             \t', g)
+print( 'null        null       null             \t', h)
+print('\n')
+print( 'TOT samples                             \t', a+b+c+d+e+f+g+h)
+print( 'Samples with not null values for lat/lon\t', a+b+c+d)
+print( 'Samples with null values for lat/lon    \t', e+f+g+h)
 
 # %%
-final_geo_data.to_csv(os.path.join(dirname, 'data/post_proc/final_incidents_city_inf.csv'))
-info_city.to_csv(os.path.join(dirname, 'data/post_proc/info_city.csv'))
-
-# %%
-plot_utils.plot_scattermap_plotly(final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['county'].notna()) & (final_geo_data['city'].isna())], 'state')
-
-# %%
-plot_utils.plot_scattermap_plotly(final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['state'] == 'Missouri') & (final_geo_data['county'] == 'Platte County') & (final_geo_data['city'] == 'Kansas City')], 'latitude')
-len(final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['state'] == 'Missouri') & (final_geo_data['county'] == 'Platte County') & (final_geo_data['city'] == 'Kansas City')])
+plot_utils.plot_scattermap_plotly(final_geo_data.loc[(final_geo_data['latitude'].notna()) & 
+    (final_geo_data['county'].notna()) & (final_geo_data['city'].isna())], 'state', zoom=2, title='Missing city')
 
 # %%
 #TODO: plottare le città che ha inserto e i centroidi??
 
 # %%
 final_geo_data.head(3)
-
-# %%
-geopy_data.head(3)
-
-# %%
-dummy = incidents_data.loc[incidents_data.loc[incidents_data['latitude'].isna()].index]
-interesting_index = dummy.loc[dummy['latitude'].notna()].index
-incidents_data.loc[interesting_index][['state', 'city_or_county', 'address', 'latitude', 'longitude']]
-
-# %%
-col_value_count = []
-for col in geopy_data.columns:
-
-    col_value_count.append([col, geopy_data.loc[(geopy_data['county'].isna()) & (geopy_data['lat'].notna())][col].count()])
-
-col_value_count.sort(key=lambda x: x[1], reverse=True)
-
-for c in col_value_count:
-    print(c[0], c[1])
-
-print(col_value_count[9][1] > col_value_count[8][1])
-
-# %%
-geopy_data.loc[(geopy_data['county'].isna()) & (geopy_data['lat'].notna())].groupby('suburb').count().sort_values('place_id', ascending=False).head(20)
-
-# %%
-geopy_data.loc[229463]['display_name']
-
-# %%
-for i in geopy_data.loc[215070].index:
-    print(i, geopy_data.loc[215070][i])
-
-# %%
-final_geo_data.loc[(final_geo_data['latitude'] == '39.7591')]
-
-# %%
-final_geo_data.loc[108203]['address']
-
-# %%
-geopy_data.loc[108203]
-
-# %%
-dummy_data = final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['county'].isna())]
-print(len(dummy_data))
-plot_utils.plot_scattermap_plotly(dummy_data, 'state')
-
-# %%
-dummy_data = final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['city'].isna())]
-print(len(dummy_data))
-plot_utils.plot_scattermap_plotly(dummy_data, 'state')
-
-# %%
-checkpoint(final_geo_data, 'checkpoint_geo') # save data
 
 
