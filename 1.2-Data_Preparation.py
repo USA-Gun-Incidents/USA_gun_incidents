@@ -460,7 +460,7 @@ age_data[age_data['participant_age1'].notna() & age_data['participant_age_group1
 # - *nan_values*: Presence of "NaN" values in the row.
 
 # %%
-from data_preparation_utils import check_age_gender_data_consistency
+from utils import check_age_gender_data_consistency
 
 if LOAD_DATA_FROM_CHECKPOINT: # load data
     age_temporary_data = load_checkpoint('checkpoint_age_temporary')
@@ -649,11 +649,15 @@ age_temporary_data.iloc[42353]
 # ### Fix Inconsistent Data
 
 # %% [markdown]
-# We have created a new DataFrame where we have recorded the corrected and consistent data. The functions and checks necessary for this process are documented in the 'data_preparation_utils.py' file. \
-# It's important to note that all these checks are performed based on the assumptions made in previous stages of the analysis.
+# We have created a new DataFrame in which we have recorded the corrected and consistent data. Note that all these checks are performed based on the assumptions made in previous stages of the analysis.
+# 
+# For entries with missing or inconsistent data, when possible, we have inferred or derived the missing values from other available data. Specifically:
+# 
+# - In cases where we had the number of males (n_males) and number of females (n_females), we calculated the total number of participants as n_participants = n_males + n_females.
+# - In instances with a single participant and consistent data for *participants1*, we used that data to derive values related to age (max, min, average) and gender.
 
 # %%
-from data_preparation_utils import  set_gender_age_consistent_data
+from utils import  set_gender_age_consistent_data
 
 if LOAD_DATA_FROM_CHECKPOINT: # load data
     new_age_data = load_checkpoint('checkpoint_age')
@@ -976,7 +980,7 @@ characteristics_age_data = pd.concat([new_age_data, characteristics_data], axis=
 characteristics_age_data.head(2)
 
 # %%
-from data_preparation_utils import check_consistency_tag
+from utils import check_consistency_tag
 for index, row in characteristics_age_data.iterrows():
     characteristics_age_data.at[index, tag_consistency_attr_name] = check_consistency_tag(row)
 
