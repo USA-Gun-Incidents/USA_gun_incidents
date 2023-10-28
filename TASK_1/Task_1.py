@@ -7,16 +7,22 @@
 
 # %%
 import pandas as pd
+import math
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import matplotlib.dates as mdates
+import numpy as np
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 import os
 import sys
-sys.path.append(os.path.abspath('..')) # TODO: c'è un modo per farlo meglio?
+sys.path.append(os.path.abspath('..\\')) # TODO: c'è un modo per farlo meglio?
 from plot_utils import *
+import plot_utils #TODO: CAMBIARE
 from sklearn.neighbors import KNeighborsClassifier
 from geopy import distance as geopy_distance
+import geopy.distance # TODO: CAMBIARE
 import calendar
 import nltk
 from wordcloud import WordCloud
@@ -35,7 +41,7 @@ pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 
 # %% [markdown]
-# ## Poverty Data
+# # Poverty Data
 
 # %% [markdown]
 # We load the dataset:
@@ -267,7 +273,7 @@ fig.suptitle("Povery percentage over the years", fontsize=25)
 fig.tight_layout()
 
 # %% [markdown]
-# ## Elections Data
+# # Elections Data
 
 # %% [markdown]
 # We load the dataset:
@@ -572,7 +578,7 @@ corr.style.background_gradient(cmap='coolwarm')
 # No correlation is evident.
 
 # %% [markdown]
-# ## Incidents Data
+# # Incidents Data
 
 # %% [markdown]
 # We load the dataset:
@@ -733,8 +739,724 @@ incidents_data.describe(include='all', datetime_is_numeric=True)
 #     - the maximum value for the attribute `date` is 2030-11-28
 #     - the range of the attributes `age`, `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` is outside the domain of the attributes (e.g. the maximum value for the attribute age is 311)
 
+# %% [markdown]
+# To avoid having to recompute the data every time the kernel is interrupted and to make the results reproducible in a short execution time, we decided to save the data to CSV files at the end of each data preparation phase.
+# 
+# Below, we provide two specific functions to perform this task.
+
 # %%
-# TODO: copiare qui osservazioni sulla data
+LOAD_DATA_FROM_CHECKPOINT = True # boolean: True if you want to load data, False if you want to compute it
+CHECKPOINT_FOLDER_PATH = 'data/checkpoints/'
+
+def checkpoint(df, checkpoint_name):
+    df.to_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv')
+
+def load_checkpoint(checkpoint_name, casting={}):
+    #d_p = pd.datetools.to_datetime
+    if casting:
+        return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0, parse_dates=['date'], dtype=casting)
+    else: #TODO: sistemare il casting quando ci sono tutte le colonne 
+        return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0)#, parse_dates=['date'])
+
+# %% [markdown]
+# ## Date
+
+# %% [markdown]
+# We initially cast the dates to a format that is convenient to manipulate 
+
+# %%
+incidents_data['date'] = incidents_data.apply(lambda row : pd.to_datetime(row['date'], format="%Y-%m-%d"), axis = 1)
+
+# %% [markdown]
+# check the result of the operation
+#
+
+# %%
+print(type(incidents_data['date'][0]))
+incidents_data.sample(3, random_state = RANDOM_STATE.get())
+
+# %% [markdown]
+# We can observe that all dates are syntactically correct
+#
+# we check the distribution of dates for obvious errors and outliers
+
+# %% [markdown]
+# ### Distribution analysis
+
+# %%
+# plot range data
+tot_row = len(incidents_data.index)
+
+# one binth for every month in the range
+min_date = incidents_data['date'].min()
+max_date = incidents_data['date'].max()
+n_bin = int((max_date - min_date).days / 30) 
+n_bin_2 = int(1 + math.log2(tot_row)) #Sturge's rule
+
+equal_freq_bins=incidents_data['date'].sort_values().quantile(np.arange(0,1, 1/n_bin)).to_list()
+equal_freq_bins2=incidents_data['date'].sort_values().quantile(np.arange(0,1, 1/n_bin_2)).to_list()
+
+fig, axs = plt.subplots(2, sharex=True, sharey=True)
+fig.set_figwidth(14)
+fig.set_figheight(6)
+fig.suptitle('Dates distribution')
+
+colors_palette = iter(mcolors.TABLEAU_COLORS)
+bins = [n_bin, n_bin_2]
+ylabels = ['fixed binning', 'Sturge\'s rule']
+for i, ax in enumerate(axs):
+    ax.hist(incidents_data['date'], bins=bins[i], color=next(colors_palette), density=True)
+
+    ax.set_ylabel(ylabels[i])
+    ax.grid(axis='y')
+    ax.axvline(min_date, color='k', linestyle='dashed', linewidth=1)
+    ax.axvline(max_date, color='k', linestyle='dashed', linewidth=1)
+axs[1].set_xlabel('dates')
+
+
+print('Range data: ', incidents_data['date'].min(), ' - ', incidents_data['date'].max())
+
+# %% [markdown]
+# We immediately notice that the dates are distributed over a period (highlighted by the dotted lines) ranging from 2013-01-01 to 2030-11-28, the first error that is easy to notice is that many data exceed the maximum limit of the feature
+
+# %%
+ticks = []
+labels = []
+for i in range(2012, 2032):
+    ticks.append(mdates.date2num(pd.to_datetime(str(i) + '-01-01', format="%Y-%m-%d")))
+    labels.append(str(i))
+
+boxplot = plt.boxplot(x=mdates.date2num(incidents_data['date']), labels=['dates'])
+print()
+plt.yticks(ticks, labels)
+plt.grid()
+dates_data = plot_utils.get_box_plot_data(['dates'], boxplot)
+dates_data
+
+# %% [markdown]
+# From this graph we can see more clearly how the distribution of dates is concentrated between 2015-07-12 and 2017-08-09 (first and third quartiles respectively) and the values that can be considered correct end around 2018-03-31. This is followed by a large period with no pattern, and finally we find all the outliers previously defined as errors.
+#
+# It is natural to deduce that one must proceed to correct the problems identified. However, it is difficult to define an error correction method because there are no obvious links between the date and the other features in the dataset, so missing or incorrect values cannot be inferred from them. We try to proceed in 2 ways:
+# - the first is to try to find the cause of the error and correct it, based on this assumption: the date could have been entered manually using a numeric keypad, so any errors found could be trivial typos, so let's try subtracting 10 from all dates that are out of range.
+# - The second is to replace the incorrect values with the mean or median of the distribution, accepting the inaccuracy if it does not affect the final distribution too much.
+
+# %% [markdown]
+# in order to calculate the correlation I convert all the data stored as objects into categories, and replace the value with the associated code (it would be better not to do this for numbers but there are errors)
+
+# %% [markdown]
+# ### Error correction
+
+# %% [markdown]
+# Let us then try replacing the values in 3 different ways, the first by subtracting 10 years from all the wrong dates, the second by subtracting 11 and the third by replacing them with the median
+
+# %%
+#let's try to remove 10 years from the wrong dates, considering the error, a typo
+actual_index = incidents_data.index.tolist()
+
+def subtract_ten_if(x):
+        if x['date'] > dates_data['upper_whisker'][0].to_datetime64(): 
+                return x['date'] - pd.DateOffset(years=10)
+        else: return x['date']
+
+def subtract_eleven_if(x):
+        if x['date'] > dates_data['upper_whisker'][0].to_datetime64(): 
+                return x['date'] - pd.DateOffset(years=11)
+        else: return x['date']
+
+def replace_with_median(x):
+        ret = x['date']
+        while ret > dates_data['upper_whisker'][0].to_datetime64(): 
+                ret = dates_data['median'][0].to_datetime64()
+        return ret
+
+mod1 = incidents_data.apply(lambda row : subtract_ten_if(row), axis = 1)
+mod2 = incidents_data.apply(lambda row : subtract_eleven_if(row), axis = 1)
+mod3 = incidents_data.apply(lambda row : replace_with_median(row), axis = 1)
+
+# for hist
+dates = [incidents_data['date'],  mod1, mod2, mod3]
+ylabels = ['original', 'mod 1', 'mod2', 'mod3']
+
+# %%
+print(len(incidents_data.loc[incidents_data['date'] > dates_data['upper_whisker'][0].to_datetime64()]))
+
+# %% [markdown]
+# We then observe the distributions thus obtained, in comparison with the original one
+#
+# the dotted lines represent the low whiskers, the first quartile, the median, the third quartile and the high whiskers. 
+
+# %%
+dates_num = []
+for i in dates:
+    dates_num.append(mdates.date2num(i))
+
+boxplot = plt.boxplot(x=dates_num, labels=ylabels)
+plt.yticks(ticks, labels)
+plt.grid()
+
+dates_data = plot_utils.get_box_plot_data(ylabels, boxplot)
+dates_data
+
+# %%
+dates_data['upper_whisker'][1]
+
+# %%
+int((dates_data['upper_whisker'][1] - dates_data['lower_whisker'][1]).days / 30)
+
+# %%
+# one binth for every month in the range
+fixed_bin = int((dates_data['upper_whisker'][0] - dates_data['lower_whisker'][0]).days / 30)
+fixed_bin_2 = int(1 + math.log2(tot_row)) #Sturge's rule
+'''
+prop_bin = []
+prop_bin.append(incidents_data['date'].sort_values(ascending=False).quantile(np.arange(0,1, 1/n_bin)).to_list())
+prop_bin.append(mod1.sort_values(ascending=False).quantile(np.arange(0,1, 1/n_bin)).to_list())
+prop_bin.append(mod2.sort_values(ascending=False).quantile(np.arange(0,1, 1/n_bin)).to_list())
+prop_bin.append(mod3.sort_values(ascending=False).quantile(np.arange(0,1, 1/n_bin)).to_list())'''
+
+
+fig, axs = plt.subplots(4, 2, sharex=True, sharey=False)
+fig.set_figwidth(14)
+fig.set_figheight(5)
+fig.suptitle('Dates distribution')
+
+colors_palette = iter(mcolors.TABLEAU_COLORS)
+bins = [n_bin, equal_freq_bins]
+
+for i, ax in enumerate(axs):
+    for el in dates_data.loc[0][1:]:
+        ax[0].axvline(el, color='k', linestyle='dashed', linewidth=1, alpha=0.4)
+        ax[1].axvline(el, color='k', linestyle='dashed', linewidth=1, alpha=0.4)
+        
+    c = next(colors_palette)
+    
+    if i == 0:
+        n, bins_first_hist, pathces = ax[0].hist(dates[i], bins=fixed_bin, color=c, density=True)
+        n,bins_first_hist_2, pathces = ax[1].hist(dates[i], bins=fixed_bin_2, color=c, density=True)
+    else:
+        ax[0].hist(dates[i], bins=bins_first_hist, color=c, density=True)
+        ax[1].hist(dates[i], bins=bins_first_hist_2, color=c, density=True)
+
+    ax[0].set_ylabel(ylabels[i])
+    ax[0].grid(axis='y')
+    ax[1].grid(axis='y')
+    
+plt.show()   
+
+# %% [markdown]
+# None of the methods used are satisfactory, as they all introduce either large variations in the distribution. On the other hand, using strategies other than those tested could make the date feature unreliable, also because the total number of errors is 23008, 9.5% of the total. The best solution is to remove all the incorrect values and take this into account when applying the knowledge extraction algorithms.
+#
+# So we create a new record with the correct date column
+
+# %%
+def replace_with_none(x):
+        ret = x['date']
+        while ret > dates_data['upper_whisker'][0].to_datetime64(): 
+                ret = pd.NaT
+        return ret
+
+checkpoint_date = pd.DataFrame(index=incidents_data.index, columns=['date'])
+checkpoint_date['date'] = incidents_data.apply(lambda row : replace_with_none(row), axis = 1)
+
+# %%
+checkpoint_date.sample(3, random_state=RANDOM_STATE.get())
+
+# %%
+checkpoint_date['date'].isna().sum()
+
+# %%
+checkpoint(checkpoint_date, 'checkpoint_date')
+
+# %% [markdown]
+# Visualize the final date distribution
+
+# %%
+checkpoint_date.max()
+print('Closest date: ', checkpoint_date.max()[0])
+print('Furthest date: ', checkpoint_date.min()[0])
+
+# %%
+plt.hist(checkpoint_date['date'], bins=51, edgecolor='black', linewidth=0.8)
+plt.title('Dates distribution')
+plt.xlabel('dates')
+plt.ylabel('frequency')
+plt.show()
+
+
+# %% [markdown]
+# ## Geographic data
+
+# %% [markdown]
+# Columns of the dataset are considered in order to verify the correctness and consistency of data related to geographical features:
+# - *state*
+# - *city_or_county*
+# - *address*
+# - *latitude*
+# - *longitude*
+
+# %%
+# select only relevant columns from incidents_data
+incidents_data[['state', 'city_or_county', 'address', 'latitude', 'longitude',
+       'congressional_district', 'state_house_district', 'state_senate_district']].head(5)
+
+# %% [markdown]
+# We display a concise summary of the DataFrame:
+
+# %%
+incidents_data[['state', 'city_or_county', 'address', 'latitude', 'longitude']].info()
+
+# %%
+print('Number of rows with missing latitude: ', incidents_data['latitude'].isnull().sum())
+print('Number of rows with missing longitude: ', incidents_data['longitude'].isnull().sum())
+
+# %% [markdown]
+# Plot incidents' location on a map:
+
+# %%
+fig = px.scatter_mapbox(
+    lat=incidents_data['latitude'],
+    lon=incidents_data['longitude'],
+    zoom=0, 
+    height=500,
+    width=800
+)
+fig.update_layout(mapbox_style="open-street-map")
+fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+fig.show()
+
+# %% [markdown]
+# We note that, excluding 7923 entries in the dataset where latitude and longitude data are missing and 4 entries outside the borders of the USA, the remaining dataset entries have latitude and longitude values. The *state* field is non-null for all entries.
+#
+# Therefore, we decided to use external sources to verify the data consistency in the dataset. For the fields where latitude and longitude were present within the United States, we utilized GeoPy data, while for the remaining data and those that did not have a positive match with GeoPy's results, we used data from Wikipedia.
+#
+# In the following sections of the notebook, we provide a summary of the additional data used and the methodologies for verifying data consistency.
+
+# %% [markdown]
+# ### Additional dataset: GeoPy
+
+# %% [markdown]
+# In order to check the data consistency of our dataset, we use [GeoPy](https://geopy.readthedocs.io/en/stable/). We have previously saved the necessary data for performing these checks using the latitude and longitude data from our dataset.
+
+# %% [markdown]
+# We load GeoPy data from the CSV file where it is stored.
+
+# %%
+geopy_path = os.path.join(FOLDER, 'geopy/geopy.csv')
+geopy_data = pd.read_csv(geopy_path, index_col=['index'], low_memory=False, dtype={})
+
+# %% [markdown]
+# geopy_data is a data frame containing one row for each row in our dataset, with matching indices.
+
+# %% [markdown]
+# **GeoPy Keys** we saved and used:
+#
+# - *lat* and *lon*: Latitude and longitude of the location.
+#
+# - *importance*: Numerical value $\in [0,1]$, indicates the importance of the location relative to other locations.
+#
+# - *addresstype*: Address type (e.g., "house," "street," "postcode") to classify the incident's place.
+#
+# - *address*: A dictionary containing detailed address information. \
+#     Dictionary keys included in the data frame are: *state*, *county*, *suburb*, *city*, *town*, *village*.
+#
+# - *display_name*: User-friendly representation of the location, often formatted as a complete address. Used by us to cross-reference with the address in case we are unable to find a match between our data and the GeoPy data set using other information from the address.
+#
+# Additional columns we added to the dataframe:
+#
+# - *coord_presence*: Boolean, false if the corresponding row in the original dataset did not have latitude and longitude values, making it impossible to query GeoPy.
+
+# %%
+print('Number of rows without surburbs: ', geopy_data.loc[geopy_data['suburb'].isna()].shape[0])
+display(geopy_data.loc[geopy_data['suburb'].isna()].head(2))
+
+# %%
+print('Number of rows without coordinates: \n', geopy_data['coord_presence'].value_counts())
+print('\nNumber of rows without importance: \n', geopy_data['importance'].isnull().value_counts())
+
+# %%
+print('Number of rows in which city is null and town is not null: ', 
+    geopy_data[(geopy_data['city'].isnull()) & (geopy_data['town'].notnull())].shape[0])
+
+# %%
+print(geopy_data['addresstype'].unique())
+print('Number of rows in which addresstype is null: ', geopy_data[geopy_data['addresstype'].isnull()].shape[0])
+
+# %% [markdown]
+# ### Additional dataset: Wikipedia
+
+# %% [markdown]
+# We also downloaded data from [Wikipedia](https://en.wikipedia.org/wiki/County_(United_States)) containing the states and counties (or the equivalent) for each state in the USA. This data was used in cases where no consistency was found with GeoPy data.
+#
+# This dataset made it possible to verify the data consistency for the *state* and *county* fields without the need for *latitude* and *longitude* values.
+
+# %%
+counties_path = os.path.join(FOLDER, 'wikipedia/counties.csv')
+
+additional_data = pd.read_csv(counties_path)
+additional_data.head()
+
+# %%
+additional_data.dtypes
+
+# %% [markdown]
+# ### Studying Data Consistency
+
+# %% [markdown]
+# We concatenate geographic data from our dataset and GeoPy data into a single DataFrame.
+
+# %%
+data_check_consistency = pd.DataFrame(columns=['state', 'city_or_county', 'address', 'latitude', 'longitude', 'display_name', 
+    'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 'importance_geopy', 'addresstype_geopy', 
+    'coord_presence', 'suburb_geopy'])
+data_check_consistency[['state', 'city_or_county', 'address', 'latitude', 'longitude']] = incidents_data[[
+    'state', 'city_or_county', 'address', 'latitude', 'longitude']]
+    
+data_check_consistency[['address_geopy', 'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 
+    'importance_geopy', 'addresstype_geopy', 'coord_presence', 'suburb_geopy']] = geopy_data.loc[incidents_data.index][['display_name', 'village', 'town', 'city', 
+    'county', 'state', 'importance', 'addresstype', 'coord_presence', 'suburb']]
+
+
+
+# %%
+data_check_consistency.head(2)
+
+# %% [markdown]
+# Convert latitude and longitude to float type.
+
+# %%
+# convert latitude and longitude to float
+data_check_consistency['latitude'] = data_check_consistency['latitude'].astype(float)
+data_check_consistency['longitude'] = data_check_consistency['longitude'].astype(float)
+
+# %% [markdown]
+# Print the first 10 occurrences of city_or_county values where parentheses are present in the string:
+
+# %%
+[c for c in data_check_consistency['city_or_county'].unique() if '(' in c][:10]
+
+# %%
+len([c for c in data_check_consistency['city_or_county'].unique() if '(' in c and 'county' not in c])
+
+# %% [markdown]
+# We can note that in 1782 entries, both city and county values are present in city_or_county, so we need to take this into consideration.
+
+# %% [markdown]
+# We created some functions to check the consistency of geographic data using the external sources we mentioned earlier. We also replaced the values for State, County, and City with a string in title case, without punctuation or numbers, to obtain a dataset of clean and consistent data.
+#
+# Below, we provide a brief summary of all the functions used to check data consistency and replace values when necessary.
+
+# %% [markdown]
+# **String Preprocessing**
+# - Initially, we convert the values for state, county, and city to lowercase for both our dataset and external dataset.
+# - For cases where the *city_or_county* field contained values for both city and county, we split the string into two and used both new strings to match with both county and city.
+# - We removed the words 'city of' and 'county' from the strings in the *city_or_county* field.
+# - We removed punctuation and numerical values from the string, if present, in the *state* and *city_or_county* fields.
+#
+# **If We Had GeoPy Data**
+# - We attempted direct comparisons with GeoPy data:
+#     - Our data's *state* was compared with *state* from GeoPy.
+#     - To assign the value of *county*, we compared with *county_geopy* and with *suburb_geopy*.
+#     - The *city* was compared with *city_geopy*, *town_geopy* and *village_geopy*.
+# - If direct comparisons were not positive:
+#     - We checked for potential typos in the string using the Damerau-Levenshtein distance (definition below).
+#     - Thresholds to decide the maximum distance for two strings to be considered equal were set after several preliminary tests. We decided to use different thresholds for state and city/county.
+# - In cases where previous comparisons were not sufficient, we also used the *address* field from our dataset, comparing it with GeoPy's *display_name*, from which commonly occurring words throughout the column were removed (e.g., "Street," "Avenue," "Boulevard"). Again, we used the Damerau-Levenshtein distance with an appropriate threshold to verify address consistency.
+#
+# In cases where we were able to evaluate data consistency through these comparisons, we set the values for the fields *state*, *county*, *city*, *latitude*, *longitude*, *importance*, *address_type* using GeoPy values. Additionally, we also saved values reflecting the consistency with the fields evaluated earlier in: *state_consistency*, *county_consistency*, *address_consistency* (0 if not consistent, 1 if consistent, -1 if null values are presents)
+#
+# If the fields in our dataset were not consistent through the previously described checks or could not be verified due to the absence of latitude and longitude values, we attempted to assess consistency using Wikipedia data, with similar checks as before. In this case, we could only retrieve the *state* and *county* fields.
+
+# %% [markdown]
+# General formula for calculating the **Damerau-Levenshtein distance** between two strings $s$ and $t$ \
+# $D(i, j) = \min
+# \begin{cases}
+# D(i-1, j) + 1 \\
+# D(i, j-1) + 1 \\
+# D(i-1, j-1) + \delta \\
+# D(i-2, j-2) + \delta & \text{if } s[i] = t[j] \text{ and } s[i-1] = t[j-1]
+# \end{cases}$
+#
+# where:
+# - $D(i, j)$ is the Damerau-Levenshtein distance between the first $i$ letters of a string $s$ and the first $j$ letters of a string $t$.
+# - $\delta$ is 0 if the current letters $s[i]$ and $t[j]$ are equal, otherwise, it is 1.
+# - $D(i-2, j-2) + \delta$ represents transposition (swapping two adjacent letters) if the current letters $s[i]$ and $t[j]$ are equal, and the preceding letters $s[i-1]$ and $t[j-1]$ are also equal.
+#
+#
+
+# %%
+from data_preparation_utils import check_geographical_data_consistency
+
+if LOAD_DATA_FROM_CHECKPOINT: # load data
+    clean_geo_data = load_checkpoint('checkpoint_geo_temporary')
+else: # compute data
+    clean_geo_data = data_check_consistency.apply(lambda row: check_geographical_data_consistency(row, 
+        additional_data=additional_data), axis=1)
+    checkpoint(clean_geo_data, 'checkpoint_geo_temporary') # save data
+
+# %% [markdown]
+# ### Visualize Consistent Geographical Data
+
+# %%
+clean_geo_data.head(2)
+
+# %%
+print('Number of rows with all null values: ', clean_geo_data.isnull().all(axis=1).sum())
+print('Number of rows with null value for state: ', clean_geo_data['state'].isnull().sum())
+print('Number of rows with null value for county: ', clean_geo_data['county'].isnull().sum())
+print('Number of rows with null value for city: ', clean_geo_data['city'].isnull().sum())
+print('Number of rows with null value for latitude: ', clean_geo_data['latitude'].isnull().sum())
+print('Number of rows with null value for longitude: ', clean_geo_data['longitude'].isnull().sum())
+
+# %%
+clean_geo_data['state'].unique().shape[0]
+
+# %%
+sns.heatmap(clean_geo_data.isnull(), cbar=False, xticklabels=True)
+
+# %% [markdown]
+# After this check, all the entries in the dataset have at least the state value not null and consistent. Only 12,796 data points, which account for 4.76% of the dataset, were found to have inconsistent latitude and longitude values.
+
+# %% [markdown]
+# Below, we have included some plots to visualize the inconsistency values in the dataset.
+
+# %%
+clean_geo_data.groupby(['state_consistency','county_consistency','address_consistency']).count().sort_index(ascending=False)
+
+# %%
+dummy = {}
+stats_columns = ['#null_val', '#not_null', '#value_count']
+for col in clean_geo_data.columns:
+    dummy[col] = []
+    dummy[col].append(clean_geo_data[col].isna().sum())
+    dummy[col].append(len(clean_geo_data[col]) - clean_geo_data[col].isna().sum())
+    dummy[col].append(len(clean_geo_data[col].value_counts()))
+    
+clean_geo_stat_stats = pd.DataFrame(dummy, index=stats_columns).transpose()
+clean_geo_stat_stats
+
+# %%
+a = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].notna())])
+b = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].isna())])
+c = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())])
+d = len(clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].isna())])
+e = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].notna())])
+f = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].isna())])
+g = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())])
+h = len(clean_geo_data.loc[(clean_geo_data['latitude'].isna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].isna())])
+
+print('LAT/LONG     COUNTY     CITY             \t#samples')
+print( 'not null    not null   not null         \t', a)
+print( 'not null    not null   null             \t', b)
+print( 'not null    null       not null         \t', c)
+print( 'not null    null       null             \t', d)
+print( 'null        not null   not null         \t', e)
+print( 'null        not null   null             \t', f)
+print( 'null        null       null             \t', g)
+print( 'null        null       null             \t', h)
+print('\n')
+print( 'TOT samples                             \t', a+b+c+d+e+f+g+h)
+print( 'Samples with not null values for lat/lon\t', a+b+c+d)
+print( 'Samples with null values for lat/lon    \t', e+f+g+h)
+
+# %%
+dummy_data = clean_geo_data[clean_geo_data['latitude'].notna()]
+print('Number of entries with not null values for latitude and longitude: ', len(dummy_data))
+plot_utils.plot_scattermap_plotly(dummy_data, 'state', zoom=2,)
+
+# %%
+dummy_data = clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & 
+    (clean_geo_data['city'].notna())]
+print('Number of entries with not null values for county but not for lat/lon and city: ', len(dummy_data))
+plot_utils.plot_scattermap_plotly(dummy_data, 'state', zoom=2, title='Missing county')
+
+# %% [markdown]
+# Visualize the number of entries for each city where we have the *city* value but not the *county*
+
+# %%
+clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].isna()) & (clean_geo_data['city'].notna())].groupby('city').count()
+
+# %%
+clean_geo_data[(clean_geo_data['latitude'].notna()) & (clean_geo_data['city'].isna()) & (clean_geo_data['county'].isna())]
+
+# %%
+dummy_data = clean_geo_data.loc[(clean_geo_data['latitude'].notna()) & (clean_geo_data['county'].notna()) & (clean_geo_data['city'].isna())]
+print('Number of rows with null values for city, but not for lat/lon and county: ', len(dummy_data))
+plot_utils.plot_scattermap_plotly(dummy_data, 'state', zoom=2, title='Missing city')
+
+# %% [markdown]
+# **Final evaluation**:
+# We segmented the dataset into distinct groups based on the consistency we could establish among the latitude, longitude, state, county, and city fields. We also considered the address field in our analysis, but its variability and limited identifiability led us to set it aside for further use. In the end, we formulated strategies to address the missing data in these groups, considering the quality of available information.
+#
+# Below, we provide a breakdown of these groups, along with their sizes:
+#
+# ---------- GOOD GROUPS ----------
+# * 174,796 entries: These are the fully consistent and finalized rows in the dataset.
+# * 26,635 entries: Rows where only the city is missing, but it can be easily inferred from the location (k-nn).
+# * 15,000 entries: Rows where only the county is missing, but it can be easily inferred from the location (k-nn).
+# * 33 entries: Rows where both the city and county are missing. Even in this group, the missing information can be inferred from the location, as they are all closely clustered around Baltimore.
+#
+# ---------- BAD GROUPS ----------
+# * 3,116 entries: Rows where latitude, longitude, and city are missing. They can be inferred (though not perfectly) from the county-state pair.
+# * 19,844 entries: Rows where only the state field is present, making it challenging to retrieve missing information.
+#
+# The dataset does not contain any missing combinations beyond those mentioned.
+# Out of the total of 216,464 lines, either the information is definitive or can be derived with a high degree of accuracy.
+
+# %% [markdown]
+# ### Infer Missing City Values
+
+# %% [markdown]
+# For entries where we have missing values for *city* but not for *latitude* and *longitude*, we attempt to assign the *city* value based on the entry's distance from the centroid.
+
+# %% [markdown]
+# Visualize data group by *state*, *county* and *city*
+
+# %%
+clean_geo_data.groupby(['state', 'county', 'city']).size().reset_index(name='count')
+
+# %% [markdown]
+# Compute the centroid for each city and visualize the first 10 centroids in alphabetical order.
+
+# %%
+centroids = clean_geo_data.loc[clean_geo_data['latitude'].notna() & clean_geo_data['city'].notna()][[
+    'latitude', 'longitude', 'city', 'state', 'county']].groupby(['state', 'county', 'city']).mean()
+centroids.head(10)
+
+# %%
+print('Number of distinct cities:', len(centroids.index.to_list()))
+
+# %% [markdown]
+# Create new DataFrame:
+
+# %%
+info_city = pd.DataFrame(columns=['5', '15', '25', '35', '45', '55', '65', '75', '85', '95', 
+    'tot_points', 'min', 'max', 'avg', 'centroid_lat', 'centroid_lon'], index=centroids.index)
+info_city.head(2)
+
+# %% [markdown]
+# The code below generates descriptive statistics related to geographical distances and updates the 'info_city' DataFrame for different city, county, and state combinations with the aim of using this data to infer missing city values.
+#
+# For each tuple (state, county, city) in 'centroids', it extracts all values for latitude and longitude corresponding coordinates from the 'clean_geo_data' DataFrame, if present. 
+#
+# It then calculates the distance between these coordinates and the centroid using the geodesic distance (in kilometers) and saves this distance in a sorted list. 
+#
+# After calculating percentiles (at 0.05 intervals), maximum, minimum, and average distances, all of these values are saved in the new DataFrame along with latitude and longitude coordinates.
+
+# %%
+if LOAD_DATA_FROM_CHECKPOINT: # load data
+    info_city = load_checkpoint('checkpoint_geo_temporary2')
+else: # compute data
+    for state, county, city in centroids.index:
+        dummy = []
+        for lat, long in zip(clean_geo_data.loc[(clean_geo_data['city'] == city) & 
+            (clean_geo_data['state'] == state) & (clean_geo_data['county'] == county) & 
+            clean_geo_data['latitude'].notna()]['latitude'], 
+            clean_geo_data.loc[(clean_geo_data['city'] == city) & 
+            (clean_geo_data['state'] == state) & (clean_geo_data['county'] == county) & 
+            clean_geo_data['longitude'].notna()]['longitude']):
+            dummy.append(geopy.distance.geodesic([lat, long], centroids.loc[state, county, city]).km)
+            
+        dummy = sorted(dummy)
+        pc = np.quantile(dummy, np.arange(0, 1, 0.05))
+        for i in range(len(info_city.columns) - 6):
+            info_city.loc[state, county, city][i] = pc[i*2 + 1]
+        info_city.loc[state, county, city][len(info_city.columns) - 6] = len(dummy)
+        info_city.loc[state, county, city][len(info_city.columns) - 5] = min(dummy)
+        info_city.loc[state, county, city][len(info_city.columns) - 4] = max(dummy)
+        info_city.loc[state, county, city][len(info_city.columns) - 3] = sum(dummy)/len(dummy)
+        info_city.loc[state, county, city][len(info_city.columns) - 2] = centroids.loc[state, county, city]['latitude']
+        info_city.loc[state, county, city][len(info_city.columns) - 1] = centroids.loc[state, county, city]['longitude']
+    checkpoint(info_city, 'checkpoint_geo_temporary2') # save data 
+
+# %%
+info_city.head()
+
+# %% [markdown]
+# We display a concise summary of the DataFrame:
+
+# %%
+info_city.loc[info_city['tot_points'] > 1].info()
+
+# %%
+plot_utils.plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat', 
+    y_column='centroid_lon', hover_name=False, zoom=2, title='Number of points per city')
+
+# %% [markdown]
+# We utilize the previously calculated data to infer missing values for the *city* field in entries of the dataset where latitude and longitude are available. The *city* field is assigned if the distance of the entry from the centroid falls within the third quartile of all points assigned to that centroid.
+
+# %%
+def substitute_city(row, info_city):
+    if pd.isna(row['city']) and not np.isnan(row['latitude']):
+        for state, county, city in info_city.index:
+            if row['state'] == state and row['county'] == county:
+                if info_city.loc[state, county, city]['tot_points'] > 1:
+                    max_radius = info_city.loc[state, county, city]['75'] # terzo quantile
+                    centroid_coord = [info_city.loc[state, county, city]['centroid_lat'], 
+                        info_city.loc[state, county, city]['centroid_lon']]
+                    if (geopy.distance.geodesic([row['latitude'], row['longitude']], centroid_coord).km <= 
+                        max_radius):
+                        row['city'] = city
+                        break
+                    
+    return row
+
+# %%
+if LOAD_DATA_FROM_CHECKPOINT: # load data
+    final_geo_data = load_checkpoint('checkpoint_geo')
+else: # compute data
+    final_geo_data = clean_geo_data.apply(lambda row: substitute_city(row, info_city), axis=1)
+    checkpoint(final_geo_data, 'checkpoint_geo') # save data
+
+# %%
+final_geo_data.head(2)
+
+# %%
+print('Number of rows with null values for city before: ', clean_geo_data['city'].isnull().sum())
+print('Number of rows with null values for city: ', final_geo_data['city'].isnull().sum())
+
+# %% [markdown]
+# From this process, we infer 2248 *city* values.
+
+# %% [markdown]
+# ### Visualize new data
+
+# %%
+a = len(final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['county'].notna()) & (final_geo_data['city'].notna())])
+b = len(final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['county'].notna()) & (final_geo_data['city'].isna())])
+c = len(final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['county'].isna()) & (final_geo_data['city'].notna())])
+d = len(final_geo_data.loc[(final_geo_data['latitude'].notna()) & (final_geo_data['county'].isna()) & (final_geo_data['city'].isna())])
+e = len(final_geo_data.loc[(final_geo_data['latitude'].isna()) & (final_geo_data['county'].notna()) & (final_geo_data['city'].notna())])
+f = len(final_geo_data.loc[(final_geo_data['latitude'].isna()) & (final_geo_data['county'].notna()) & (final_geo_data['city'].isna())])
+g = len(final_geo_data.loc[(final_geo_data['latitude'].isna()) & (final_geo_data['county'].isna()) & (final_geo_data['city'].notna())])
+h = len(final_geo_data.loc[(final_geo_data['latitude'].isna()) & (final_geo_data['county'].isna()) & (final_geo_data['city'].isna())])
+
+print('LAT/LONG     COUNTY     CITY             \t#samples')
+print( 'not null    not null   not null         \t', a)
+print( 'not null    not null   null             \t', b)
+print( 'not null    null       not null         \t', c)
+print( 'not null    null       null             \t', d)
+print( 'null        not null   not null         \t', e)
+print( 'null        not null   null             \t', f)
+print( 'null        null       null             \t', g)
+print( 'null        null       null             \t', h)
+print('\n')
+print( 'TOT samples                             \t', a+b+c+d+e+f+g+h)
+print( 'Samples with not null values for lat/lon\t', a+b+c+d)
+print( 'Samples with null values for lat/lon    \t', e+f+g+h)
+
+# %%
+plot_utils.plot_scattermap_plotly(final_geo_data.loc[(final_geo_data['latitude'].notna()) & 
+    (final_geo_data['county'].notna()) & (final_geo_data['city'].isna())], 'state', zoom=2, title='Missing city')
+
+# %%
+#TODO: plottare le città che ha inserto e i centroidi??
+
+# %%
+final_geo_data.head(3)
+
+
+# %% [markdown]
+# ## Geo CONTROLLARE
 
 # %% [markdown]
 # We now check the values of the attribute `state` comparing them with the values in the dictionary `usa_code` that maps the name of USA states to their alphanumerical codes that we will later use to plot maps:
@@ -1162,7 +1884,529 @@ plot_scattermap_plotly(
 # These attributes have a lot of missing values, sometimes spread over large areas where there are no other points. Given this scarcity of training examples, we cannot apply the same method to recover the missing values.
 
 # %% [markdown]
-# TAGS EXPLORATION:
+# ## Age, gender and number of participants data
+
+# %% [markdown]
+# ### Features
+
+# %% [markdown]
+# Columns of the dataset are considered in order to verify the correctness and consistency of data related to age, gender, and the number of participants for each incident:
+# - *participant_age1*
+# - *participant_age_group1*
+# - *participant_gender1*
+# - *min_age_participants*
+# - *avg_age_participants*
+# - *max_age_participants*
+# - *n_participants_child*
+# - *n_participants_teen*
+# - *n_participants_adult*
+# - *n_males*
+# - *n_females*
+# - *n_killed*
+# - *n_injured*
+# - *n_arrested*
+# - *n_unharmed*
+# - *n_participants*
+
+# %%
+# participant_age1,participant_age_group1,participant_gender1,min_age_participants,avg_age_participants,max_age_participants,n_participants_child,n_participants_teen,n_participants_adult,n_males,n_females,n_killed,n_injured,n_arrested,n_unharmed,n_participants
+age_data = incidents_data[['participant_age1', 'participant_age_group1', 'participant_gender1', 
+    'min_age_participants', 'avg_age_participants', 'max_age_participants',
+    'n_participants_child', 'n_participants_teen', 'n_participants_adult', 
+    'n_males', 'n_females',
+    'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 
+    'n_participants']]
+
+# %%
+age_data.head(10)
+
+# %% [markdown]
+# We display a concise summary of the DataFrame:
+
+# %%
+age_data.info()
+
+# %%
+age_data['participant_age_group1'].unique()
+
+# %% [markdown]
+# Display the maximum and minimum ages, among the possible valid values, in the dataset. We have set a maximum threshold of 122 years, as it is the age reached by [Jeanne Louise Calment](https://www.focus.it/scienza/scienze/longevita-vita-umana-limite-biologico#:~:text=Dal%201997%2C%20anno%20in%20cui,ha%20raggiunto%20un%20limite%20biologico), the world's oldest person.
+
+# %%
+def max_min_value(attribute):
+    age = []
+    for i in age_data[attribute].unique():
+        try: 
+            i = int(float(i))
+            if i <= 122 and i > 0: age.append(i)
+        except: pass
+    print(f'Max value for attribute {attribute}: {np.array(age).max()}')
+    print(f'Max value for attribute {attribute}: {np.array(age).min()}')
+
+max_min_value('participant_age1')
+max_min_value('min_age_participants')
+max_min_value('max_age_participants')
+max_min_value('avg_age_participants')
+
+# %%
+age_data[age_data['max_age_participants'] == '101.0']
+
+# %% [markdown]
+# We have set the maximum age threshold at 101 years.
+
+# %% [markdown]
+# We check if we have entries with non-null values for participant_age1 but NaN for participant_age_group1. 
+
+# %%
+age_data[age_data['participant_age1'].notna() & age_data['participant_age_group1'].isna()]
+
+# %% [markdown]
+# These 126 values can be inferred.
+
+# %% [markdown]
+# ### Studying Data Consistency
+
+# %% [markdown]
+# We create some functions to identify and, if possible, correct missing and inconsistent data.
+# Below, we provide a brief summary of all the functions used to check data consistency:
+
+# %% [markdown]
+# First of all, we convert all the values to type int if the values were consistent (i.e., values related to age and the number of participants for a particular category must be a positive number), all the values that are out of range or contain alphanumeric strings were set to *NaN*.
+
+# %% [markdown]
+# Checks done to evaluate the consistency of data related to the minimum, maximum, and average ages of participants, as well as the composition of the age groups:
+# 
+# - min_age_participants $<$ avg_age_participants $<$ max_age_participants
+# - n_participants_child $+$ n_participants_teen $+$ n_participants_adult $>$ 0
+# 
+# - $if$ min_age_participants $<$ 12 $then$ n_participants_child $>$ 0
+# - $if$ 12 $\leq$ min_age_participants $<$ 18 $then$ n_participants_teen $>$ 0
+# - $if$ min_age_participants $\geq$ 18 $then$ n_participants_adult $>$ 0
+# 
+# - $if$ max_age_participants $<$ 12 $then$ n_participants_child $>$ 0 and n_participants_teen $=$ 0 and n_participants_adult $=$ 0
+# - $if$ max_age_participants $<$ 18 $then$ n_participants_teen $>$ 0 or n_participants_child $>$ 0 and n_participants_adult $=$ 0
+# - $if$ max_age_participants $\geq$ 18 $then$ n_participants_adult $>$ 0
+# 
+# Note that: child = 0-11, teen = 12-17, adult = 18+
+
+# %% [markdown]
+# Checks done to evaluate the consistency of data related to number of participants divided by gender and other participants class:
+# 
+# - n_participants $\geq$ 0
+# - n_participants $==$ n_males $+$ n_females
+# - n_killed $+$ n_injured $\leq$ n_participants
+# - n_arrested $\leq$ n_participants
+# - n_unharmed $\leq$ n_participants
+
+# %% [markdown]
+# We also considered data of participants1, a randomly chosen participant whose data related to gender and age are reported in the dataset. For participants, we have the following features: *participant_age1*, *participant_age_group1*, *participant_gender1*.
+# 
+# Values related to participant_age_group1 and participant_gender1 have been binarized using one-hot encoding, thus creating the boolean features *participant1_child*, *participant1_teen*, *participant1_adult*, *participant1_male*, *participant1_female*.
+# 
+# The following checks are done in order to verify the consistency of the data among them and with respect to the other features of the incident:
+# 
+# - $if$ participant_age1 $<$ 12 $then$ participant_age_group1 $=$ *Child*
+# - $if$ 12 $\leq$ participant_age1 $<$ 18 $then$ participant_age_group1 $=$ *Teen*
+# - $if$ participant_age1 $\geq$ 18 $then$ participant_age_group1 $==$ *Adult*
+# 
+# - $if$ participant_age_group1 $==$ *Child* $then$ n_participants_child $>$ 0
+# - $if$ participant_age_group1 $==$ *Teen* $then$ n_participants_teen $>$ 0
+# - $if$ participant_age_group1 $==$ *Adult* $then$ n_participants_adult $>$ 0
+# 
+# - $if$ participant_gender1 $==$ *Male* $then$ n_males $>$ 0
+# - $if$ participant_gender1 $==$ *Female* $then$ n_females $>$ 0
+
+# %% [markdown]
+# In the initial phase, only the values that were not permissible were set to *NaN*. 
+# 
+# We kept track of the consistency of admissible values by using variables (which could take on the boolean value *True* if they were consistent, *False* if they were not, or *NaN* in cases where data was not present). 
+# 
+# These variables were temporarily included in the dataframe so that we could later replace them with consistent values, if possible, or remove them if they were outside the acceptable range.
+# 
+# Variables:
+# - *consistency_age*: Values related to the minimum, maximum, and average ages consistent with the number of participants by age groups.
+# - *consistency_n_participant*: The number of participants for different categories consistent with each other.
+# - *consistency_gender*: The number of participants by gender consistent with the total number of participants.
+# - *consistency_participant1*: Values of features related to participant1 consistent with each other.
+# 
+# - *consistency_participants1_wrt_n_participants*: If *consistency_participants1_wrt_n_participants*, *participant1_age_range_consistency_wrt_all_data*, and *participant1_gender_consistency_wrt_all_data* are all *True*.
+# 
+# - *participant1_age_consistency_wrt_all_data*: Age of participant1 consistent with the minimum and maximum age values of the participants.
+# - *participant1_age_range_consistency_wrt_all_data*: Value of the age range (*Child*, *Teen*, or *Adult*) consistent with the age groups of the participants.
+# - *participant1_gender_consistency_wrt_all_data*: Gender value of participant1 consistent with the gender breakdown values of the group.
+# 
+# - *nan_values*: Presence of "NaN" values in the row.
+
+# %%
+from utils import check_age_gender_data_consistency
+
+if LOAD_DATA_FROM_CHECKPOINT: # load data
+    age_temporary_data = load_checkpoint('checkpoint_age_temporary')
+else: # compute data
+    age_temporary_data = age_data.apply(lambda row: check_age_gender_data_consistency(row), axis=1)
+    checkpoint(age_temporary_data, 'checkpoint_age_temporary') # save data
+
+# %% [markdown]
+# ### Data Exploration without Out-of-Range Data
+
+# %%
+age_temporary_data.head(2)
+
+# %% [markdown]
+# We display a concise summary of the DataFrame:
+
+# %%
+age_temporary_data.info()
+
+# %% [markdown]
+# We assess the correctness of the checks performed by printing the consistency variable for the first 5 rows and providing a concise summary of their most frequent values.
+
+# %%
+age_temporary_data[['consistency_age', 'consistency_n_participant', 'consistency_gender', 
+    'consistency_participant1', 'consistency_participants1_wrt_n_participants',
+    'participant1_age_consistency_wrt_all_data', 'participant1_age_range_consistency_wrt_all_data',
+    'participant1_gender_consistency_wrt_all_data', 'nan_values']].head(5)
+
+# %%
+age_temporary_data[['consistency_age', 'consistency_n_participant', 'consistency_gender', 
+    'consistency_participant1', 'consistency_participants1_wrt_n_participants',
+    'participant1_age_consistency_wrt_all_data', 'participant1_age_range_consistency_wrt_all_data',
+    'participant1_gender_consistency_wrt_all_data', 'nan_values']].describe()
+
+# %% [markdown]
+# Below, we print the number of rows with 'NaN' or inconsistent data.
+
+# %%
+print('Number of rows with null values: ', age_temporary_data[age_temporary_data['nan_values'] == True].shape[0])
+print('Number of rows with inconsistent values in age data: ', age_temporary_data[age_temporary_data['consistency_age'] == False].shape[0])
+print('Number of rows with inconsistent values in number of participants data: ', age_temporary_data[age_temporary_data[
+    'consistency_n_participant'] == False].shape[0])
+print('Number of rows with inconsistent values in gender data: ', age_temporary_data[age_temporary_data['consistency_gender'] == False].shape[0])
+print('Number of rows with inconsistent values in participants1 data: ', age_temporary_data[age_temporary_data[
+    'consistency_participant1'] == False].shape[0])
+
+# %%
+print('Number of rows with inconsistent values for participants1: ', age_temporary_data[age_temporary_data[
+    'consistency_participant1'] == False].shape[0])
+print('Number of rows with NaN values for participants1: ', age_temporary_data[age_temporary_data[
+    'consistency_participant1'] == np.nan].shape[0])
+print('Number of rows with inconsistent values in participants1 wrt all other data: ', age_temporary_data[age_temporary_data[
+    'consistency_participants1_wrt_n_participants'] == False].shape[0])
+print('Number of rows with inconsistent values in participants1 wrt age data: ', age_temporary_data[age_temporary_data[
+    'participant1_age_consistency_wrt_all_data'] == False].shape[0])
+print('Number of rows with inconsistent values in participants1 wrt age range data: ', age_temporary_data[age_temporary_data[
+    'participant1_age_range_consistency_wrt_all_data'] == False].shape[0])
+print('Number of rows with inconsistent values in participants1 wrt gender data: ', age_temporary_data[age_temporary_data[
+    'participant1_gender_consistency_wrt_all_data'] == False].shape[0])
+
+# %%
+age_temporary_data[(age_temporary_data['consistency_participant1'] == True) & (age_temporary_data[
+    'participant1_age_range_consistency_wrt_all_data'] == False)].shape[0]
+
+# %%
+print('Number of rows with null values in age data: ', age_temporary_data[age_temporary_data['consistency_age'].isna()].shape[0])
+print('Number of rows with null values in number of participants data: ', age_temporary_data[age_temporary_data[
+    'consistency_n_participant'].isna()].shape[0])
+print('Number of rows with null values in gender data: ', age_temporary_data[age_temporary_data['consistency_gender'].isna()].shape[0])
+print('Number of rows with null values in participants1 data: ', age_temporary_data[age_temporary_data[
+    'consistency_participant1'].isna()].shape[0])
+
+# %%
+print('Number of rows with all null data: ', age_temporary_data.isnull().all(axis=1).sum())
+
+# %% [markdown]
+# We can notice that:
+# - The data in our dataset related to participant1, excluding the 1099 cases where age and age group data were inconsistent with each other and 190 cases where age range is not consistent, always appear to be consistent with the data in the rest of the dataset and can thus be used to fill in missing or incorrect data.
+# - In the data related to age and gender, some inconsistencies are present, but they account for only 1.88% and 6.01% of the total dataset rows, respectively.
+# - In 93779 rows, at least one field had a *NaN* value.
+
+# %% [markdown]
+# Since we noticed that some age data contained impossible values, we have set the age range between 0 and 100 years old. Below, we have verified this by printing the range.
+
+# %%
+print('Range age: ', age_temporary_data['min_age_participants'].min(), '-', age_temporary_data['max_age_participants'].max())
+
+# %%
+age_temporary_data[age_temporary_data['consistency_participant1'] == False].head(5)
+
+# %% [markdown]
+# We printed the distribution of participants1 in the age range when age was equal to 18 to verify that the majority of the data were categorized as adults.
+
+# %%
+age_data[age_data['participant_age1'] == 18]['participant_age_group1'].value_counts()
+
+# %% [markdown]
+# We plotted the age distribution of participant1 and compared it to the distribution of the minimum and maximum participants' age for each group.
+
+# %%
+fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 6), sharey=True)
+
+ax0.hist(age_temporary_data['participant_age1'], bins=100, edgecolor='black', linewidth=0.8)
+ax0.set_xlabel('Age')
+ax0.set_ylabel('Frequency')
+ax0.set_title('Distribution of age participant1')
+
+ax1.hist(age_temporary_data['min_age_participants'], bins=100, edgecolor='black', linewidth=0.8)
+ax1.set_xlabel('Age')
+ax1.set_ylabel('Frequency')
+ax1.set_title('Distribution of min age participants')
+
+ax2.hist(age_temporary_data['max_age_participants'], bins=100, edgecolor='black', linewidth=0.8)
+ax2.set_xlabel('Age')
+ax2.set_ylabel('Frequency')
+ax2.set_title('Distribution of max age participants')
+
+plt.show()
+
+# %% [markdown]
+# Observing the similar shapes of the distributions provides confirmation that the data pertaining to participant1 is accurate and reliable. Therefore, we can confidently use participant1's data to fill gaps in cases involving groups with a single participant.
+
+# %% [markdown]
+# We visualized the number of unique values for the cardinality of participants in each incident and provided a brief summary of this feature below.
+
+# %%
+print('Values of n_participants: ', age_temporary_data['n_participants'].unique())
+display(age_temporary_data['n_participants'].describe())
+
+# %% [markdown]
+# From the data above, it is evident that the third quartile is equal to two participants, and the maximum number of participants per incident reaches the value of 103.
+# 
+# Below, we have presented the distribution of the number of participants for each incident. In order to make the histograms more comprehensible, we have chosen to represent the data on two separate histograms.
+
+# %%
+# distribuition number of participants
+fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(20, 8), sharey=False)
+
+ax0.hist(age_temporary_data['n_participants'], bins=15, range=(0,15), edgecolor='black', linewidth=0.8)
+ax0.set_xlabel('Number of participants')
+ax0.set_ylabel('Frequency')
+ax0.set_title('Distribution of number of participants (1-15 participants)')
+
+ax1.hist(age_temporary_data['n_participants'], bins=15, range=(15,103), edgecolor='black', linewidth=0.8)
+ax1.set_xlabel('Number of participants')
+ax1.set_ylabel('Frequency')
+ax1.set_title('Distribution of number of participants (15-103 participants)')
+plt.show()
+
+# %% [markdown]
+# Note that: the chart on the left shows the distribution of data for groups with a number of participants between 0 and 15, while the one on the right displays data for groups between 15 and 103. The y-axes are not equal.
+
+# %% [markdown]
+# In the table below, we can see how many data related to the *number of participants* are clearly out of range, divided by age groups.
+
+# %%
+age_temporary_data[age_temporary_data['n_participants_adult'] >= 103][['n_participants', 'n_participants_adult', 
+    'n_participants_child', 'n_participants_teen']]
+
+# %%
+age_temporary_data[age_temporary_data['n_participants_teen'] >= 103][['n_participants', 'n_participants_adult', 
+    'n_participants_child', 'n_participants_teen']]
+
+# %%
+age_temporary_data[age_temporary_data['n_participants_child'] >= 103][['n_participants', 'n_participants_adult', 
+    'n_participants_child', 'n_participants_teen']]
+
+# %% [markdown]
+# Based on the tables above, we have evidence to set the maximum number of participants to 103.
+
+# %% [markdown]
+# We have provided additional information below for two of the rows with values out of range.
+
+# %%
+age_temporary_data.loc[35995]
+
+# %%
+age_temporary_data.iloc[42353]
+
+# %% [markdown]
+# This data visualization has been helpful in understanding the exceptions in the dataset and correcting them when possible, using other data from the same entry.
+# 
+# In cases where we were unable to obtain consistent data for a certain value, we have set the corresponding field to *NaN*.
+
+# %% [markdown]
+# ### Fix Inconsistent Data
+
+# %% [markdown]
+# We have created a new DataFrame in which we have recorded the corrected and consistent data. Note that all these checks are performed based on the assumptions made in previous stages of the analysis.
+# 
+# For entries with missing or inconsistent data, when possible, we have inferred or derived the missing values from other available data. Specifically:
+# 
+# - In cases where we had the number of males (n_males) and number of females (n_females), we calculated the total number of participants as n_participants = n_males + n_females.
+# - In instances with a single participant and consistent data for *participants1*, we used that data to derive values related to age (max, min, average) and gender.
+
+# %%
+from utils import  set_gender_age_consistent_data
+
+if LOAD_DATA_FROM_CHECKPOINT: # load data
+    new_age_data = load_checkpoint('checkpoint_age')
+else: # compute data
+    new_age_data = age_temporary_data.apply(lambda row: set_gender_age_consistent_data(row), axis=1)
+    checkpoint(age_temporary_data, 'checkpoint_age') # save data
+
+# %% [markdown]
+# We display the first 2 rows and a concise summary of the DataFrame:
+
+# %%
+new_age_data.head(2)
+
+# %%
+new_age_data.info()
+
+# %%
+print('Number of rows in which all data are null: ', new_age_data.isnull().all(axis=1).sum())
+print('Number of rows with some null data: ', new_age_data.isnull().any(axis=1).sum())
+print('Number of rows in which number of participants is null: ', new_age_data[new_age_data['n_participants'].isnull()].shape[0])
+print('Number of rows in which number of participants is 0: ', new_age_data[new_age_data['n_participants'] == 0].shape[0])
+print('Number of rows in which number of participants is null and n_killed is not null: ', new_age_data[
+    new_age_data['n_participants'].isnull() & new_age_data['n_killed'].notnull()].shape[0])
+
+# %%
+print('Total rows with null value for n_participants: ', new_age_data['n_participants'].isnull().sum())
+print('Total rows with null value for n_participants_child: ', new_age_data['n_participants_child'].isnull().sum())
+print('Total rows with null value for n_participants_teen: ', new_age_data['n_participants_teen'].isnull().sum())
+print('Total rows with null value for n_participants_adult: ', new_age_data['n_participants_adult'].isnull().sum())
+print('Total rows with null value for n_males: ', new_age_data['n_males'].isnull().sum())
+print('Total rows with null value for n_females: ', new_age_data['n_females'].isnull().sum())
+
+# %% [markdown]
+# We can observe that for any entries in the dataset, all data related to age and gender are *NaN*, while for 98973 entries, almost one value is *NaN*. From the plot below, we can visualize the null values (highlighted).
+# 
+# It's important to note that we have complete data for *n_killed* and *n_injured* entries, and the majority of missing data are related to age-related features.
+
+# %%
+sns.heatmap(new_age_data.isnull(), cbar=False)
+
+# %% [markdown]
+# Below, we have provided the distribution of the total number of participants and the number of participants divided by age range for each incident. Once again, to make the histograms more comprehensible, we have opted to present the data on separate histograms.
+
+# %%
+# distribuition number of participants
+fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(20, 8), sharey=False)
+
+ax0.hist(age_temporary_data['n_participants'], bins=15, range=(0,15), edgecolor='black', linewidth=0.8)
+ax0.set_xlabel('Number of participants')
+ax0.set_ylabel('Frequency')
+ax0.set_title('Distribution of number of participants (1-15 participants)')
+
+ax1.hist(age_temporary_data['n_participants'], bins=15, range=(15,103), edgecolor='black', linewidth=0.8)
+ax1.set_xlabel('Number of participants')
+ax1.set_ylabel('Frequency')
+ax1.set_title('Distribution of number of participants (15-103 participants)')
+plt.show()
+
+# %%
+print('Max number of participants: ', new_age_data['n_participants'].max())
+print('Max number of children: ', new_age_data['n_participants_child'].max())
+print('Max number of teens: ', new_age_data['n_participants_teen'].max())
+print('Max number of adults: ', new_age_data['n_participants_adult'].max())
+
+# %%
+new_age_data[new_age_data['n_participants_adult'] > 60][['n_participants', 'n_participants_adult', 
+    'n_participants_child', 'n_participants_teen']]
+
+# %%
+# distribuition number of participants divided by age group
+fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 8), sharey=False)
+
+ax0.hist(age_temporary_data['n_participants_child'], bins=15, range=(0,10), density=False, histtype='step',
+    linewidth=4, color='blue', label='Children')
+ax0.hist(age_temporary_data['n_participants_teen'], bins=15, range=(0,10), density=False, histtype='step',
+    linewidth=4, color='magenta', label='Teens')
+ax0.hist(age_temporary_data['n_participants_adult'], bins=15, range=(0,10), density=False, histtype='step',
+    linewidth=4, color='green', label='Adults')
+ax0.set_xlabel('Number of participants')
+ax0.set_ylabel('Frequency')
+ax0.legend()
+ax0.set_title('Distribution of number of participants (1-10 participants)')
+
+ax1.hist(age_temporary_data['n_participants_child'], bins=15, range=(10,30), density=False, histtype='step',
+    linewidth=4, color='blue', label='Children')
+ax1.hist(age_temporary_data['n_participants_teen'], bins=15, range=(10,30), density=False, histtype='step',
+    linewidth=4, color='magenta', label='Teens')
+ax1.hist(age_temporary_data['n_participants_adult'], bins=15, range=(10,30), density=False, histtype='step',
+    linewidth=4, color='green', label='Adults')
+ax1.set_xlabel('Number of participants')
+ax1.set_ylabel('Frequency')
+ax1.legend()
+ax1.set_title('Distribution of number of participants (10-30 participants)')
+
+ax2.hist(age_temporary_data['n_participants_child'], bins=15, range=(30,103), density=False, histtype='step',
+    linewidth=4, color='blue', label='Children')
+ax2.hist(age_temporary_data['n_participants_teen'], bins=15, range=(30,103), density=False, histtype='step',
+    linewidth=4, color='magenta', label='Teens')
+ax2.hist(age_temporary_data['n_participants_adult'], bins=15, range=(30,103), density=False, histtype='step',
+    linewidth=4, color='green', label='Adults')
+ax2.set_xlabel('Number of participants')
+ax2.set_ylabel('Frequency')
+ax2.legend()
+ax2.set_title('Distribution of number of participants (30-103 participants)')
+
+plt.show()
+
+# %% [markdown]
+# We observe that in incidents involving children and teenagers under the age of 18, the total number of participants was less than 7 and 27, respectively. In general, incidents involving a single person are much more frequent than other incidents, and most often, they involve teenagers and children, with a smaller percentage involving adults. On the other hand, incidents with multiple participants mostly consist of adults, and as the number of participants increases, the frequency of such incidents decreases. 
+# 
+# Note that the y-axis of the histograms is not equal.
+
+# %% [markdown]
+# We also plot the distribution of the number of incidents divided by gender:
+
+# %%
+# distribuition number of participants divided by gender
+fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 8), sharey=False)
+
+ax0.hist(age_temporary_data['n_males'], bins=15, range=(0,10), density=False, histtype='step',
+    linewidth=4, color='blue', label='Males')
+ax0.hist(age_temporary_data['n_females'], bins=15, range=(0,10), density=False, histtype='step',
+    linewidth=4, color='red', label='Females')
+ax0.set_xlabel('Number of participants')
+ax0.set_ylabel('Frequency')
+ax0.legend()
+ax0.set_title('Distribution of number of participants (1-10 participants)')
+
+ax1.hist(age_temporary_data['n_males'], bins=15, range=(10,30), density=False, histtype='step',
+    linewidth=4, color='blue', label='Males')
+ax1.hist(age_temporary_data['n_females'], bins=15, range=(10,30), density=False, histtype='step',
+    linewidth=4, color='red', label='Females')
+ax1.set_xlabel('Number of participants')
+ax1.set_ylabel('Frequency')
+ax1.legend()
+ax1.set_title('Distribution of number of participants (10-30 participants)')
+
+ax2.hist(age_temporary_data['n_males'], bins=15, range=(30,103), density=False, histtype='step',
+    linewidth=4, color='blue', label='Males')
+ax2.hist(age_temporary_data['n_females'], bins=15, range=(30,103), density=False, histtype='step',
+    linewidth=4, color='red', label='Females')
+ax2.set_xlabel('Number of participants')
+ax2.set_ylabel('Frequency')
+ax2.legend()
+ax2.set_title('Distribution of number of participants (30-103 participants)')  
+
+plt.show()
+
+# %% [markdown]
+# From the plot, we can notice that when women are involved in incidents, most of the time, there is only one woman, while in incidents with more than two participants of the same gender, it is more frequent for the participants to be men.
+# 
+# Note that for 1567 entries in the dataset, we have the total number of participants, but we do not have the number of males and females
+
+# %% [markdown]
+# Below, we plot the distribution of the average age of participants in each incident.
+
+# %%
+plt.figure(figsize=(20, 8))
+plt.hist(new_age_data['avg_age_participants'], bins=100, density=False, edgecolor='black', linewidth=0.8)
+plt.xlim(0, 100)
+plt.xlabel('Participants average age')
+plt.ylabel('Frequency')
+plt.title('Distribution of participants average age')
+plt.show()
+
+# %%
+new_age_data.describe()
+
+
+# %% [markdown]
+# ## TAGS EXPLORATION:
 
 # %%
 fig = incidents_data['incident_characteristics1'].value_counts().sort_values().plot(kind='barh', figsize=(5, 15))
@@ -1484,3 +2728,5 @@ for index, record in tagged_incidents_data.iterrows():
         unconsistencies += 1
 
 print(unconsistencies)
+
+
