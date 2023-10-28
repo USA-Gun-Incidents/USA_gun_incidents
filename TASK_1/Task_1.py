@@ -2731,7 +2731,7 @@ col = [True] * tagged_incidents_data.shape[0] #tag consistency assumed true
 tagged_incidents_data.insert(tagged_incidents_data.shape[1], tag_consistency_attr_name, col)
 
 # %%
-from utils import *
+from data_preparation_utils import tagged_incidents_data
 
 #consistency check
 unconsistencies = 0
