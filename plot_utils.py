@@ -5,6 +5,7 @@ import plotly.express as px
 from sklearn.inspection import DecisionBoundaryDisplay
 import matplotlib.dates as mdates
 import pandas as pd
+import seaborn as sns
 
 # TODO: sostiture questo dizionario con:
 # usa_states = pd.read_csv(
@@ -66,6 +67,34 @@ usa_code = {
     'Wisconsin': 'WI',
     'Wyoming': 'WY'
 }
+
+def hist_box_plot(
+    df,
+    col,
+    title,
+    xlabel=None,
+    ylabel=None,
+    bins=50,
+    figsize=(10, 5)
+    ):
+    '''
+    This function plots an histogram and a boxplot of the given column of the given dataframe.
+    
+    :param df: dataframe
+    :param col: column to plot
+    :param title: title of the plot
+    :param xlabel: label of the x axis
+    :param ylabel: label of the y axis
+    :param bins: number of bins for the histogram
+    :param figsize: size of the figure
+    '''
+    _, (ax_box, ax_hist) = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": (.15, .85)})
+    df[col].plot.hist(bins=bins, figsize=figsize, ax=ax_hist)
+    df.boxplot(ax=ax_box, column=col, vert=False, grid=False)
+    ax_box.set(yticks=[])
+    plt.suptitle(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
 
 def plot_usa_map(
     df,
@@ -165,32 +194,55 @@ def plot_usa_map(
         ax.set_yticks([])
         ax.set_xticks([])
 
-def plot_scattermap_plotly(data, attribute, zoom=6, height=800, width=800, title=None, legend_title=None, x_column='latitude', y_column='longitude', hover_name=True):
-    if hover_name:
-        fig = px.scatter_mapbox(
-            hover_name=data.index,
-            color=data[attribute].astype(str),
-            lat=data[x_column], 
-            lon=data[y_column],
-            zoom=zoom, 
-            height=height,
-            width=width,
-            title=title,
-            text=data[attribute].astype(str),
-            category_orders={'color': sorted(data[attribute].astype(str).unique())}
-        )
-    else:
-        fig = px.scatter_mapbox(
-            color=data[attribute].astype(str),
-            lat=data[x_column], 
-            lon=data[y_column],
-            zoom=zoom, 
-            height=height,
-            width=width,
-            title=title,
-            text=data[attribute].astype(str),
-            category_orders={'color': sorted(data[attribute].astype(str).unique())}
-        )
+def plot_scattermap_plotly(
+    data,
+    attribute,
+    zoom=6,
+    height=800,
+    width=800,
+    title=None,
+    legend_title=None,
+    x_column='latitude',
+    y_column='longitude',
+    hover_name=True,
+    black_nan=True
+    ):
+    '''
+    This function plots a scattermap using plotly.
+
+    :param data: dataframe
+    :param attribute: attribute to use for coloring the points
+    :param zoom: zoom of the map
+    :param height: height of the map
+    :param width: width of the map
+    :param title: title of the map
+    :param legend_title: title of the legend
+    :param x_column: name of the column containing the x coordinates
+    :param y_column: name of the column containing the y coordinates
+    :param hover_name: if True, the hover name is the index of the dataframe # TODO: ?
+    :param black_nan: if True, the nan values are colored in black
+    '''
+    color_map = None
+    if black_nan:
+        color_map = {}
+        n_colors = len(px.colors.qualitative.Plotly)
+        for i, category in enumerate(data[attribute].unique()):
+            color_map[str(category)] = px.colors.qualitative.Plotly[i%n_colors]
+        color_map[str(np.nan)] = '#000000'
+
+    fig = px.scatter_mapbox(
+        hover_name=data.index if hover_name else None,
+        color=data[attribute].astype(str),
+        color_discrete_map=color_map,
+        lat=data[x_column], 
+        lon=data[y_column],
+        zoom=zoom, 
+        height=height,
+        width=width,
+        title=title,
+        text=data[attribute].astype(str),
+        category_orders={'color': sorted(data[attribute].astype(str).unique())}
+    )
     fig.update_layout(
         mapbox_style="open-street-map",
         margin={"r":0,"t":100,"l":0,"b":0},

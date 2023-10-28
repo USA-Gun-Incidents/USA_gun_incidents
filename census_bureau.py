@@ -83,10 +83,6 @@ for year in years:
     
     data['year'] = year
     data['state_name'] = data['state'].map(lambda x: usa_num_name[x])
-    data.drop(
-        columns=["Males " + age for age in ages]+["Females " + age for age in ages],
-        inplace=True
-    )
     all_data = pd.concat([all_data, data])
 
 all_data.rename(
@@ -97,7 +93,7 @@ all_data.rename(
     },
     inplace=True
 )
-all_data = all_data[[
+cols = [
     'state_code',
     'state',
     'congressional_district',
@@ -108,7 +104,10 @@ all_data = all_data[[
     'female_child',
     'female_teen',
     'female_adult'
-]]
+    ] + \
+    ['Females '+age for age in ages] + \
+    ['Males '+age for age in ages]
+all_data = all_data[cols]
 all_data.sort_values(
     by=['year', 'state_code', 'congressional_district'],
     inplace=True

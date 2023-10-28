@@ -26,7 +26,8 @@ class IncidentTag(Enum):
     unintentional = 20
 
 tags_map = {
-    'ATF/LE Confiscation/Raid/Arrest': [IncidentTag.illegal_holding.name],
+    # when a gun was not used?
+    'ATF/LE Confiscation/Raid/Arrest': [IncidentTag.illegal_holding.name, IncidentTag.officers.name],
     'Accidental Shooting': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.unintentional.name],
     'Accidental Shooting - Death': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.death.name, IncidentTag.unintentional.name],
     'Accidental Shooting - Injury': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.injuries.name, IncidentTag.unintentional.name],
@@ -43,7 +44,7 @@ tags_map = {
     'Child Involved Incident': [IncidentTag.children.name],
     'Child picked up & fired gun': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.children.name],
     'Child with gun - no shots fired': [IncidentTag.firearm.name, IncidentTag.children.name],
-    'Cleaning gun': [IncidentTag.firearm.name, IncidentTag.illegal_holding.name],
+    'Cleaning gun': [IncidentTag.firearm.name, IncidentTag.shots.name],
     'Concealed Carry License - Perpetrator': [IncidentTag.firearm.name],
     'Concealed Carry License - Victim': [IncidentTag.firearm.name],
     'Criminal act with stolen gun': [IncidentTag.firearm.name, IncidentTag.illegal_holding.name],
@@ -72,9 +73,9 @@ tags_map = {
     'Home Invasion - subject/suspect/perpetrator injured': [IncidentTag.injuries.name, IncidentTag.house.name],
     'Home Invasion - subject/suspect/perpetrator killed': [IncidentTag.death.name, IncidentTag.house.name],
     'House party': [IncidentTag.house.name],
-    'Hunting accident': [IncidentTag.firearm.name],
+    'Hunting accident': [IncidentTag.firearm.name, IncidentTag.unintentional.name],
     'Implied Weapon': [IncidentTag.firearm.name],
-    'Institution/Group/Business': [IncidentTag.organized.name],
+    'Institution/Group/Business': [IncidentTag.workplace.name],
     'Kidnapping/abductions/hostage': [IncidentTag.aggression.name, IncidentTag.abduction.name],
     'LOCKDOWN/ALERT ONLY: No GV Incident Occurred Onsite': [],
     'Mass Murder (4+ deceased victims excluding the subject/suspect/perpetrator , one location)': [IncidentTag.aggression.name, IncidentTag.death.name],
@@ -86,10 +87,10 @@ tags_map = {
     'Officer Involved Incident - Weapon involved but no shots fired': [IncidentTag.firearm.name, IncidentTag.officers.name],
     'Officer Involved Shooting - Accidental discharge - no injury required': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.officers.name, IncidentTag.unintentional.name],
     'Officer Involved Shooting - Officer killed': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.aggression.name, IncidentTag.death.name, IncidentTag.officers.name],
-    'Officer Involved Shooting - Officer shot': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.aggression.name, IncidentTag.injuries.name, IncidentTag.officers.name],
+    'Officer Involved Shooting - Officer shot': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.aggression.name, IncidentTag.officers.name],
     'Officer Involved Shooting - Shots fired, no injury': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.aggression.name, IncidentTag.officers.name],
     'Officer Involved Shooting - subject/suspect/perpetrator killed': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.death.name, IncidentTag.officers.name],
-    'Officer Involved Shooting - subject/suspect/perpetrator shot': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.injuries.name, IncidentTag.officers.name],
+    'Officer Involved Shooting - subject/suspect/perpetrator shot': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.officers.name],
     'Officer Involved Shooting - subject/suspect/perpetrator suicide at standoff': [IncidentTag.suicide.name, IncidentTag.officers.name],
     'Officer Involved Shooting - subject/suspect/perpetrator surrender at standoff': [IncidentTag.officers.name],
     'Officer Involved Shooting - subject/suspect/perpetrator unarmed': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.officers.name],
@@ -112,7 +113,7 @@ tags_map = {
     'Stolen/Illegally owned gun{s} recovered during arrest/warrant': [IncidentTag.firearm.name, IncidentTag.illegal_holding.name],
     'Suicide - Attempt': [IncidentTag.suicide.name],
     'Suicide^': [IncidentTag.suicide.name, IncidentTag.death.name],
-    'TSA Action': [IncidentTag.road.name],
+    'TSA Action': [IncidentTag.officers.name],
     'Terrorism Involvement': [IncidentTag.aggression.name, IncidentTag.organized.name],
     'Under the influence of alcohol or drugs (only applies to the subject/suspect/perpetrator )': [IncidentTag.drugs.name],
     'Unlawful purchase/sale': [IncidentTag.illegal_holding.name],
@@ -120,15 +121,23 @@ tags_map = {
 }
 
 def set_tags(row):
-    for tag in tags_map[row['incident_characteristics1']]:
-        row[tag] = True
-    for tag in tags_map[row['incident_characteristics2']]:
-        row[tag] = True
+    if pd.notnull(row['incident_characteristics1']):
+        for tag in tags_map[row['incident_characteristics1']]:
+            row[tag] = True
+    if pd.notnull(row['incident_characteristics2']):
+        for tag in tags_map[row['incident_characteristics2']]:
+            row[tag] = True
     return row
 
-data = pd.read_csv('./data/incidents.csv')
 
-for tag in IncidentTag:
-    data[tag.name] = False
+def build_tagged_dataframe(base_folder): #build the dataframe with tags
+    data = pd.read_csv(base_folder + 'incidents.csv')
 
-data = data.apply(set_tags, axis=1)
+    for tag in IncidentTag:
+        data[tag.name] = False
+
+    data = data.apply(set_tags, axis=1)
+
+    data.to_csv(base_folder + 'incidents_tagged.csv')
+
+    return data

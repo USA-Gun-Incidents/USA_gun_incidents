@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Task 1 Data Understanding and Preparation
 
@@ -26,7 +27,7 @@ from pyproj import Transformer
 # We define constants and settings for the notebook:
 
 # %%
-%matplotlib inline
+# %matplotlib inline
 
 DATA_FOLDER_PATH = '../data/'
 
@@ -51,15 +52,15 @@ poverty_data.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about the poverty percentage for each USA state and year.
-# 
+#
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas dtype for later analysis.
-# 
+#
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :------------: |
 # | 0 | state | Categorical (Nominal) | Name of the state | object |
 # | 1 | year | Numeric (Interval) | Year | int64 |
 # | 2 | povertyPercentage | Numeric (Ratio) | Poverty percentage for the corresponding state and year | float64 |
-# 
+#
 
 # %% [markdown]
 # We display a concise summary of the DataFrame:
@@ -120,7 +121,7 @@ poverty_data.loc[
 
 # %% [markdown]
 # Since the tuple <`state`, `year`> uniquely identifies each row we can conclude that there are no missing rows.
-# 
+#
 # Now, we count how many rows have missing values:
 
 # %%
@@ -134,7 +135,7 @@ poverty_data[poverty_data['povertyPercentage'].isnull()]['year'].unique()
 
 # %% [markdown]
 # As expected we have no data from 2012. Later we will fix this issue.
-# 
+#
 # Now we visualize the distribution of poverty percentage for each state.
 
 # %%
@@ -179,7 +180,7 @@ plt.ylabel('Average Poverty (%)')
 
 # %% [markdown]
 # It is evident that New Hampshire's average poverty rate is markedly lower than that of the other states, whereas Mississippi's average poverty rate is notably higher than the rest. 
-# 
+#
 # To inspect and compare the poverty percentage of each state over the year, we plot an interactive line chart:
 
 # %%
@@ -190,7 +191,7 @@ fig.show()
 
 # %% [markdown]
 # We can oberserve that New Hampshire always had the lowest poverty percentage, whereas Mississippi had the highest till 2009, then it was surpassed by New Mexico and Louisiana.
-# 
+#
 # To imputate the missing data from 2012, we calculate the average of the `povertyPercentage` values for the preceding and succeeding year.
 
 # %%
@@ -283,9 +284,9 @@ elections_data.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about the winner of the congressional elections in the USA, for each year, state and congressional district.
-# 
+#
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas `dtype` for later analysis.
-# 
+#
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :------------: |
 # | 0 | year | Numeric (Interval) | Year | int64 |
@@ -341,7 +342,7 @@ print(f'Number of states: {states.size}')
 
 # %% [markdown]
 # All the states (District of Columbia included) are present.
-# 
+#
 # We now display the states and the years for which there are missing rows:
 
 # %%
@@ -360,7 +361,7 @@ elections_data[elections_data['state']=='DISTRICT OF COLUMBIA']
 
 # %% [markdown]
 # Missing values are probably due to the fact that District of Columbia is a non voting delegate district. Anyway, we gathered the missing values from Wikipedia. We noticed that as for the 2020 elecetions, the number of votes received by the winning party coincides, but the number of totalvotes is different (see [here](https://en.wikipedia.org/wiki/2020_United_States_House_of_Representatives_election_in_the_District_of_Columbia)). To be consistent with the other data, we replace the totalvotes value from 2020 with the one from Wikipedia.
-# 
+#
 # Now we import those data:
 
 # %%
@@ -375,7 +376,7 @@ dc_elections_data.info()
 
 # %% [markdown]
 # The inferred types are correct.
-# 
+#
 # We now merge the two dataframes:
 
 # %%
@@ -416,7 +417,7 @@ plt.tight_layout()
 
 # %% [markdown]
 # We can observe that for both total and candidate votes Florida, Louisian and Oklahoma have lower outliers, while Maine has an upper outlier. 
-# 
+#
 # We display the rows relative to Maine:
 
 # %%
@@ -472,7 +473,7 @@ plt.tight_layout()
 
 # %% [markdown]
 # It is evident that in some states the number of votes fluctuates significantly from year to year.
-# 
+#
 # We get the unique names of the parties for the years of interest:
 
 # %%
@@ -493,16 +494,9 @@ elections_data['party'] = elections_data['party'].apply(
 
 # %%
 elections_data['candidateperc'] = (elections_data['candidatevotes']/elections_data['totalvotes'])*100
-elections_data[elections_data['year']>2012]['candidateperc'].plot.hist(bins=50, figsize=(10, 5), title='Percentage of winner votes')
 
 # %%
-f, (ax_box, ax_hist) = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": (.15, .85)})
-elections_data[elections_data['year']>2012]['candidateperc'].plot.hist(bins=50, figsize=(10, 5), ax=ax_hist)
-elections_data[elections_data['year']>2012].boxplot(ax=ax_box, column='candidateperc', vert=False, grid=False)
-ax_box.set(yticks=[])
-sns.despine(ax=ax_hist, top=True)
-sns.despine(ax=ax_box, left=True)
-plt.suptitle('Percentage of winner votes')
+hist_box_plot(elections_data[elections_data['year']>2012], col='candidateperc', title='Percentage of winner votes')
 
 # %% [markdown]
 # It seems that in some districts the winner party obtained 100% of the votes. We disaply those districts:
@@ -512,7 +506,7 @@ elections_data[(elections_data['candidateperc']==100) & (elections_data['year']>
 
 # %% [markdown]
 # Wikipedia reports the same data, in those cases there was not an opponent party.
-# 
+#
 # The histogram above also shows that in some disticts the winner party obtained less than 50% of the votes. We display those districts:
 
 # %%
@@ -595,9 +589,9 @@ incidents_data.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about gun incidents in the USA.
-# 
+#
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas dtype for later analysis.
-# 
+#
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :-----------: |
 # | 0 | date | Numeric (Interval) | Date of incident occurrence| datetime |
@@ -640,7 +634,7 @@ incidents_data.info()
 # - `congressional_district`, `state_house_district`, `state_senate_district`, `participant_age1`, `n_males`, `n_females`, `n_arrested`, `n_unharmed`, `n_participants` are stored as `float64` while should be `int64`
 # - `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` are stored as `object` while should be `int64`, this probably indicates the presence of out of syntactic errors (not in the domain)
 # - the presence of missing values within many attributes; the only attributes without missing values are the following: `date`, `state`, `city_or_county`, `n_killed`, `n_injured`, `n_participants`
-# 
+#
 # We display descriptive statistics of the DataFrame so to better understand how to cast the data:
 
 # %%
@@ -690,7 +684,7 @@ incidents_data.info()
 
 # %% [markdown]
 # We observe that the downcasting of many attributes has not succeeded. This is due to the presence of missing or out of range values. TODO: to handle
-# 
+#
 # Now we visualize missing values:
 
 # %%
@@ -785,7 +779,7 @@ incidents_data.groupby(['latitude', 'longitude'])['address'].unique()[lambda x: 
 
 # %% [markdown]
 # Still this attribute may be written in different ways (e.g. "Avenue" may also be written as "Ave", or "Highway" as "Hwy"). There could also be some errors (e.g. the same point corresponds to the address "33rd Avenue", "Kamehameha Highway" and "Kilauea Avenue extension").
-# 
+#
 # We plot on a map the location of the incidents:
 
 # %%
@@ -894,7 +888,7 @@ house_districts
 
 # %% [markdown]
 # Also this attribute has some errors because the maximum number of state house districts should be 204 (for New Hampshire, see [here](https://ballotpedia.org/State_Legislative_Districts)). For now we won't correct this error beacuse this attribute is not useful for our analysis.
-# 
+#
 # We check if given a certain value for the attributes `latitude` and a `longitude`, the attribute `state_house_district` has always the same value:
 
 # %%
@@ -923,7 +917,7 @@ senate_districts
 
 # %% [markdown]
 # And again we notice some errors because the maximum number of state senate districts should be 67 (for Minnesota, see [here](https://ballotpedia.org/State_Legislative_Districts)). For now we won't correct this error beacuse this attribute is not useful for our analysis.
-# 
+#
 # We correct other possible errors as above:
 
 # %%
@@ -949,44 +943,32 @@ incidents_data[incidents_data['congressional_district'].notnull()].groupby(
 incidents_data[incidents_data['congressional_district'].notnull()].groupby(
     ['state', 'city_or_county', 'state_house_district'])['congressional_district'].unique()[lambda x: x.str.len() > 1].shape[0]==0
 
-# %%
-districts = incidents_data['congressional_district'].unique()
-color_discrete_map={}
-n_colors = len(px.colors.qualitative.Plotly)
-for i, district in enumerate(districts):
-    color_discrete_map[str(district)] = px.colors.qualitative.Plotly[i%n_colors]
-color_discrete_map[str(np.nan)] = '#000000'
-
-fig = px.scatter_mapbox(
-        color=incidents_data['congressional_district'].astype(str),
-        color_discrete_map=color_discrete_map,
-        lat=incidents_data['latitude'], 
-        lon=incidents_data['longitude'],
-        zoom=2, 
-        height=400,
-        width=800,
-        title="USA Congressional districts",
-        text=incidents_data['congressional_district'].astype(str),
-        category_orders={'color': sorted(incidents_data['congressional_district'].astype(str).unique())}
-    )
-fig.update_layout(
-    mapbox_style="open-street-map",
-    margin={"r":0,"t":100,"l":0,"b":0},
-    legend_title_text="Congressional district"
-)
-fig.show()
-
 # %% [markdown]
 # We cannot recover the missing values for the attribute `congressional_district` from the values of `state_house_district` either.
-# 
-# We can, instead, recover the missing values from the entries with "similar" `latitude` and `longitude`. We'll do this first for the state of Alabama, showing the results with some plots. Later we will do the same for all the other states.
-# 
-# As a first step, we plot on a map the incidents that happened in Alabama, coloring them according to the value of the attribute `congressional_district`:
+#
+# We could, instead, recover the missing values from the entries with "similar" `latitude` and `longitude`. To explore this possibility we first plot on a map the dislocation of the incidents, coloring them according to the value of the attribute `congressional_district`:
+
+# %%
+plot_scattermap_plotly(
+    incidents_data,
+    'congressional_district',
+    black_nan=True,
+    zoom=2,
+    height=800,
+    width=800,
+    title="USA Congressional districts"
+    )
+
+# %% [markdown]
+# Many points with missing `congressional_district` are often "surrounded" by points belonging to the same congressional district. We could, therefore, use KNN classifier to recover those values.
+#
+# We'll do this first for the state of Alabama, showing the results with some plots. Later we will do the same for all the other states. We plot the distribution of the values of the attribute `congressional_district` for the state of Alabama:
 
 # %%
 plot_scattermap_plotly(
     incidents_data[incidents_data['state']=='ALABAMA'],
     attribute='congressional_district',
+    black_nan=True,
     width=500,
     height=600,
     zoom=5.5,
@@ -995,7 +977,7 @@ plot_scattermap_plotly(
 )
 
 # %% [markdown]
-# Many points with missing values for the attribute `congressional_district` (those in light green) are very near to other points for which the congressional district is known. We could use KNN classifier to recover those values. To do so, we define a function to prepare the data for the classification task:
+# We define a function to prepare the data for the classification task:
 
 # %%
 def build_X_y_for_district_inference(incidents_data):
@@ -1108,7 +1090,7 @@ plot_clf_decision_boundary(knn_eu_clf, X_train_converted, y_train, alabama_color
 
 # %% [markdown]
 # We can now compare the boundaries built by the classifier with the actual boundaries (this map was taken [here](https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif/lossless-page1-1256px-United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif.png)):
-# 
+#
 # <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif/lossless-page1-1256px-United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif.png" alt="Alt Text" width="600"/>
 
 # %% [markdown]
@@ -1118,7 +1100,7 @@ plot_clf_decision_boundary(knn_eu_clf, X_train_converted, y_train, alabama_color
 incidents_data.groupby(['state', 'congressional_district']).size()[lambda x: x <= 2]
 
 # %% [markdown]
-# By the way, missclassification can still occurr, depending on the position of the available examples w.r.t the position of the points to classify. Aware of this limitation, we proceed to apply this method to the other states:
+# By the way, missclassification can still occurr, depending on the position of the available examples w.r.t the position of the points to classify. Aware of this limitation, we proceed to apply this method to the other states and plot the result:
 
 # %%
 # for state in incidents_data['state'].unique():
@@ -1136,6 +1118,14 @@ incidents_data.groupby(['state', 'congressional_district']).size()[lambda x: x <
 #             (incidents_data['longitude'].notna()),
 #             'KNN_congressional_district'
 #         ] = knn_pred
+# plot_scattermap_plotly(
+#     incidents_data,
+#     'congressional_district',
+#     zoom=2,
+#     height=800,
+#     width=800,
+#     title="USA Congressional districts (after inference)"
+#     )
 
 # %% [markdown]
 # We drop the original column with congressional districts and we replace it with the one with the one we just computed:
@@ -1143,6 +1133,33 @@ incidents_data.groupby(['state', 'congressional_district']).size()[lambda x: x <
 # %%
 incidents_data.drop(columns=['congressional_district'], inplace=True)
 incidents_data.rename(columns={'KNN_congressional_district':'congressional_district'}, inplace=True)
+
+# %% [markdown]
+# We now plot on a map the location of the incidents, coloring them according to the value of the attribute `state_senate_district` and `state_house_district`, to assess wheter we can apply the same method to recover missing values:
+
+# %%
+plot_scattermap_plotly(
+    incidents_data,
+    'state_senate_district',
+    black_nan=True,
+    zoom=2,
+    height=800,
+    width=800,
+    title="USA State senate districts"
+    )
+
+plot_scattermap_plotly(
+    incidents_data,
+    'state_house_district',
+    black_nan=True,
+    zoom=2,
+    height=800,
+    width=800,
+    title="USA State house districts"
+    )
+
+# %% [markdown]
+# These attributes have a lot of missing values, sometimes spread over large areas where there are no other points. Given this scarcity of training examples, we cannot apply the same method to recover the missing values.
 
 # %% [markdown]
 # TAGS EXPLORATION:
@@ -1439,3 +1456,31 @@ incidents_data = incidents_data[[
 # fare plot sui dati puliti
 
 
+
+# %%
+# da capire meglio come inserire il tutto
+
+# create all the tags for each record
+from tags_mapping import *
+
+tagged_incidents_data = build_tagged_dataframe('../data/')
+
+tagged_incidents_data
+
+# %%
+# add tag consistency column
+tag_consistency_attr_name = "tag_consistency"
+col = [True] * tagged_incidents_data.shape[0] #tag consistency assumed true
+tagged_incidents_data.insert(tagged_incidents_data.shape[1], tag_consistency_attr_name, col)
+
+# %%
+from utils import *
+
+#consistency check
+unconsistencies = 0
+for index, record in tagged_incidents_data.iterrows():
+    if not check_consistency_tag(record):
+        tagged_incidents_data.at[index, tag_consistency_attr_name] = False
+        unconsistencies += 1
+
+print(unconsistencies)

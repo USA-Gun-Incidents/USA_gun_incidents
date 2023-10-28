@@ -5,6 +5,7 @@ import numpy as np
 import seaborn as sns
 import math
 from data_preparation_utils import *
+from tags_mapping import *
 
 FOLDER = './data/'
 incidents_path = FOLDER + 'incidents.csv'
@@ -76,7 +77,8 @@ print(incidents_data.pivot_table(columns=['incident_characteristics2'], aggfunc=
 # %%
 #add tags to dataframe
 
-tags = ["Firearm", "Shots", "Aggression", "Suicide", "Injuries", "Death", "Road", "Illegal holding", "House", "School", "Children", "Drugs", "Officers", "Organized", "Social reasons", "Defensive", "Workplace"]
+tags = ["Firearm", "Shots", "Aggression", "Suicide", "Injuries", "Death", "Road", "Illegal holding", "House", "School", "Children",
+        "Drugs", "Officers", "Organized", "Social reasons", "Defensive", "Workplace", "Unintentional", "Abduction",	"Air Gun"]
 zeros = [False] * incidents_data_characteristics.shape[0]
 
 for tag in tags:
@@ -123,6 +125,26 @@ for index, record in incidents_data_characteristics.iterrows():
 incidents_data_characteristics
 
 # %%
+data
+
+# %%
+tag_consistency_attr_name = "tag_consistency"
+col = [True] * data.shape[0] #tag consistency assumed true
+data.insert(data.shape[1], tag_consistency_attr_name, col)
+
+data
+
+# %%
+#consistency check
+unconsistencies = 0
+for index, record in data.iterrows():
+    if not check_consistency_tag(record):
+        data.at[index, tag_consistency_attr_name] = False
+        unconsistencies += 1
+
+print(unconsistencies)
+
+# %%
 tag_consistency_attr_name = "Tag Consistency"
 col = [True] * incidents_data_characteristics.shape[0] #tag consistency assumed true
 incidents_data_characteristics.insert(incidents_data_characteristics.shape[1], tag_consistency_attr_name, col)
@@ -166,5 +188,10 @@ final_incidents_data = pd.read_csv(updated_incidents_path)
 
 # %%
 final_incidents_data
+
+# %%
+data.loc[(data["incident_characteristics2"] == "TSA Action")][["notes", "incident_characteristics1", "incident_characteristics2"]]
+
+#data.loc[326]["notes"]
 
 
