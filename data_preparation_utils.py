@@ -679,11 +679,14 @@ def set_gender_age_consistent_data(row):
 ####################### Tag Consistency w.r.t. all other data #######################
 def check_consistency_tag(row):
     """Return if tag are consistent w.r.t. other data"""
-    if row[tag.death.name] and row['n_killed'] == 0:
+    if type(row['n_killed']) == str or type(row['n_injured']) == str or type(row['n_participants_child']) == str: # DA ELIMINARE!!!
         return False
-    if row[tag.children.name] and row['n_participants_child'] == 0:
+
+    if row[tag.death.name] and row['n_killed'] == 0 or (not(row[tag.death.name]) and row['n_killed'] > 0):
         return False
-    if row[tag.injuries.name] and row['n_injured'] == 0:
+    if row[tag.injuries.name] and row['n_injured'] == 0 or (not(row[tag.injuries.name]) and row['n_injured'] > 0):
+        return False
+    if row[tag.children.name] and row['n_participants_child'] == 0 or (not(row[tag.children.name]) and row['n_participants_child'] > 0):
         return False
     if((row["incident_characteristics1"] == "Non-Shooting Incident" or row["incident_characteristics2"] ==
         "Non-Shooting Incident") and row[tag.shots.name]): #consistency for non-shooting incidents
@@ -691,6 +694,13 @@ def check_consistency_tag(row):
     if((row["incident_characteristics1"] == "Non-Aggression Incident" or row["incident_characteristics2"] == 
         "Non-Aggression Incident") and row[tag.aggression.name]): #consistency for non-aggression incidents
         return False
+    return True
+
+def check_consistency_characteristics(row):
+    """Return if characteristics are consistent w.r.t. other data"""
+    if type(row['n_killed']) == str or type(row['n_injured']) == str or type(row['n_participants']) == str: # DA ELIMINARE!!!
+        return False
+
     if((row["incident_characteristics1"] == "Home Invasion - No death or injury" or row["incident_characteristics2"] == 
         "Home Invasion - No death or injury") and (row['n_killed'] != 0 or row['n_injured'] != 0)):
         return False
@@ -698,12 +708,12 @@ def check_consistency_tag(row):
         "Mass Murder (4+ deceased victims excluding the subject/suspect/perpetrator , one location)" 
         or row["incident_characteristics2"] == 
         "Mass Murder (4+ deceased victims excluding the subject/suspect/perpetrator , one location)")
-        and row['n_killed'] < 4 and row['n_participants'] < 4):
+        and (row['n_killed'] < 4 or row['n_participants'] < 4)):
         return False
     if((row["incident_characteristics1"] == 
         "Mass Shooting (4+ victims injured or killed excluding the subject/suspect/perpetrator, one location)" 
         or row["incident_characteristics2"] == 
         "Mass Shooting (4+ victims injured or killed excluding the subject/suspect/perpetrator, one location)")
-        and (row['n_killed']+row['n_injured']) < 4 and row['n_participants'] < 4):
-        return False   
+        and ((row['n_killed'] + row['n_injured']) < 4 or row['n_participants'] < 4)):
+        return False
     return True

@@ -2465,7 +2465,7 @@ for label in ax.get_xticklabels():
     year = txt_label[:txt_label.find('-')]
     xticks.append(year+' - '+calendar.month_name[int(month)])
 
-ax.set_xticklabels(xticks);
+ax.set_xticklabels(xticks)
 
 plt.xticks(rotation=90)
 plt.tight_layout()
@@ -2584,18 +2584,54 @@ col = [True] * tagged_incidents_data.shape[0] #tag consistency assumed true
 tagged_incidents_data.insert(tagged_incidents_data.shape[1], tag_consistency_attr_name, col)
 
 # %%
-from data_preparation_utils import check_consistency_tag
+from data_preparation_utils import check_consistency_tag, check_consistency_characteristics
 
-#consistency check
-unconsistencies = 0
+# consistency check
+unconsistencies_characteristics = 0
+unconsistencies_tag = 0
 for index, record in tagged_incidents_data.iterrows():
     if not check_consistency_tag(record):
         tagged_incidents_data.at[index, tag_consistency_attr_name] = False
-        unconsistencies += 1
+        unconsistencies_tag += 1
+    if not check_consistency_characteristics(record):
+        tagged_incidents_data.at[index, tag_consistency_attr_name] = False # if there is an unconsistencies with characteristics it will be reflected by tags
+        unconsistencies_characteristics += 1
 
-print(unconsistencies)
+print("characteristics unconsistencies: " + str(unconsistencies_characteristics) + "\ntags unconsistencies: " + str(unconsistencies_tag))
+print("total: " + str(unconsistencies_characteristics + unconsistencies_tag))
 
+# %%
+# correct all unconcistencies
 
+# ora questo lavoro è fatto sui dati sporchi
+# poi quando il dataset sarà pulito avrà effettivamente senso
+for index, record in tagged_incidents_data.iterrows():
+    if not(type(record['n_killed']) == str or type(record['n_injured']) == str or type(record['n_participants_child']) == str): # non ce ne sarà bisogno
+        if not(record[IncidentTag.death.name]) and record['n_killed'] > 0:
+            tagged_incidents_data.at[index, IncidentTag.death.name] = True
+        if not(record[IncidentTag.injuries.name]) and record['n_injured'] > 0:
+            tagged_incidents_data.at[index, IncidentTag.injuries.name] = True
+        if not(record[IncidentTag.children.name]) and record['n_participants_child'] > 0:
+            tagged_incidents_data.at[index, IncidentTag.children.name] = True
+
+# %%
+# check tags unconsistencies again
+unconsistencies_tag = 0
+for index, record in tagged_incidents_data.iterrows():
+    if check_consistency_tag(record):
+        if check_consistency_characteristics(record):
+            tagged_incidents_data.at[index, tag_consistency_attr_name] = True # set it back to true if issues are resolved
+    else:
+        unconsistencies_tag += 1
+
+print(unconsistencies_tag)
+
+# %%
+cnt = 0
+for index, record in tagged_incidents_data.iterrows():
+    if not tagged_incidents_data.loc[index, tag_consistency_attr_name]:
+        cnt += 1
+print(cnt)
 
 # %%
 # fare in modo che i tag vengano messi sui dati puliti
