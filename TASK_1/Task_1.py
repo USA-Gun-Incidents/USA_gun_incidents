@@ -2294,13 +2294,18 @@ plt.ylabel('Incident characteristics')
 plt.tight_layout()
 
 # %%
-characteristics_count_matrix = pd.crosstab(incidents_data['incident_characteristics1'], incidents_data['incident_characteristics2'])
+characteristics_count_matrix = pd.crosstab(incidents_data['incident_characteristics2'], incidents_data['incident_characteristics1'])
 fig, ax = plt.subplots(figsize=(25, 20))
 sns.heatmap(characteristics_count_matrix, cmap='coolwarm', ax=ax, xticklabels=True, yticklabels=True, linewidths=.5)
 ax.set_xlabel('incident_characteristics2')
 ax.set_ylabel('incident_characteristics1')  
 ax.set_title('Counts of incident characteristics')
 plt.tight_layout()
+
+# %%
+fig, ax = plt.subplots(figsize=(20, 15))
+sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(by="Shot - Dead (murder, accidental, suicide)", inplace=False, ascending=False).tail(-1),
+            cmap='coolwarm', yticklabels=True)
 
 # %%
 incidents_data[incidents_data['state']=='DISTRICT OF COLUMBIA'].size
