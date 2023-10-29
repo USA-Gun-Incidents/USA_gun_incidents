@@ -2244,10 +2244,8 @@ new_age_data.describe()
 # ## TAGS EXPLORATION:
 
 # %%
-#merge characteristics list
+# merge characteristics list
 
-#characteristics1_frequency = incidents_data.pivot_table(columns=['incident_characteristics1'], aggfunc='size').sort_values(ascending=False)
-#characteristics2_frequency = incidents_data.pivot_table(columns=['incident_characteristics2'], aggfunc='size').sort_values(ascending=False)
 characteristics1_frequency = pd.Series.to_dict(incidents_data.pivot_table(columns=['incident_characteristics1'], aggfunc='size'))
 characteristics2_frequency = pd.Series.to_dict(incidents_data.pivot_table(columns=['incident_characteristics2'], aggfunc='size'))
 
@@ -2306,6 +2304,72 @@ plt.tight_layout()
 fig, ax = plt.subplots(figsize=(20, 15))
 sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(by="Shot - Dead (murder, accidental, suicide)", inplace=False, ascending=False).tail(-1),
             cmap='coolwarm', yticklabels=True)
+
+# %%
+# da capire meglio come inserire il tutto
+
+# create all the tags for each record
+from tags_mapping import *
+
+tagged_incidents_data = build_tagged_dataframe('../data/')
+
+tagged_incidents_data
+
+# %%
+# add tag consistency column
+tag_consistency_attr_name = "tag_consistency"
+col = [True] * tagged_incidents_data.shape[0] #tag consistency assumed true
+tagged_incidents_data.insert(tagged_incidents_data.shape[1], tag_consistency_attr_name, col)
+
+# %%
+from data_preparation_utils import check_consistency_tag, check_consistency_characteristics
+
+# consistency check
+unconsistencies_characteristics = 0
+unconsistencies_tag = 0
+for index, record in tagged_incidents_data.iterrows():
+    if not check_consistency_tag(record):
+        tagged_incidents_data.at[index, tag_consistency_attr_name] = False
+        unconsistencies_tag += 1
+    if not check_consistency_characteristics(record):
+        tagged_incidents_data.at[index, tag_consistency_attr_name] = False # if there is an unconsistencies with characteristics it will be reflected by tags
+        unconsistencies_characteristics += 1
+
+print("characteristics unconsistencies: " + str(unconsistencies_characteristics) + "\ntags unconsistencies: " + str(unconsistencies_tag))
+print("total: " + str(unconsistencies_characteristics + unconsistencies_tag))
+
+# %%
+# correct unconcistencies
+
+# ora questo lavoro è fatto sui dati sporchi
+# poi quando il dataset sarà pulito avrà effettivamente senso
+for index, record in tagged_incidents_data.iterrows():
+    if not(type(record['n_killed']) == str or type(record['n_injured']) == str or type(record['n_participants_child']) == str): # non ce ne sarà bisogno
+        if not(record[IncidentTag.death.name]) and record['n_killed'] > 0:
+            tagged_incidents_data.at[index, IncidentTag.death.name] = True
+        if not(record[IncidentTag.injuries.name]) and record['n_injured'] > 0:
+            tagged_incidents_data.at[index, IncidentTag.injuries.name] = True
+        if not(record[IncidentTag.children.name]) and record['n_participants_child'] > 0:
+            tagged_incidents_data.at[index, IncidentTag.children.name] = True
+
+# %%
+# check tags unconsistencies again
+unconsistencies_tag = 0
+for index, record in tagged_incidents_data.iterrows():
+    if check_consistency_tag(record):
+        if check_consistency_characteristics(record):
+            tagged_incidents_data.at[index, tag_consistency_attr_name] = True # set it back to true if issues are resolved
+    else:
+        unconsistencies_tag += 1
+
+print(unconsistencies_tag)
+
+# %%
+cnt = 0
+for index, record in tagged_incidents_data.iterrows():
+    if not tagged_incidents_data.loc[index, tag_consistency_attr_name]:
+        cnt += 1
+print(cnt)
 
 # %%
 incidents_data[incidents_data['state']=='DISTRICT OF COLUMBIA'].size
@@ -2566,72 +2630,6 @@ incidents_data = incidents_data[[
     'candidateperc'
     ]]
 #incidents_data.to_csv(DATA_FOLDER_PATH + 'incidents_cleaned.csv')
-
-# %%
-# da capire meglio come inserire il tutto
-
-# create all the tags for each record
-from tags_mapping import *
-
-tagged_incidents_data = build_tagged_dataframe('../data/')
-
-tagged_incidents_data
-
-# %%
-# add tag consistency column
-tag_consistency_attr_name = "tag_consistency"
-col = [True] * tagged_incidents_data.shape[0] #tag consistency assumed true
-tagged_incidents_data.insert(tagged_incidents_data.shape[1], tag_consistency_attr_name, col)
-
-# %%
-from data_preparation_utils import check_consistency_tag, check_consistency_characteristics
-
-# consistency check
-unconsistencies_characteristics = 0
-unconsistencies_tag = 0
-for index, record in tagged_incidents_data.iterrows():
-    if not check_consistency_tag(record):
-        tagged_incidents_data.at[index, tag_consistency_attr_name] = False
-        unconsistencies_tag += 1
-    if not check_consistency_characteristics(record):
-        tagged_incidents_data.at[index, tag_consistency_attr_name] = False # if there is an unconsistencies with characteristics it will be reflected by tags
-        unconsistencies_characteristics += 1
-
-print("characteristics unconsistencies: " + str(unconsistencies_characteristics) + "\ntags unconsistencies: " + str(unconsistencies_tag))
-print("total: " + str(unconsistencies_characteristics + unconsistencies_tag))
-
-# %%
-# correct all unconcistencies
-
-# ora questo lavoro è fatto sui dati sporchi
-# poi quando il dataset sarà pulito avrà effettivamente senso
-for index, record in tagged_incidents_data.iterrows():
-    if not(type(record['n_killed']) == str or type(record['n_injured']) == str or type(record['n_participants_child']) == str): # non ce ne sarà bisogno
-        if not(record[IncidentTag.death.name]) and record['n_killed'] > 0:
-            tagged_incidents_data.at[index, IncidentTag.death.name] = True
-        if not(record[IncidentTag.injuries.name]) and record['n_injured'] > 0:
-            tagged_incidents_data.at[index, IncidentTag.injuries.name] = True
-        if not(record[IncidentTag.children.name]) and record['n_participants_child'] > 0:
-            tagged_incidents_data.at[index, IncidentTag.children.name] = True
-
-# %%
-# check tags unconsistencies again
-unconsistencies_tag = 0
-for index, record in tagged_incidents_data.iterrows():
-    if check_consistency_tag(record):
-        if check_consistency_characteristics(record):
-            tagged_incidents_data.at[index, tag_consistency_attr_name] = True # set it back to true if issues are resolved
-    else:
-        unconsistencies_tag += 1
-
-print(unconsistencies_tag)
-
-# %%
-cnt = 0
-for index, record in tagged_incidents_data.iterrows():
-    if not tagged_incidents_data.loc[index, tag_consistency_attr_name]:
-        cnt += 1
-print(cnt)
 
 # %%
 # fare in modo che i tag vengano messi sui dati puliti
