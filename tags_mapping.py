@@ -1,4 +1,4 @@
-# TODO: aggiungere nel notebook Task_1.ipynb
+# TODO: eliminare
 
 from enum import Enum
 import pandas as pd
