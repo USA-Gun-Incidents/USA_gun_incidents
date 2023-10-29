@@ -2244,17 +2244,51 @@ new_age_data.describe()
 # ## TAGS EXPLORATION:
 
 # %%
-fig = incidents_data['incident_characteristics1'].value_counts().sort_values().plot(kind='barh', figsize=(5, 15))
-fig.set_xscale("log")
-plt.title("Counts of 'incident_characteristics1'")
-plt.xlabel('Count')
-plt.ylabel('Incident characteristics')
-plt.tight_layout()
+#merge characteristics list
+
+#characteristics1_frequency = incidents_data.pivot_table(columns=['incident_characteristics1'], aggfunc='size').sort_values(ascending=False)
+#characteristics2_frequency = incidents_data.pivot_table(columns=['incident_characteristics2'], aggfunc='size').sort_values(ascending=False)
+characteristics1_frequency = pd.Series.to_dict(incidents_data.pivot_table(columns=['incident_characteristics1'], aggfunc='size'))
+characteristics2_frequency = pd.Series.to_dict(incidents_data.pivot_table(columns=['incident_characteristics2'], aggfunc='size'))
+
+characteristics_frequency = {}
+keys1 = list(characteristics1_frequency.keys())
+keys2 = list(characteristics2_frequency.keys())
+
+i = 0
+j = 0
+while i < len(characteristics1_frequency) and j < len(characteristics2_frequency):
+    if keys1[i] > keys2[j]:
+        characteristics_frequency[keys2[j]] = characteristics2_frequency[keys2[j]]
+        j += 1
+    elif keys1[i] == keys2[j]:
+        characteristics_frequency[keys2[j]] = characteristics2_frequency[keys2[j]] + characteristics1_frequency[keys1[i]]
+        i += 1
+        j += 1
+    else:
+        characteristics_frequency[keys1[i]] = characteristics1_frequency[keys1[i]]
+        i += 1
+
+if(len(characteristics1_frequency) < len(characteristics2_frequency)):
+    for j in range(len(characteristics1_frequency), len(characteristics2_frequency)):
+        characteristics_frequency[keys2[j]] = characteristics2_frequency[keys2[j]]
+elif(len(characteristics2_frequency) < len(characteristics1_frequency)):
+    for i in range(len(characteristics2_frequency), len(characteristics1_frequency)):
+        characteristics_frequency[keys1[i]] = characteristics1_frequency[keys1[i]]
+
+characteristics_frequency = dict(sorted(characteristics_frequency.items(), key=lambda x:x[1])) # sort by value
 
 # %%
-fig = incidents_data['incident_characteristics2'].value_counts().sort_values().plot(kind='barh', figsize=(5, 18))
+characteristics_frequency_df = pd.DataFrame({'characteristics': list(characteristics_frequency.keys()), 'occurrences': list(characteristics_frequency.values())})
+
+characteristics_frequency_df
+
+# %%
+
+fig = pd.DataFrame(characteristics_frequency_df).plot(kind='barh', figsize=(5, 18))
+fig.set_yticklabels(characteristics_frequency_df['characteristics'])
 fig.set_xscale("log")
-plt.title("Counts of 'incident_characteristics2'")
+plt.title("Counts of 'incident_characteristics'")
 plt.xlabel('Count')
 plt.ylabel('Incident characteristics')
 plt.tight_layout()
