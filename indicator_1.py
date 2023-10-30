@@ -1,7 +1,10 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
 from plot_utils import hist_box_plot
+import matplotlib.pyplot as plt
+# %matplotlib inline
 
 # %%
 incidents_df = pd.read_csv('./data/final.csv', index_col=0)
@@ -46,6 +49,9 @@ incidents_df = compute_ratio_indicator(incidents_df, ['year', 'semester', 'state
 incidents_df = compute_ratio_indicator(incidents_df, ['year', 'semester', 'state', 'city'], 'n_males', 'n_participants', '_semester_city', 'sum')
 
 # %%
+incidents_df.columns
+
+# %%
 ratio_wrt_tot = []
 ratio_wrt_mean = []
 for att in incidents_df.columns:
@@ -70,7 +76,7 @@ incidents_df.boxplot(
 
 # %%
 log_ratio_wrt_tot = ['log_'+col for col in ratio_wrt_tot]
-incidents_df[log_ratio_wrt_tot] = np.log(incidents_df[ratio_wrt_tot]) # to avoid log(0)? sostituire infinito con? sommare eps prima di applicare?
+incidents_df[log_ratio_wrt_tot] = np.log(incidents_df[ratio_wrt_tot]+0.000001)
 incidents_df.boxplot(
     column=log_ratio_wrt_tot,
     rot=90,
@@ -91,6 +97,9 @@ incidents_df.boxplot(
     column=ratio_wrt_mean,
     rot=90
 )
+
+# %%
+incidents_df[ratio_wrt_mean].describe()
 
 # %%
 hist_box_plot(
@@ -151,7 +160,7 @@ incidents_df.boxplot(
 # considerare i tag
 # usare popolazione esterna per fare statistiche aggregate (indici a livello di stato, distretto congressuale - anno - semestre, non per record)
 # aggregazione più fine-grossa sul tempo (non credo sia necessario)
-# comninare genere e fasce di età (?)
+# combinare genere e fasce di età (?)
 # usare dati di città e contee da census?
 
 

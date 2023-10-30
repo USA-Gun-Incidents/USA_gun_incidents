@@ -1261,7 +1261,9 @@ final_geo_data.head(3)
 
 
 # %%
+final_geo_data['state'] = final_geo_data['state'].apply(lambda x: 'Hawaii' if x=='Hawaiʻi' else x) # TODO: togliere
 incidents_data[final_geo_data.columns] = final_geo_data[final_geo_data.columns]
+incidents_data['state'] = incidents_data['state'].apply(lambda x: x.upper()) # FIX: da spostare?
 
 # %% [markdown]
 # We check if the attribute `congressional_district` is numbered consistently (with '0' for states with only one congressional district). To do so we use the data from the dataset containing the data about elections in the period of interest (congressional districts are redrawn when (year%10)==0):
@@ -1293,13 +1295,7 @@ incidents_data[(incidents_data['state'] == at_large_states.any()) & (incidents_d
 incidents_data.loc[incidents_data['state'].isin(at_large_states), 'congressional_district'] = 0
 
 # %%
-incidents_data['state'] = incidents_data['state'].apply(lambda x: x.upper()) # FIX: da spostare?
-
-# %%
-incidents_data['state'].unique() # FIX: perchè c'è un HAWAI'I e un HAWAII????
-
-# %%
-incidents_data[incidents_data['state']=='HAWAIʻI']
+incidents_data['state'].unique()
 
 # %%
 elections_data['state'].unique()
@@ -1318,10 +1314,42 @@ incidents_data[
     (incidents_data['state']=='KENTUCKY') &
     (incidents_data['congressional_district'] > 
         elections_data[(elections_data['state']=='KENTUCKY') & (elections_data['year']>2012)]['congressional_district'].max())
-]
+] # actually 6
 
 # %%
-# TODO: questi errori ci sono sempre una volta corretta la geografia?
+incidents_data.loc[
+    (incidents_data['state']=='KENTUCKY') &
+    (incidents_data['congressional_district'] > 
+        elections_data[(elections_data['state']=='KENTUCKY') & (elections_data['year']>2012)]['congressional_district'].max()),
+    'congressional_district'] = np.nan
+
+# %%
+incidents_data[
+    (incidents_data['state']=='OREGON') &
+    (incidents_data['congressional_district'] > 
+        elections_data[(elections_data['state']=='OREGON') & (elections_data['year']>2012)]['congressional_district'].max())
+] # actually 5
+
+# %%
+incidents_data.loc[
+    (incidents_data['state']=='OREGON') &
+    (incidents_data['congressional_district'] > 
+        elections_data[(elections_data['state']=='OREGON') & (elections_data['year']>2012)]['congressional_district'].max()),
+    'congressional_district_df'] = np.nan 
+
+# %%
+incidents_data[
+    (incidents_data['state']=='WEST VIRGINIA') &
+    (incidents_data['congressional_district'] > 
+        elections_data[(elections_data['state']=='WEST VIRGINIA') & (elections_data['year']>2012)]['congressional_district'].max())
+] # actually 3
+
+# %%
+incidents_data.loc[
+    (incidents_data['state']=='WEST VIRGINIA') &
+    (incidents_data['congressional_district'] > 
+        elections_data[(elections_data['state']=='WEST VIRGINIA') & (elections_data['year']>2012)]['congressional_district'].max()),
+    'congressional_district'] = np.nan
 
 # %% [markdown]
 # We check whether given a certain value for the attributes `latitude` and a `longitude`, the attribute `congressional_district` has always the same value:
@@ -2392,8 +2420,6 @@ plt.tight_layout()
 
 # %%
 from data_preparation_utils import add_tags, check_tag_consistency, IncidentTag
-
-LOAD_DATA_FROM_CHECKPOINT=False
 
 tags_columns = [tag.name for tag in IncidentTag]
 tags_columns.append('tag_consistency')
