@@ -1592,13 +1592,7 @@ plot_clf_decision_boundary(knn_eu_clf, X_train_converted, y_train, alabama_color
 # <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif/lossless-page1-1256px-United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif.png" alt="Alt Text" width="600"/>
 
 # %% [markdown]
-# The result is satisfactory. We can overwrite the original values with those inferred by the classifier:
-
-# %%
-incidents_df.rename(columns={'KNN_congressional_district':'congressional_district'}, inplace=True)
-
-# %% [markdown]
-# However, it is important to highlight that if there are no examples available for a specific district, we won't assign the correct label to the points in that districts. We check how many congressional districts have 2 or less examples:
+# The result is satisfactory. However, it is important to highlight that if there are no examples available for a specific district, we won't assign the correct label to the points in that districts. We check how many congressional districts have 2 or less examples:
 
 # %%
 incidents_df.groupby(['state', 'congressional_district']).size()[lambda x: x <= 2]
@@ -1610,6 +1604,7 @@ incidents_df.groupby(['state', 'congressional_district']).size()[lambda x: x <= 
 if LOAD_DATA_FROM_CHECKPOINT:
     congressional_district_df = load_checkpoint('congressional_district')
     incidents_df['congressional_district'] = congressional_district_df['congressional_district']
+    incidents_df.drop(columns=['KNN_congressional_district'], inplace=True)
 else:
     for state in incidents_df['state'].unique():
         if state != "ALABAMA":
@@ -2190,6 +2185,28 @@ new_age_df.describe()
 # %%
 incidents_df[new_age_df.columns] = new_age_df[new_age_df.columns]
 
+# %%
+fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(10, 5))
+incidents_df['n_males'].value_counts().plot(kind='bar', ax=ax1, title="Number of males count")
+incidents_df['n_females'].value_counts().plot(kind='bar', ax=ax2, title="Number of females count")
+
+# %%
+numerical_columns = incidents_df.select_dtypes(include=['float64', 'int64']).columns
+n_cols = 3
+fig, ax = plt.subplots(figsize=(12,28), nrows=numerical_columns.size//3, ncols=n_cols)
+row = 0
+for i, column in enumerate(numerical_columns):
+    if i!=0 and i%n_cols==0:
+        row += 1
+    sns.boxplot(x=column, data=incidents_df, ax=ax[row][i%n_cols])
+
+# %%
+fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
+incidents_df['n_killed'].value_counts().plot(kind='bar', ax=ax[0][0], title='n_killed')
+incidents_df['n_injured'].value_counts().plot(kind='bar', ax=ax[0][1], title='n_injured')
+incidents_df['n_unharmed'].value_counts().plot(kind='bar', ax=ax[1][0], title='n_unharmed')
+incidents_df['n_arrested'].value_counts().plot(kind='bar', ax=ax[1][1], title='n_arrested')
+
 # %% [markdown]
 # We join the poverty data with the incidents data:
 
@@ -2400,6 +2417,24 @@ fig.show()
 # FIX: aggiungere commenti
 
 # %%
+# check if ch1 and ch2 are always different
+incidents_df[incidents_df['incident_characteristics1']==incidents_df['incident_characteristics2']].shape[0]==0
+
+# %%
+ch1_counts = incidents_df['incident_characteristics1'].value_counts()
+ch2_counts = incidents_df['incident_characteristics2'].value_counts()
+ch_counts = ch1_counts.add(ch2_counts, fill_value=0).sort_values(ascending=True)
+ch_counts
+
+# %%
+fig = ch_counts.plot(kind='barh', figsize=(5, 18))
+fig.set_xscale("log")
+plt.title("Counts of 'incident_characteristics'")
+plt.xlabel('Count')
+plt.ylabel('Incident characteristics')
+plt.tight_layout()
+
+# %%
 # merge characteristics list
 
 characteristics1_frequency = pd.Series.to_dict(incidents_df.pivot_table(columns=['incident_characteristics1'], aggfunc='size'))
@@ -2481,7 +2516,7 @@ incidents_df.head()
 incidents_df['tag_consistency'].value_counts()
 
 # %%
-# correct unconcistencies
+# correct inconcistencies
 for index, record in incidents_df.iterrows():
     if not(record[IncidentTag.death.name]) and record['n_killed'] > 0:
         incidents_df.at[index, IncidentTag.death.name] = True
@@ -2493,9 +2528,75 @@ for index, record in incidents_df.iterrows():
 incidents_df['tag_consistency'].value_counts()
 
 # %%
+tags_partitions_counts = {}
+tags_partitions_counts['Murder'] = incidents_df[
+    (incidents_df['death']==True) &
+    ((incidents_df['aggression']==True) |
+     (incidents_df['social_reasons']==True))].shape[0] # not accidental nor defensive
+tags_partitions_counts['Suicide'] = incidents_df[
+    (incidents_df['death']==True) &
+    (incidents_df['suicide']==True)].shape[0] # warninig: if murder/suicide is counted twice
+tags_partitions_counts['Defensive'] = incidents_df[
+    (incidents_df['death']==True) &
+    (incidents_df['defensive']==True)].shape[0]
+tags_partitions_counts['Accidental'] = incidents_df[
+    (incidents_df['death']==True) &
+    (incidents_df['unintentional']==True)].shape[0]
+tags_partitions_counts['Others or not known'] = incidents_df[
+    (incidents_df['death']==True) &
+    (incidents_df['aggression']==False) &
+    (incidents_df['social_reasons']==False) &
+    (incidents_df['suicide']==False) & 
+    (incidents_df['defensive']==False) &
+    (incidents_df['unintentional']==False)].shape[0]
+
+fig, ax = plt.subplots()
+ax.pie(tags_partitions_counts.values(), labels=tags_partitions_counts.keys(), autopct='%1.1f%%');
+
+# %%
+n_cols = 3
+fig, ax = plt.subplots(figsize=(12,16), nrows=7, ncols=n_cols)
+row = 0
+for i, tag in enumerate(tags_columns):
+    n_rows_tag = incidents_df[(incidents_df[tag]==True)].shape[0]
+    if i!=0 and i%n_cols==0:
+        row += 1
+    ax[row][i%n_cols].pie([n_rows_tag, incidents_df.shape[0]-n_rows_tag], labels=[tag, 'no '+tag], autopct='%1.1f%%')
+
+# %%
+incidents_df[(incidents_df['death']==True) &
+    (incidents_df['aggression']==False) &
+    (incidents_df['social_reasons']==False) &
+    (incidents_df['suicide']==False) & 
+    (incidents_df['defensive']==False) &
+    (incidents_df['unintentional']==False)]
+
+# %%
+plt.figure(figsize=(15, 12))
+corr_matrix = incidents_df[numerical_columns].corr()
+sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
+
+# %%
+incidents_df.groupby(['latitude', 'longitude']).size().sort_values(ascending=False)[:50].plot(
+    kind='bar',
+    figsize=(10,6),
+    title='Counts of the locations with the 50 highest number of incidents'
+)
+
+# %%
+incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
+    kind='bar',
+    figsize=(10,6),
+    title='Counts of the addresses with the 50 highest number of incidents'
+) # ci sono tanti aeroporti, forse perchè sono sequestri di armi più che incidenti?
+
+# %%
+# TODO: le città con più incidenti per 100 000 ab. (servono i dati delle popolazioni)
+
+# %%
 incidents_df.columns
 # TODO: spostare queste liste nelle sezioni dei notebook in cui si analizzano gli attributi (appendendo le nuove features)
-time_columns = ['date', 'year', 'month', 'day_of_week'] # TODO: aggiungere month come stringa, day of week come
+time_columns = ['date', 'year', 'month', 'day_of_week'] # TODO: aggiungere month come stringa, day of week come stringa
 
 geo_columns = ['state', 'city_or_county', # togliere?
 'address', 'latitude', 'longitude', 'county', 'city', 'state_consistency', 'county_consistency',
