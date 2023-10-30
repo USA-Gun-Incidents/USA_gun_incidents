@@ -811,15 +811,16 @@ def add_tags(df):
 ####################### Tag Consistency w.r.t. all other data #######################
 def check_tag_consistency(row):
     """Return if tag are consistent w.r.t. other data"""
-    if row[IncidentTag.death.name] and row['n_killed'] == 0:
+    if (row[IncidentTag.death.name] and row['n_killed'] == 0) or (not(row[tag.death.name]) and row['n_killed'] > 0):
         row['tag_consistency'] = False
         return row
-    if row[IncidentTag.children.name] and row['n_participants_child'] == 0:
+    if (row[IncidentTag.injuries.name] and row['n_injured'] == 0) or (not(row[tag.injuries.name]) and row['n_injured'] > 0):
         row['tag_consistency'] = False
         return row
-    if row[IncidentTag.injuries.name] and row['n_injured'] == 0:
+    if (row[IncidentTag.children.name] and row['n_participants_child'] == 0) or (not(row[tag.children.name]) and row['n_participants_child'] > 0):
         row['tag_consistency'] = False
         return row
+        
     if((row["incident_characteristics1"] == "Non-Shooting Incident" or row["incident_characteristics2"] ==
         "Non-Shooting Incident") and row[IncidentTag.shots.name]): #consistency for non-shooting incidents
         row['tag_consistency'] = False
@@ -828,6 +829,11 @@ def check_tag_consistency(row):
         "Non-Aggression Incident") and row[IncidentTag.aggression.name]): #consistency for non-aggression incidents
         row['tag_consistency'] = False
         return row
+    return row
+
+
+def check_consistency_characteristics(row):
+    """Return if characteristics are consistent w.r.t. other data"""
     if((row["incident_characteristics1"] == "Home Invasion - No death or injury" or row["incident_characteristics2"] == 
         "Home Invasion - No death or injury") and (row['n_killed'] != 0 or row['n_injured'] != 0)):
         row['tag_consistency'] = False
