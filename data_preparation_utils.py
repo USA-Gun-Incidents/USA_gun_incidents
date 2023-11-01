@@ -811,13 +811,13 @@ def add_tags(df):
 ####################### Tag Consistency w.r.t. all other data #######################
 def check_tag_consistency(row):
     """Return if tag are consistent w.r.t. other data"""
-    if (row[IncidentTag.death.name] and row['n_killed'] == 0) or (not(row[tag.death.name]) and row['n_killed'] > 0):
+    if (row[IncidentTag.death.name] and row['n_killed'] == 0) or (not(row[IncidentTag.death.name]) and row['n_killed'] > 0):
         row['tag_consistency'] = False
         return row
-    if (row[IncidentTag.injuries.name] and row['n_injured'] == 0) or (not(row[tag.injuries.name]) and row['n_injured'] > 0):
+    if (row[IncidentTag.injuries.name] and row['n_injured'] == 0) or (not(row[IncidentTag.injuries.name]) and row['n_injured'] > 0):
         row['tag_consistency'] = False
         return row
-    if (row[IncidentTag.children.name] and row['n_participants_child'] == 0) or (not(row[tag.children.name]) and row['n_participants_child'] > 0):
+    if (row[IncidentTag.children.name] and row['n_participants_child'] == 0) or (not(row[IncidentTag.children.name]) and row['n_participants_child'] > 0):
         row['tag_consistency'] = False
         return row
         
@@ -832,7 +832,7 @@ def check_tag_consistency(row):
     return row
 
 
-def check_consistency_characteristics(row):
+def check_characteristics_consistency(row):
     """Return if characteristics are consistent w.r.t. other data"""
     if((row["incident_characteristics1"] == "Home Invasion - No death or injury" or row["incident_characteristics2"] == 
         "Home Invasion - No death or injury") and (row['n_killed'] != 0 or row['n_injured'] != 0)):
