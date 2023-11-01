@@ -2522,7 +2522,7 @@ sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suic
             cmap='coolwarm', yticklabels=True)
 
 # %%
-from data_preparation_utils import add_tags, check_tag_consistency, IncidentTag
+from data_preparation_utils import add_tags, check_tag_consistency, check_characteristics_consistency, IncidentTag
 
 tags_columns = [tag.name for tag in IncidentTag]
 tags_columns.append('tag_consistency')
@@ -2534,6 +2534,7 @@ else:
     incidents_df = add_tags(incidents_df)
     incidents_df['tag_consistency'] = True
     incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
+    incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
     save_checkpoint(incidents_df[tags_columns], 'tags')
 
 incidents_df.head()
@@ -2550,6 +2551,11 @@ for index, record in incidents_df.iterrows():
         incidents_df.at[index, IncidentTag.injuries.name] = True
     if not(record[IncidentTag.children.name]) and record['n_participants_child'] > 0:
         incidents_df.at[index, IncidentTag.children.name] = True
+
+# %%
+incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
+incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
+save_checkpoint(incidents_df[tags_columns], 'tags')
 
 incidents_df['tag_consistency'].value_counts()
 
