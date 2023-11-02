@@ -559,6 +559,9 @@ fig.show()
 # # Incidents Data
 
 # %% [markdown]
+# ### Preliminaries
+
+# %% [markdown]
 # We load the dataset:
 
 # %%
@@ -2180,7 +2183,7 @@ plt.show()
 new_age_df.describe()
 
 # %% [markdown]
-# ### Characteristic forse (da cancellare)
+# ## Characteristic forse (da cancellare)
 
 # %%
 #TODO: rivedere cosa dovrebbe fare questa funzione, così non funziona
@@ -2317,7 +2320,7 @@ print(cnt)
 incidents_data[incidents_data['state']=='DISTRICT OF COLUMBIA'].size
 
 # %% [markdown]
-# ### Join population, poverty and eletion data
+# ## Join population, poverty and eletion data
 
 # %%
 #TODO: probabilmente da spostare (?) per ora ho messo il sottotitolo a questa sezione così da capire che è un blocco a parte guardando outline
