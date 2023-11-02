@@ -720,9 +720,10 @@ incidents_df.describe(include='all', datetime_is_numeric=True)
 #     - the maximum value for the attribute `date` is 2030-11-28
 #     - the range of the attributes `age`, `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` is outside the domain of the attributes (e.g. the maximum value for the attribute age is 311)
 
-# %% [markdown]
+# %%
 # FIXME: spostare e introdurre lo studio "more in depth"
-#
+
+# %% [markdown]
 # To avoid having to recompute the data every time the kernel is interrupted and to make the results reproducible in a short execution time, we decided to save the data to CSV files at the end of each data preparation phase.
 #
 # Below, we provide two specific functions to perform this task.
@@ -887,10 +888,11 @@ incidents_df[(incidents_df['latitude'] == 37.6499) & (incidents_df['longitude'] 
 # %% [markdown]
 # That point has probably the correct values for the attributes `state` and `city_or_county`.
 
-# %% [markdown]
+# %%
 # FIXME: introdurre meglio, abbiamo usato
 # geolocator = Nominatim(user_agent="?????"), assicurarsi abbia confini 2013-2020
-#
+
+# %% [markdown]
 # To fix these inconsistencies we used the library [GeoPy]((https://geopy.readthedocs.io/en/stable/)). This library allows to retrieve the address (state, county, suburb, city, town, village, location name, and other features) corresponding to a given latitude and longitude. We queried the library using all the latitudes and longitudes of the points in the dataset and we saved the results in the CSV file we now load:
 
 # %%
@@ -927,9 +929,7 @@ print('Number of rows in which addresstype is null: ', geopy_df[geopy_df['addres
 # %% [markdown]
 # We also downloaded from [Wikipedia](https://en.wikipedia.org/wiki/County_(United_States)) the list of the counties (or their equivalent) in each state. 
 #
-# This data was used in cases where no consistency was found with GeoPy data. FIXME: come?
-#
-# When latitude and longitude where not available we used this information to check whether the county actually belonged to the state. FIXME: è questo che volevi dire con "This dataset made it possible to verify the data consistency for the *state* and *county* fields without the need for *latitude* and *longitude* values"?
+# This data was used in cases where no consistency was found with GeoPy data: when latitude and longitude where not available we used this information to check whether the county actually belonged to the state. 
 
 # %%
 counties_path = os.path.join(DATA_FOLDER_PATH, 'wikipedia/counties.csv')
@@ -970,9 +970,9 @@ else:
 #
 # - Converts to lowercase the values for *state*, *county*, and *city* in all the dataframes
 # - If *city_or_county* contains values for both city and county, splits them into two different fields
-# - Removes from *city_or_county* the words 'city of' and 'county' FIXME: dire perchè
+# - Removes from *city_or_county* the words 'city of' and 'county' to avoid potential inconsistencies during distance calculations
 # - Removes from *city_or_county* punctuation and numerical values
-# - Removes frequent words from *address* and *display_name* (e.g., "Street," "Avenue," "Boulevard") FIXME: da entrambi? dire perchè
+# - Removes frequent words from *address* and *display_name* (e.g., "Street," "Avenue," "Boulevard") to avoid potential inconsistencies during distance calculations
 #
 # When latitude and longitude are available and therefore Geopy provided information for the corresponding location:
 # - checks for equality between *state* and *state_geopy*
@@ -1019,7 +1019,10 @@ print('Number of rows with null value for longitude: ', geo_df['longitude'].isnu
 sns.heatmap(geo_df.isnull(), cbar=False, xticklabels=True)
 
 # %% [markdown]
-# After this check, all the entries in the dataset have at least the state value not null and consistent. Only 12,796 data points, which account for 4.76% of the dataset, were found to have inconsistent latitude and longitude values.  FIXME: ogni volta che c'è un percentuale (o qualsiasi numero in generale) nel markdown bisognerebbe averli calcolati e stampati nelle celle di codice precedenti
+# After this check, all the entries in the dataset have at least the state value not null and consistent. Only 12,796 data points, which account for 4.76% of the dataset, were found to have inconsistent latitude and longitude values.  
+
+# %%
+# FIXME: ogni volta che c'è un percentuale (o qualsiasi numero in generale) nel markdown bisognerebbe averli calcolati e stampati nelle celle di codice precedenti
 
 # %% [markdown]
 # Below, we have included some plots to visualize the inconsistent values in the dataset.
@@ -1076,7 +1079,7 @@ print('Number of entries with not null values for county but not for lat/lon and
 plot_scattermap_plotly(dummy_df, 'state', zoom=2, title='Missing county')
 
 # %% [markdown]
-# Visualize the number of entries for each city where we have the *city* value but not the *county* FIXME: dove stampiamo df dire 'display', visualize è più per le immagini
+# Display the number of entries for each city where we have the *city* value but not the *county*.
 
 # %%
 geo_df.loc[(geo_df['latitude'].notna()) & (geo_df['county'].isna()) & (geo_df['city'].notna())].groupby('city').count()
@@ -2083,7 +2086,8 @@ new_age_df[new_age_df['n_participants_adult'] > 60][['n_participants', 'n_partic
     'n_participants_child', 'n_participants_teen']]
 
 # %%
-# distribuition number of participants divided by age group FIXME: sostituire 'divided by' con 'per' o 'by', con 'divided' si intede proprio la divisione (/)
+# distribuition number of participants divided by age group 
+#FIXME: sostituire 'divided by' con 'per' o 'by', con 'divided' si intede proprio la divisione (/)
 fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 8), sharey=False) # FIXME: binning come sopra, valutare se fare 3 istogrammi con sharey in subplots distinti
 
 ax0.hist(age_temporary_df['n_participants_child'], bins=15, range=(0,10), density=False, histtype='step',
