@@ -703,7 +703,6 @@ def set_gender_age_consistent_data(row):
 
     return new_data_row
 
-
 ####################### Characteristics data cleaning #######################
 
 # incidents tags
@@ -867,7 +866,6 @@ def check_tag_consistency(row):
     if (row[IncidentTag.children.name] and row['n_participants_child'] == 0) or (not(row[IncidentTag.children.name]) and row['n_participants_child'] > 0):
         row['tag_consistency'] = False
         return row
-        
     if((row["incident_characteristics1"] == "Non-Shooting Incident" or row["incident_characteristics2"] ==
         "Non-Shooting Incident") and row[IncidentTag.shots.name]): #consistency for non-shooting incidents
         row['tag_consistency'] = False

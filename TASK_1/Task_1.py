@@ -2180,7 +2180,135 @@ plt.show()
 new_age_df.describe()
 
 # %%
-incidents_df[new_age_df.columns] = new_age_df[new_age_df.columns]
+# merge characteristics list
+
+characteristics1_frequency = pd.Series.to_dict(incidents_data.pivot_table(columns=['incident_characteristics1'], aggfunc='size'))
+characteristics2_frequency = pd.Series.to_dict(incidents_data.pivot_table(columns=['incident_characteristics2'], aggfunc='size'))
+
+characteristics_frequency = {}
+keys1 = list(characteristics1_frequency.keys())
+keys2 = list(characteristics2_frequency.keys())
+
+i = 0
+j = 0
+while i < len(characteristics1_frequency) and j < len(characteristics2_frequency):
+    if keys1[i] > keys2[j]:
+        characteristics_frequency[keys2[j]] = characteristics2_frequency[keys2[j]]
+        j += 1
+    elif keys1[i] == keys2[j]:
+        characteristics_frequency[keys2[j]] = characteristics2_frequency[keys2[j]] + characteristics1_frequency[keys1[i]]
+        i += 1
+        j += 1
+    else:
+        characteristics_frequency[keys1[i]] = characteristics1_frequency[keys1[i]]
+        i += 1
+
+if(len(characteristics1_frequency) < len(characteristics2_frequency)):
+    for j in range(len(characteristics1_frequency), len(characteristics2_frequency)):
+        characteristics_frequency[keys2[j]] = characteristics2_frequency[keys2[j]]
+elif(len(characteristics2_frequency) < len(characteristics1_frequency)):
+    for i in range(len(characteristics2_frequency), len(characteristics1_frequency)):
+        characteristics_frequency[keys1[i]] = characteristics1_frequency[keys1[i]]
+
+characteristics_frequency = dict(sorted(characteristics_frequency.items(), key=lambda x:x[1])) # sort by value
+
+# %%
+characteristics_frequency_df = pd.DataFrame({'characteristics': list(characteristics_frequency.keys()), 'occurrences': list(characteristics_frequency.values())})
+
+characteristics_frequency_df
+
+# %%
+
+fig = pd.DataFrame(characteristics_frequency_df).plot(kind='barh', figsize=(5, 18))
+fig.set_yticklabels(characteristics_frequency_df['characteristics'])
+fig.set_xscale("log")
+plt.title("Counts of 'incident_characteristics'")
+plt.xlabel('Count')
+plt.ylabel('Incident characteristics')
+plt.tight_layout()
+
+# %%
+characteristics_count_matrix = pd.crosstab(incidents_data['incident_characteristics2'], incidents_data['incident_characteristics1'])
+fig, ax = plt.subplots(figsize=(25, 20))
+sns.heatmap(characteristics_count_matrix, cmap='coolwarm', ax=ax, xticklabels=True, yticklabels=True, linewidths=.5)
+ax.set_xlabel('incident_characteristics2')
+ax.set_ylabel('incident_characteristics1')  
+ax.set_title('Counts of incident characteristics')
+plt.tight_layout()
+
+# %%
+fig, ax = plt.subplots(figsize=(20, 15))
+sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(by="Shot - Dead (murder, accidental, suicide)", inplace=False, ascending=False).tail(-1),
+            cmap='coolwarm', yticklabels=True)
+
+# %%
+# da capire meglio come inserire il tutto
+
+# create all the tags for each record
+from tags_mapping import *
+
+tagged_incidents_data = build_tagged_dataframe('../data/')
+
+tagged_incidents_data
+
+# %%
+# add tag consistency column
+tag_consistency_attr_name = "tag_consistency"
+col = [True] * tagged_incidents_data.shape[0] #tag consistency assumed true
+tagged_incidents_data.insert(tagged_incidents_data.shape[1], tag_consistency_attr_name, col)
+
+# %%
+from data_preparation_utils import check_consistency_tag, check_consistency_characteristics
+
+# consistency check
+unconsistencies_characteristics = 0
+unconsistencies_tag = 0
+for index, record in tagged_incidents_data.iterrows():
+    if not check_consistency_tag(record):
+        tagged_incidents_data.at[index, tag_consistency_attr_name] = False
+        unconsistencies_tag += 1
+    if not check_consistency_characteristics(record):
+        tagged_incidents_data.at[index, tag_consistency_attr_name] = False # if there is an unconsistencies with characteristics it will be reflected by tags
+        unconsistencies_characteristics += 1
+
+print("characteristics unconsistencies: " + str(unconsistencies_characteristics) + "\ntags unconsistencies: " + str(unconsistencies_tag))
+print("total: " + str(unconsistencies_characteristics + unconsistencies_tag))
+
+# %%
+# correct unconcistencies
+
+# ora questo lavoro è fatto sui dati sporchi
+# poi quando il dataset sarà pulito avrà effettivamente senso
+for index, record in tagged_incidents_data.iterrows():
+    if not(type(record['n_killed']) == str or type(record['n_injured']) == str or type(record['n_participants_child']) == str): # non ce ne sarà bisogno
+        if not(record[IncidentTag.death.name]) and record['n_killed'] > 0:
+            tagged_incidents_data.at[index, IncidentTag.death.name] = True
+        if not(record[IncidentTag.injuries.name]) and record['n_injured'] > 0:
+            tagged_incidents_data.at[index, IncidentTag.injuries.name] = True
+        if not(record[IncidentTag.children.name]) and record['n_participants_child'] > 0:
+            tagged_incidents_data.at[index, IncidentTag.children.name] = True
+
+# %%
+# check tags unconsistencies again
+unconsistencies_tag = 0
+for index, record in tagged_incidents_data.iterrows():
+    if check_consistency_tag(record):
+        if check_consistency_characteristics(record):
+            tagged_incidents_data.at[index, tag_consistency_attr_name] = True # set it back to true if issues are resolved
+    else:
+        unconsistencies_tag += 1
+
+print(unconsistencies_tag)
+
+# %%
+cnt = 0
+for index, record in tagged_incidents_data.iterrows():
+    if not tagged_incidents_data.loc[index, tag_consistency_attr_name]:
+        cnt += 1
+print(cnt)
+
+# %%
+incidents_data[incidents_data['state']=='DISTRICT OF COLUMBIA'].size
 
 # %% [markdown]
 # We join the poverty data with the incidents data:
@@ -2395,7 +2523,7 @@ for label in ax.get_xticklabels():
     year = txt_label[:txt_label.find('-')]
     xticks.append(year+' - '+calendar.month_name[int(month)])
 
-ax.set_xticklabels(xticks);
+ax.set_xticklabels(xticks)
 
 plt.xticks(rotation=90)
 plt.tight_layout()
@@ -2689,5 +2817,3 @@ incidents_df.columns
 # %%
 # incidents_data[time_columns+geo_columns+participants_columns+characteristic_columns+external_columns]
 incidents_df.to_csv('../data/incidents_cleaned.csv', index=False)
-
-
