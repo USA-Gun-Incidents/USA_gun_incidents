@@ -718,7 +718,7 @@ incidents_df.describe(include='all', datetime_is_numeric=True)
 #     - the range of the attributes `age`, `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` is outside the domain of the attributes (e.g. the maximum value for the attribute age is 311)
 
 # %% [markdown]
-# FIX: spostare e introdurre lo studio "more in depth"
+# FIXME: spostare e introdurre lo studio "more in depth"
 #
 # To avoid having to recompute the data every time the kernel is interrupted and to make the results reproducible in a short execution time, we decided to save the data to CSV files at the end of each data preparation phase.
 #
@@ -885,7 +885,7 @@ incidents_df[(incidents_df['latitude'] == 37.6499) & (incidents_df['longitude'] 
 # That point has probably the correct values for the attributes `state` and `city_or_county`.
 
 # %% [markdown]
-# FIX: introdurre meglio, abbiamo usato
+# FIXME: introdurre meglio, abbiamo usato
 # geolocator = Nominatim(user_agent="?????"), assicurarsi abbia confini 2013-2020
 #
 # To fix these inconsistencies we used the library [GeoPy]((https://geopy.readthedocs.io/en/stable/)). This library allows to retrieve the address (state, county, suburb, city, town, village, location name, and other features) corresponding to a given latitude and longitude. We queried the library using all the latitudes and longitudes of the points in the dataset and we saved the results in the CSV file we now load:
@@ -912,21 +912,21 @@ geopy_df.head(n=2)
 # - *display_name*: User-friendly representation of the location, often formatted as a complete address. Used by us to cross-reference with the address in case we are unable to find a match between our data and the GeoPy data set using other information from the address.
 
 # %%
-# FIX: allineare meglio
+# FIXME: allineare meglio
 print('Number of rows without surburbs: ', geopy_df.loc[geopy_df['suburb'].isna()].shape[0])
 print('Number of rows without coordinates: \n', geopy_df['coord_presence'].value_counts())
 print('\nNumber of rows without importance: \n', geopy_df['importance'].isnull().value_counts())
 print('Number of rows in which city is null and town is not null: ', 
     geopy_df[(geopy_df['city'].isnull()) & (geopy_df['town'].notnull())].shape[0])
-print(geopy_df['addresstype'].unique()) # FIX: descr
+print(geopy_df['addresstype'].unique()) # FIXME: descr
 print('Number of rows in which addresstype is null: ', geopy_df[geopy_df['addresstype'].isnull()].shape[0])
 
 # %% [markdown]
 # We also downloaded from [Wikipedia](https://en.wikipedia.org/wiki/County_(United_States)) the list of the counties (or their equivalent) in each state. 
 #
-# This data was used in cases where no consistency was found with GeoPy data. FIX: come?
+# This data was used in cases where no consistency was found with GeoPy data. FIXME: come?
 #
-# When latitude and longitude where not available we used this information to check whether the county actually belonged to the state. FIX: è questo che volevi dire con "This dataset made it possible to verify the data consistency for the *state* and *county* fields without the need for *latitude* and *longitude* values"?
+# When latitude and longitude where not available we used this information to check whether the county actually belonged to the state. FIXME: è questo che volevi dire con "This dataset made it possible to verify the data consistency for the *state* and *county* fields without the need for *latitude* and *longitude* values"?
 
 # %%
 counties_path = os.path.join(DATA_FOLDER_PATH, 'wikipedia/counties.csv')
@@ -967,9 +967,9 @@ else:
 #
 # - Converts to lowercase the values for *state*, *county*, and *city* in all the dataframes
 # - If *city_or_county* contains values for both city and county, splits them into two different fields
-# - Removes from *city_or_county* the words 'city of' and 'county' FIX: dire perchè
+# - Removes from *city_or_county* the words 'city of' and 'county' FIXME: dire perchè
 # - Removes from *city_or_county* punctuation and numerical values
-# - Removes frequent words from *address* and *display_name* (e.g., "Street," "Avenue," "Boulevard") FIX: da entrambi? dire perchè
+# - Removes frequent words from *address* and *display_name* (e.g., "Street," "Avenue," "Boulevard") FIXME: da entrambi? dire perchè
 #
 # When latitude and longitude are available and therefore Geopy provided information for the corresponding location:
 # - checks for equality between *state* and *state_geopy*
@@ -1016,7 +1016,7 @@ print('Number of rows with null value for longitude: ', geo_df['longitude'].isnu
 sns.heatmap(geo_df.isnull(), cbar=False, xticklabels=True)
 
 # %% [markdown]
-# After this check, all the entries in the dataset have at least the state value not null and consistent. Only 12,796 data points, which account for 4.76% of the dataset, were found to have inconsistent latitude and longitude values.  FIX: ogni volta che c'è un percentuale (o qualsiasi numero in generale) nel markdown bisognerebbe averli calcolati e stampati nelle celle di codice precedenti
+# After this check, all the entries in the dataset have at least the state value not null and consistent. Only 12,796 data points, which account for 4.76% of the dataset, were found to have inconsistent latitude and longitude values.  FIXME: ogni volta che c'è un percentuale (o qualsiasi numero in generale) nel markdown bisognerebbe averli calcolati e stampati nelle celle di codice precedenti
 
 # %% [markdown]
 # Below, we have included some plots to visualize the inconsistent values in the dataset.
@@ -1037,7 +1037,7 @@ clean_geo_stat_stats = pd.DataFrame(stats, index=stats_columns).transpose()
 clean_geo_stat_stats
 
 # %%
-geo_null_counts = [] # FIX: mettere in dataframe come sopra
+geo_null_counts = [] # FIXME: mettere in dataframe come sopra
 geo_null_counts.append(len(geo_df.loc[(geo_df['latitude'].notna()) & (geo_df['county'].notna()) & (geo_df['city'].notna())]))
 geo_null_counts.append(len(geo_df.loc[(geo_df['latitude'].notna()) & (geo_df['county'].notna()) & (geo_df['city'].isna())]))
 geo_null_counts.append(len(geo_df.loc[(geo_df['latitude'].notna()) & (geo_df['county'].isna()) & (geo_df['city'].notna())]))
@@ -1062,7 +1062,7 @@ print( 'Samples with not null values for lat/lon\t', geo_null_counts[0]+geo_null
 print( 'Samples with null values for lat/lon    \t', geo_null_counts[4]+geo_null_counts[5]+geo_null_counts[6]+geo_null_counts[7])
 
 # %%
-dummy_df = geo_df[geo_df['latitude'].notna()] # FIX: possiamo sostituire tutte le variabili 'dummy' con nomi più significativi? (anche se temporanee)
+dummy_df = geo_df[geo_df['latitude'].notna()] # FIXME: possiamo sostituire tutte le variabili 'dummy' con nomi più significativi? (anche se temporanee)
 print('Number of entries with not null values for latitude and longitude: ', len(dummy_df))
 plot_scattermap_plotly(dummy_df, 'state', zoom=2,)
 
@@ -1073,7 +1073,7 @@ print('Number of entries with not null values for county but not for lat/lon and
 plot_scattermap_plotly(dummy_df, 'state', zoom=2, title='Missing county')
 
 # %% [markdown]
-# Visualize the number of entries for each city where we have the *city* value but not the *county* FIX: dove stampiamo df dire 'display', visualize è più per le immagini
+# Visualize the number of entries for each city where we have the *city* value but not the *county* FIXME: dove stampiamo df dire 'display', visualize è più per le immagini
 
 # %%
 geo_df.loc[(geo_df['latitude'].notna()) & (geo_df['county'].isna()) & (geo_df['city'].notna())].groupby('city').count()
@@ -1163,7 +1163,7 @@ else: # compute data
         pc = np.quantile(dummy, np.arange(0, 1, 0.05))
         for i in range(len(info_city.columns) - 6):
             info_city.loc[state, county, city][i] = pc[i*2 + 1]
-        info_city.loc[state, county, city][len(info_city.columns) - 6] = len(dummy) # FIX: invece di -6,-5,... si possono mettere le stringhe?
+        info_city.loc[state, county, city][len(info_city.columns) - 6] = len(dummy) # FIXME: invece di -6,-5,... si possono mettere le stringhe?
         info_city.loc[state, county, city][len(info_city.columns) - 5] = min(dummy)
         info_city.loc[state, county, city][len(info_city.columns) - 4] = max(dummy)
         info_city.loc[state, county, city][len(info_city.columns) - 3] = sum(dummy)/len(dummy)
@@ -1182,7 +1182,7 @@ info_city.loc[info_city['tot_points'] > 1].info()
 
 # %%
 plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat', 
-    y_column='centroid_lon', hover_name=False, zoom=2, title='Number of points per city') # FIX: discretizzare e.g. <x, between(x, y), ...
+    y_column='centroid_lon', hover_name=False, zoom=2, title='Number of points per city') # FIXME: discretizzare e.g. <x, between(x, y), ...
 
 # %% [markdown]
 # We utilize the previously calculated data to infer missing values for the *city* field in entries of the dataset where latitude and longitude are available. The *city* field is assigned if the distance of the entry from the centroid falls within the third quartile of all points assigned to that centroid.
@@ -1191,7 +1191,7 @@ plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat',
 def substitute_city(row, info_city):
     if pd.isna(row['city']) and not np.isnan(row['latitude']):
         for state, county, city in info_city.index:
-            if row['state'] == state and row['county'] == county: # FIX: mettere in &
+            if row['state'] == state and row['county'] == county: # FIXME: mettere in &
                 if info_city.loc[state, county, city]['tot_points'] > 1:
                     max_radius = info_city.loc[state, county, city]['75'] # terzo quantile
                     centroid_coord = [info_city.loc[state, county, city]['centroid_lat'], 
@@ -1224,7 +1224,7 @@ print('Number of rows with null values for city: ', final_geo_df['city'].isnull(
 # ### Visualize new data
 
 # %%
-geo_null_counts = [] # FIX: mettere in dataframe come sopra
+geo_null_counts = [] # FIXME: mettere in dataframe come sopra
 geo_null_counts.append(len(final_geo_df.loc[(final_geo_df['latitude'].notna()) & (final_geo_df['county'].notna()) & (final_geo_df['city'].notna())]))
 geo_null_counts.append(len(final_geo_df.loc[(final_geo_df['latitude'].notna()) & (final_geo_df['county'].notna()) & (final_geo_df['city'].isna())]))
 geo_null_counts.append(len(final_geo_df.loc[(final_geo_df['latitude'].notna()) & (final_geo_df['county'].isna()) & (final_geo_df['city'].notna())]))
@@ -1261,7 +1261,7 @@ final_geo_df.head(3)
 # %%
 final_geo_df['state'] = final_geo_df['state'].apply(lambda x: 'Hawaii' if x=='Hawaiʻi' else x) # TODO: togliere (dovrebbe essere fixato altrove)
 incidents_df[final_geo_df.columns] = final_geo_df[final_geo_df.columns]
-incidents_df['state'] = incidents_df['state'].apply(lambda x: x.upper()) # FIX: da spostare?
+incidents_df['state'] = incidents_df['state'].apply(lambda x: x.upper()) # FIXME: da spostare?
 
 # %% [markdown]
 # We check if the attribute `congressional_district` is numbered consistently (with '0' for states with only one congressional district). To do so we use the data from the dataset containing the data about elections in the period of interest (congressional districts are redrawn when (year%10)==0):
@@ -1708,7 +1708,7 @@ age_df['participant_age_group1'].unique()
 # Display the maximum and minimum ages, among the possible valid values, in the dataset. We have set a maximum threshold of 122 years, as it is the age reached by [Jeanne Louise Calment](https://www.focus.it/scienza/scienze/longevita-vita-umana-limite-biologico#:~:text=Dal%201997%2C%20anno%20in%20cui,ha%20raggiunto%20un%20limite%20biologico), the world's oldest person.
 
 # %%
-def max_min_value(attribute): # FIX: convertire in float, escludere <= 122 e > 0 e usare la funzione max sulle colonne di interesse
+def max_min_value(attribute): # FIXME: convertire in float, escludere <= 122 e > 0 e usare la funzione max sulle colonne di interesse
     age = []
     for i in age_df[attribute].unique():
         try: 
@@ -1950,7 +1950,7 @@ display(age_temporary_df['n_participants'].describe())
 
 # %%
 # distribuition number of participants
-fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(20, 8), sharey=False) # FIX: mettere in unico plot con num bins = range
+fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(20, 8), sharey=False) # FIXME: mettere in unico plot con num bins = range
 
 ax0.hist(age_temporary_df['n_participants'], bins=15, range=(0,15), edgecolor='black', linewidth=0.8)
 ax0.set_xlabel('Number of participants')
@@ -2056,7 +2056,7 @@ sns.heatmap(new_age_df.isnull(), cbar=False)
 
 # %%
 # distribuition number of participants
-fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(20, 8), sharey=False) # FIX: come sopra
+fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(20, 8), sharey=False) # FIXME: come sopra
 
 ax0.hist(age_temporary_df['n_participants'], bins=15, range=(0,15), edgecolor='black', linewidth=0.8)
 ax0.set_xlabel('Number of participants')
@@ -2080,8 +2080,8 @@ new_age_df[new_age_df['n_participants_adult'] > 60][['n_participants', 'n_partic
     'n_participants_child', 'n_participants_teen']]
 
 # %%
-# distribuition number of participants divided by age group FIX: sostituire 'divided by' con 'per' o 'by', con 'divided' si intede proprio la divisione (/)
-fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 8), sharey=False) # FIX: binning come sopra, valutare se fare 3 istogrammi con sharey in subplots distinti
+# distribuition number of participants divided by age group FIXME: sostituire 'divided by' con 'per' o 'by', con 'divided' si intede proprio la divisione (/)
+fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 8), sharey=False) # FIXME: binning come sopra, valutare se fare 3 istogrammi con sharey in subplots distinti
 
 ax0.hist(age_temporary_df['n_participants_child'], bins=15, range=(0,10), density=False, histtype='step',
     linewidth=4, color='blue', label='Children')
@@ -2128,7 +2128,7 @@ plt.show()
 
 # %%
 # distribuition number of participants divided by gender
-fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 8), sharey=False) # FIX: idem come sopra
+fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 8), sharey=False) # FIXME: idem come sopra
 
 ax0.hist(age_temporary_df['n_males'], bins=15, range=(0,10), density=False, histtype='step',
     linewidth=4, color='blue', label='Males')
@@ -2169,7 +2169,7 @@ plt.show()
 
 # %%
 plt.figure(figsize=(20, 8))
-plt.hist(new_age_df['avg_age_participants'], bins=100, density=False, edgecolor='black', linewidth=0.8) # FIX: provare + binning (magare anche sturges's rule)
+plt.hist(new_age_df['avg_age_participants'], bins=100, density=False, edgecolor='black', linewidth=0.8) # FIXME: provare + binning (magare anche sturges's rule)
 plt.xlim(0, 100)
 plt.xlabel('Participants average age')
 plt.ylabel('Frequency')
@@ -2178,6 +2178,12 @@ plt.show()
 
 # %%
 new_age_df.describe()
+
+# %% [markdown]
+# ### Characteristic forse (da cancellare)
+
+# %%
+#TODO: rivedere cosa dovrebbe fare questa funzione, così non funziona
 
 # %%
 # merge characteristics list
@@ -2311,6 +2317,12 @@ print(cnt)
 incidents_data[incidents_data['state']=='DISTRICT OF COLUMBIA'].size
 
 # %% [markdown]
+# ### Join population, poverty and eletion data
+
+# %%
+#TODO: probabilmente da spostare (?) per ora ho messo il sottotitolo a questa sezione così da capire che è un blocco a parte guardando outline
+
+# %% [markdown]
 # We join the poverty data with the incidents data:
 
 # %%
@@ -2407,7 +2419,7 @@ plt.axis('off')
 plt.title('Word cloud of notes')
 
 # %%
-incidents_df = incidents_df[incidents_df['state']!='HAWAIʻI'] # FIX: una volta risolto il bug andrà tolto
+incidents_df = incidents_df[incidents_df['state']!='HAWAIʻI'] # FIXME: una volta risolto il bug andrà tolto
 
 # %%
 incidents_per_month_per_state = incidents_df.groupby(['state', 'month', 'year']).size()
@@ -2586,7 +2598,7 @@ pyo.plot(fig, filename='../html/scatter_poverty.html', auto_open=False)
 # ## Incident characteristics features: exploration and preparation
 
 # %%
-# FIX: aggiungere commenti
+# FIXME: aggiungere commenti
 
 # %%
 # check if ch1 and ch2 are always different
