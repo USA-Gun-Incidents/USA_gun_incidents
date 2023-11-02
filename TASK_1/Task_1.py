@@ -669,6 +669,14 @@ incidents_df.info()
 # %% [markdown]
 # We observe that the downcasting of many attributes has not succeeded. This is due to the presence of missing or out of range values. TODO: to handle
 #
+# We drop duplicates:
+
+# %%
+print(f"# of rows before dropping duplicates: {incidents_df.shape[0]}")
+incidents_df.drop_duplicates(inplace=True)
+print(f"# of rows after dropping duplicates: {incidents_df.shape[0]}")
+
+# %% [markdown]
 # Now we visualize missing values:
 
 # %%
@@ -689,14 +697,6 @@ sns.heatmap(incidents_df.isnull(), cbar=False, xticklabels=True, ax=ax)
 #     - `incident_characteristics2`
 # - Often `participant_age1` is missing but `participant_age_group1` is not and the same holds for `state_house_district` w.r.t `state_senate_district`.
 # - `latitude` and `longitude` are often available and could be used to recover the missing values of `address`, `congressional_district`, `state_house_district` and `state_senate_district` (using external libraries that offer this service).
-
-# %% [markdown]
-# We drop duplicates:
-
-# %%
-print(f"# of rows before dropping duplicates: {incidents_df.shape[0]}")
-incidents_df.drop_duplicates(inplace=True)
-print(f"# of rows after dropping duplicates: {incidents_df.shape[0]}")
 
 # %% [markdown]
 # We display descriptive statistics:
@@ -2786,6 +2786,13 @@ incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
     figsize=(10,6),
     title='Counts of the addresses with the 50 highest number of incidents'
 )
+
+# %%
+fig, ax = plt.subplots(figsize=(12,8)) 
+sns.heatmap(incidents_df[['date', 'state', 'city_or_county', 'address', 'latitude', 'longitude', 'congressional_district', 'state_house_district', 'state_senate_district', 'participant_age1', 'participant_age_group1', 'participant_gender1', 'min_age_participants', 'avg_age_participants', 'max_age_participants', 'n_participants_child', 'n_participants_teen', 'n_participants_adult', 'n_males', 'n_females', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 'n_participants', 'notes', 'incident_characteristics1', 'incident_characteristics2']].isnull(), cbar=False, xticklabels=True, ax=ax)
+
+# %% [markdown]
+# We are aware of the fact that we could use classifier to inferr missing values. We chose not to do it because we think such method do not align with the nature of gun incidents. Citando il libro "Classification is the task of learning a target function f that maps each attribute set x to one of the predefined class labels y", il problema è che non può esistere una tale funzione (possono esserci (e immagino siano anche molti comuni) record uguali su tutti gli attributi tranne uno, per cui l'inferenza è impossibile).
 
 # %%
 incidents_df.columns
