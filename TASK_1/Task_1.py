@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.dates as mdates
 import plotly.express as px
+import plotly.offline as pyo
 import math
 import os
 import calendar
@@ -209,6 +210,7 @@ poverty_df['povertyPercentage'] = poverty_df.apply(
 fig = px.line(
     poverty_df.pivot(index='year', columns='state', values='povertyPercentage'),
     title='Poverty percentage in the US over the years')
+pyo.plot(fig, filename='../html/lines_poverty.html', auto_open=False)
 fig.show()
 
 # %% [markdown]
@@ -242,6 +244,7 @@ fig.update_layout(
     title_text='US Poverty Percentage over the years',
     coloraxis_colorbar_title_text = 'Poverty (%)'
 )
+pyo.plot(fig, filename='../html/animation_poverty.html', auto_open=False)
 fig.show()
 
 # %%
@@ -553,6 +556,7 @@ fig = px.choropleth(
 fig.update_layout(
     legend_title_text='Party'
 )
+pyo.plot(fig, filename='../html/animation_elections.html', auto_open=False)
 fig.show()
 
 # %% [markdown]
@@ -2576,11 +2580,10 @@ fig = px.scatter(
     facet_col="year",
     facet_col_wrap=3
 )
+pyo.plot(fig, filename='../html/scatter_poverty.html', auto_open=False)
 fig.show()
 
-# %%
-import plotly.offline as pyo
-pyo.plot(fig, filename='../html/scatter_poverty.html', auto_open=False)
+
 
 # %% [markdown]
 # ## Incident characteristics features: exploration and preparation
