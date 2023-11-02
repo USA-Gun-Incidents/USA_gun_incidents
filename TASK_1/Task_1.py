@@ -212,9 +212,15 @@ fig = px.line(
 fig.show()
 
 # %% [markdown]
-# We also visualize how the poverty percentage changed with an animated map:
+# We also visualize how the poverty percentage changed with an animated map (to do this we need the alphanumeric codes associated to each state):
 
 # %%
+usa_states_df = pd.read_csv(
+    'https://www2.census.gov/geo/docs/reference/state.txt',
+    sep='|',
+    dtype={'STATE': str, 'STATE_NAME': str}
+)
+usa_name_alphcode = usa_states_df.set_index('STATE_NAME').to_dict()['STUSAB']
 poverty_df.sort_values(by=['state', 'year'], inplace=True)
 poverty_df['px_code'] = poverty_df['state'].map(usa_name_alphcode) # retrieve the code associated to each state (the map is defined in the file data_preparation_utils.py)
 fig = px.choropleth(
@@ -818,12 +824,6 @@ incidents_df.drop(columns=['date_minus10', 'date_minus11', 'date_mean', 'date_me
 # We check if the values of the attribute `state` are admissible comparing them with an official list of states:
 
 # %%
-usa_states_df = pd.read_csv(
-    'https://www2.census.gov/geo/docs/reference/state.txt',
-    sep='|',
-    dtype={'STATE': str, 'STATE_NAME': str}
-)
-usa_name_alphcode = usa_states_df.set_index('STATE_NAME').to_dict()['STUSAB']
 states = incidents_df['state'].unique()
 not_existing_states = False
 missing_states = False
@@ -2555,19 +2555,32 @@ fig = px.line(
 fig.show()
 
 # %%
-incidents_per_state_2016 = incidents_df[(incidents_df['year']==2016) & (incidents_df['n_killed']>0)].groupby(['state', 'population', 'povertyPercentage', 'party']).size()
+# merge data about the winning party
+winning_party_per_state_copy = winning_party_per_state.copy()
+winning_party_per_state_copy['year'] = winning_party_per_state['year'] + 1
+winning_party_per_state = pd.concat([winning_party_per_state, winning_party_per_state_copy], ignore_index=True)
+incidents_df = incidents_df.merge(winning_party_per_state[['state', 'year', 'winningparty']], on=['state', 'year'], how='left')
+
+# %%
+incidents_per_state_2016 = incidents_df[(incidents_df['n_killed']>0)].groupby(['state', 'year', 'population', 'povertyPercentage', 'winningparty']).size()
 incidents_per_state_2016 = incidents_per_state_2016.to_frame(name='incidents').reset_index()
 incidents_per_state_2016['incidents_per_100k_inhabitants'] = (incidents_per_state_2016['incidents'] / incidents_per_state_2016['population'])*100000
 fig = px.scatter(
     incidents_per_state_2016,
     x='povertyPercentage',
     y='incidents_per_100k_inhabitants',
-    color='party',
+    color='winningparty',
     hover_name='state',
     hover_data={'povertyPercentage': True, 'incidents_per_100k_inhabitants': True},
-    title='Mortal gun incidents in the USA in 2016'
+    title='Mortal gun incidents in the USA',
+    facet_col="year",
+    facet_col_wrap=3
 )
 fig.show()
+
+# %%
+import plotly.offline as pyo
+pyo.plot(fig, filename='../html/scatter_poverty.html', auto_open=False)
 
 # %% [markdown]
 # ## Incident characteristics features: exploration and preparation
