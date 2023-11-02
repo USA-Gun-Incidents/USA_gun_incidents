@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 # %%
-DATA_FOLDER_PATH = './data/'
+DATA_FOLDER_PATH = '../../data/'
 incidents_path = DATA_FOLDER_PATH + 'incidents.csv'
 incidents_data = pd.read_csv(incidents_path, low_memory=False)
 
@@ -43,34 +43,27 @@ incidents_data.describe(include='all')
 incidents_data[(incidents_data['max_age_participants']>100) & (incidents_data['max_age_participants']<200)]
 
 # %%
-def set_uint8_oor_to_nan(x):
-    if np.issubdtype(type(x), np.integer) and 0 <= x < np.iinfo(np.uint8).max:
-        return x
-    return np.nan
-
 MAX_AGE = 150
-def set_age_oor_to_nan(x):
-    if np.issubdtype(type(x), np.integer) and 0 <= x < MAX_AGE:
-        return x
-    return np.nan
+MAX_PARTICIPANTS = 1000
 
-incidents_data['participant_age1'] = incidents_data['participant_age1'].apply(set_age_oor_to_nan).astype('UInt8')
-incidents_data['min_age_participants'] = incidents_data['min_age_participants'].apply(set_age_oor_to_nan).astype('UInt8')
-incidents_data['avg_age_participants'] = incidents_data['avg_age_participants'].apply(lambda x: x if 0 <= x < MAX_AGE else np.nan).astype('Float32')
-incidents_data['max_age_participants'] = incidents_data['max_age_participants'].apply(set_age_oor_to_nan).astype('UInt8')
-incidents_data['n_participants_child'] = incidents_data['n_participants_child'].apply(set_uint8_oor_to_nan).astype('UInt8')
-incidents_data['n_participants_teen'] = incidents_data['n_participants_teen'].apply(set_uint8_oor_to_nan).astype('UInt8')
-incidents_data['n_participants_adult'] = incidents_data['n_participants_adult'].apply(set_uint8_oor_to_nan).astype('UInt8')
-incidents_data['n_males'] = incidents_data['n_males'].apply(set_uint8_oor_to_nan).astype('UInt8')
-incidents_data['n_females'] = incidents_data['n_females'].apply(set_uint8_oor_to_nan).astype('UInt8')
-incidents_data['n_arrested'] = incidents_data['n_arrested'].apply(set_uint8_oor_to_nan).astype('UInt8')
-incidents_data['n_unharmed'] = incidents_data['n_unharmed'].apply(set_uint8_oor_to_nan).astype('UInt8')
-incidents_data['n_killed'] = incidents_data['n_killed'].astype('UInt8')
-incidents_data['n_injured'] = incidents_data['n_injured'].astype('UInt8')
-incidents_data['n_participants'] = incidents_data['n_participants'].astype('UInt8')
+def set_oor_to_nan(x, set_non_int_to_nan, max):
+    if set_non_int_to_nan and not float.is_integer(x):
+        return np.nan
+    if x < 0 or x >= max:
+        return np.nan
+    return x
 
-# %%
-incidents_data['n_females'][0:100]
+incidents_data['participant_age1'] = incidents_data['participant_age1'].apply(set_oor_to_nan, args=(True, MAX_AGE))
+incidents_data['min_age_participants'] = incidents_data['min_age_participants'].apply(set_oor_to_nan, args=(True, MAX_AGE))
+incidents_data['avg_age_participants'] = incidents_data['avg_age_participants'].apply(set_oor_to_nan, args=(False, MAX_AGE))
+incidents_data['max_age_participants'] = incidents_data['max_age_participants'].apply(set_oor_to_nan, args=(True, MAX_AGE))
+incidents_data['n_participants_child'] = incidents_data['n_participants_child'].apply(set_oor_to_nan, args=(True, MAX_PARTICIPANTS))
+incidents_data['n_participants_teen'] = incidents_data['n_participants_teen'].apply(set_oor_to_nan, args=(True, MAX_PARTICIPANTS))
+incidents_data['n_participants_adult'] = incidents_data['n_participants_adult'].apply(set_oor_to_nan, args=(True, MAX_PARTICIPANTS))
+incidents_data['n_males'] = incidents_data['n_males'].apply(set_oor_to_nan, args=(True, MAX_PARTICIPANTS))
+incidents_data['n_females'] = incidents_data['n_females'].apply(set_oor_to_nan, args=(True, MAX_PARTICIPANTS))
+incidents_data['n_arrested'] = incidents_data['n_arrested'].apply(set_oor_to_nan, args=(True, MAX_PARTICIPANTS))
+incidents_data['n_unharmed'] = incidents_data['n_unharmed'].apply(set_oor_to_nan, args=(True, MAX_PARTICIPANTS))
 
 # %%
 incidents_data.info()
@@ -138,22 +131,10 @@ incidents_data['participants1_wrt_n_participants_consistency'] = ((incidents_dat
 incidents_data['nan_values'] = False
 incidents_data.loc[incidents_data.isnull().any(axis=1), 'nan_values'] = True
 
-
-
-
 # %%
-a = incidents_data['avg_age_participants'].unique()
-for i in a:
-    print(i)
-
-# %%
-incidents_data['min_age_participants'].unique()
-
-# %%
-incidents_data['max_age_participants'].unique()
-
-# %%
-incidents_data['n_males'].unique()
+incidents_data[incidents_data['age_consistency']==False][['participant_age1', 'participant_age_group1', 
+    'min_age_participants', 'avg_age_participants', 'max_age_participants',
+    'n_participants_child', 'n_participants_teen', 'n_participants_adult', 'n_participants']]
 
 # %%
 incidents_data[['participant_age1', 'participant_age_group1', 'participant_gender1', 
@@ -162,3 +143,23 @@ incidents_data[['participant_age1', 'participant_age_group1', 'participant_gende
     'n_males', 'n_females',
     'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 
     'n_participants']]
+
+# %%
+incidents_data[['n_females', 'date']]
+
+# %%
+# get rows with nan values
+
+
+# %%
+# capisci not in np.nan
+
+def check(x):
+    print(type(x))
+    print(type(x['n_females']))
+    print(x['n_females'].isna())
+    # if x['n_females'].isnull():
+    #     print(x['date'])
+
+
+inc = incidents_data[:10].apply(check)
