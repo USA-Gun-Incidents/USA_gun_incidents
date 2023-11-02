@@ -3,3 +3,4 @@ __pycache__
 **/.DS_Store
 **/data/geopy/geopy_merged/geopy_merged.json
 **/data/final.csv
+**/data/incidents_cleaned.csv
