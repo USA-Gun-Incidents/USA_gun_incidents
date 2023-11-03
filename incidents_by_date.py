@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
@@ -132,7 +131,7 @@ incidents_df[(incidents_df['date'].dt.month==7) & (incidents_df['date'].dt.day==
 
 # %% [markdown]
 # [Federal Holiday calendar in USA](https://www.commerce.gov/hr/employees/leave/holidays)
-#
+# 
 # | Holiday | Date |
 # | :------------: | :------------: |
 # | New Year’s Day | January 1 |
@@ -169,16 +168,16 @@ incidents_df.groupby(incidents_df['date'].isin(['2013-11-29', '2014-11-28', '201
 
 # %% [markdown]
 # Thanksgiving Day è il giorno con meno incidenti in assoluto
-#
+# 
 # Capodanno quello con più incidenti
-#
+# 
 # 29 febbraio non lo considero
-#
+# 
 # Natale, Columnbus Day, Juneteenth National Independence Day, Thanksgiving Day, Veterans Day sono nel primo quantile. \
 # Natale e Ringraziamento stanno a casa a festeggiare. \
 # Durante Columnbus Day, Juneteenth National Independence Day, Veterans Day vengono organizzate parate e cose pubbliche. \
 # Juneteenth National Independence Day: celebra la liberazione degli schiavi in ​​Texas il 19 giugno 1865.           
-#
+# 
 # A marzo molti incidenti \
 # Altre cose da considerare: spring break, san Patrick (17 marzo), pasqua (la festeggiano e ci sono anche eventi religiosi tipo processioni)
 
@@ -423,6 +422,19 @@ plt.xticks(rotation=90)
 plt.title('Incidents with only one participant')
 plt.show()
 
+n_cols = 10
+fig, ax = plt.subplots(figsize=(20, 4), nrows=2, ncols=n_cols)
+row = 0
+for i, tag in enumerate(tags_columns):
+    n_rows_tag = incidents_df[(incidents_df[tag]==True)].shape[0]
+    if i!=0 and i%n_cols==0:
+        row += 1
+    ax[row][i%n_cols].pie([n_rows_tag, incidents_df.shape[0]-n_rows_tag], autopct='%1.2f%%')
+    ax[row][i%n_cols].set_title(tag)
+fig.legend(['Tag', 'No tag'], loc='upper right')
+fig.suptitle('Percentage of incidents with tag')
+plt.show()
+
 # %%
 incidents_df[(incidents_df['n_participants']==1) & (incidents_df['tag_consistency'] & (incidents_df['aggression']))]['incident_characteristics1'][0]
 
@@ -468,8 +480,8 @@ plt.show()
 
 # %% [markdown]
 # Non sembra avere senso dividere per incidenti con 1 unico partecipante (:
-#
-#
+# 
+# 
 
 # %% [markdown]
 # ### grafici da copiare da un altra parte
@@ -487,7 +499,6 @@ plt.ylabel('Number of incidents')
 plt.legend()
 plt.title('Number of participants for each incident per gender')
 plt.show()
-
 
 # %%
 fig, (ax0, ax1, ax2) = plt.subplots(3, 1, figsize=(20, 12), sharex=True, sharey=True)
@@ -511,3 +522,5 @@ ax1.set_ylabel('Numer of incidents')
 ax2.set_ylabel('Numer of incidents')
 ax0.set_title('Number of participants for each incident per age')
 plt.show()
+
+
