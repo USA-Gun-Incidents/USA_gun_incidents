@@ -327,7 +327,7 @@ plt.show()
 # 'unintentional'
 
 # %%
-tag_list = ['firearm', 'air_gun', 'shots', 'aggression', 'suicide','injuries', 'death', 'road', 'illegal_holding', 'house', 'school',
+tags_columns = ['firearm', 'air_gun', 'shots', 'aggression', 'suicide','injuries', 'death', 'road', 'illegal_holding', 'house', 'school',
     'children', 'drugs', 'officers', 'organized', 'social_reasons','defensive', 'workplace', 'abduction', 'unintentional']
 
 # %%
@@ -349,7 +349,7 @@ def annot_text(val):
 
 # %%
 plt.figure(figsize=(20, 7))
-correlation_matrix = incidents_df[(incidents_df['n_participants']==1) & (incidents_df['tag_consistency'])][tag_list].corr()
+correlation_matrix = incidents_df[(incidents_df['n_participants']==1) & (incidents_df['tag_consistency'])][tags_columns].corr()
 sns.heatmap(correlation_matrix, annot=correlation_matrix.applymap(annot_text), cmap='coolwarm', center=0, fmt='')
 plt.title('Correlation between tags (incidents with 1 participants and consistent tag)')
 plt.show()
@@ -369,11 +369,11 @@ def correlated_tag(correlation_matrix, correlation_threshold):
     return correlated_tag
 
 # %%
-correlated_tag_list = correlated_tag(correlation_matrix, correlation_threshold=0.2)
+correlated_tags_columns = correlated_tag(correlation_matrix, correlation_threshold=0.2)
 
 # sort correlated tag by correlation value
-correlated_tag_list.sort(key=lambda x: abs(x[2]), reverse=True)
-for pair in correlated_tag_list:
+correlated_tags_columns.sort(key=lambda x: abs(x[2]), reverse=True)
+for pair in correlated_tags_columns:
     print(f"{pair[0]} - {pair[1]} \t\tCorrelation: {pair[2]:.4f}")
 
 # %%
@@ -408,12 +408,12 @@ plt.show()
 # %%
 plt.figure(figsize=(20, 5))
 
-plt.bar(tag_list, incidents_df[(incidents_df['n_participants']==1) & (incidents_df['tag_consistency'])][tag_list].sum(),
+plt.bar(tags_columns, incidents_df[(incidents_df['n_participants']==1) & (incidents_df['tag_consistency'])][tags_columns].sum(),
     alpha=0.8, edgecolor='black', linewidth=0.8)
 
-for i in range(len(tag_list)):
-    plt.text(i-0.3, incidents_df[(incidents_df['n_participants']==1) & (incidents_df['tag_consistency'])][tag_list].sum()[i]+100, 
-        str(round(100*incidents_df[(incidents_df['n_participants']==1) & (incidents_df['tag_consistency'])][tag_list].sum()[i]/ 
+for i in range(len(tags_columns)):
+    plt.text(i-0.3, incidents_df[(incidents_df['n_participants']==1) & (incidents_df['tag_consistency'])][tags_columns].sum()[i]+100, 
+        str(round(100*incidents_df[(incidents_df['n_participants']==1) & (incidents_df['tag_consistency'])][tags_columns].sum()[i]/ 
         incidents_df[(incidents_df['n_participants']==1) & (incidents_df['tag_consistency'])].count().max(), 2))+'%', 
         fontsize=10)
 
@@ -422,6 +422,9 @@ plt.ylabel('Number of incidents')
 plt.xticks(rotation=90)
 plt.title('Incidents with only one participant')
 plt.show()
+
+# %%
+incidents_df[(incidents_df['n_participants']==1) & (incidents_df['tag_consistency'] & (incidents_df['aggression']))]['incident_characteristics1'][0]
 
 # %% [markdown]
 # nel grafico sopra le percentuali sono del numero di incidenti con il corrispondente tag rispetto al numero totale di incidenti con 1 solo partecipante e in cui tag_consistency==True
