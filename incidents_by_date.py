@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
@@ -131,7 +132,7 @@ incidents_df[(incidents_df['date'].dt.month==7) & (incidents_df['date'].dt.day==
 
 # %% [markdown]
 # [Federal Holiday calendar in USA](https://www.commerce.gov/hr/employees/leave/holidays)
-# 
+#
 # | Holiday | Date |
 # | :------------: | :------------: |
 # | New Year’s Day | January 1 |
@@ -168,16 +169,16 @@ incidents_df.groupby(incidents_df['date'].isin(['2013-11-29', '2014-11-28', '201
 
 # %% [markdown]
 # Thanksgiving Day è il giorno con meno incidenti in assoluto
-# 
+#
 # Capodanno quello con più incidenti
-# 
+#
 # 29 febbraio non lo considero
-# 
+#
 # Natale, Columnbus Day, Juneteenth National Independence Day, Thanksgiving Day, Veterans Day sono nel primo quantile. \
 # Natale e Ringraziamento stanno a casa a festeggiare. \
 # Durante Columnbus Day, Juneteenth National Independence Day, Veterans Day vengono organizzate parate e cose pubbliche. \
 # Juneteenth National Independence Day: celebra la liberazione degli schiavi in ​​Texas il 19 giugno 1865.           
-# 
+#
 # A marzo molti incidenti \
 # Altre cose da considerare: spring break, san Patrick (17 marzo), pasqua (la festeggiano e ci sono anche eventi religiosi tipo processioni)
 
@@ -464,5 +465,46 @@ plt.show()
 
 # %% [markdown]
 # Non sembra avere senso dividere per incidenti con 1 unico partecipante (:
+#
+#
+
+# %% [markdown]
+# ### grafici da copiare da un altra parte
+
+# %%
+plt.figure(figsize=(20, 5))
+plt.bar(incidents_df['n_males'].value_counts().index-0.2, incidents_df['n_males'].value_counts(), 0.4,
+    edgecolor='black', linewidth=0.8, label='Males participants')
+plt.bar(incidents_df['n_females'].value_counts().index+0.2, incidents_df['n_females'].value_counts(), 0.4,
+    edgecolor='black', linewidth=0.8, label='Females participants')
+plt.xticks(range(1, 64))
+plt.yscale('log')
+plt.xlabel('Number of participants')
+plt.ylabel('Number of incidents')
+plt.legend()
+plt.title('Number of participants for each incident per gender')
+plt.show()
 
 
+# %%
+fig, (ax0, ax1, ax2) = plt.subplots(3, 1, figsize=(20, 12), sharex=True, sharey=True)
+
+ax0.bar(incidents_df['n_participants_child'].value_counts().index, incidents_df['n_participants_child'].value_counts(),
+    alpha=0.8, color='magenta', edgecolor='black', linewidth=0.8, label='Children')
+ax0.legend()
+ax1.bar(incidents_df['n_participants_teen'].value_counts().index, incidents_df['n_participants_teen'].value_counts(),
+    alpha=0.8, color='red', edgecolor='black', linewidth=0.8, label='Teen')
+ax1.legend()
+ax2.bar(incidents_df['n_participants_adult'].value_counts().index, incidents_df['n_participants_adult'].value_counts(),
+    color='orange', edgecolor='black', linewidth=0.8, label='Adult')
+ax2.legend()
+
+plt.xlim(-1, 64)
+plt.xticks(range(0, 64))
+plt.yscale('log')
+plt.xlabel('Number of participants')
+ax0.set_ylabel('Number of incidents')
+ax1.set_ylabel('Numer of incidents')
+ax2.set_ylabel('Numer of incidents')
+ax0.set_title('Number of participants for each incident per age')
+plt.show()
