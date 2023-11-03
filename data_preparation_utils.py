@@ -902,3 +902,31 @@ def check_characteristics_consistency(row):
         and (row['n_killed']+row['n_injured']) < 4 and row['n_participants'] < 4):
         row['tag_consistency'] = False
     return row
+
+def set_tags_consistent_data(row):
+    '''
+    This function returns a row with consistent value of tags w.r.t. the other info of the incident.
+
+    :param row: row of the incidents dataframe
+    :return new_row: row of the dataframe with tags set in a consistent way
+    '''
+    new_row = row
+    if(not(row[IncidentTag.death.name]) and row['n_killed'] > 0):
+        new_row[IncidentTag.death.name] = True
+    if(not(row[IncidentTag.injuries.name]) and row['n_injured'] > 0):
+        new_row[IncidentTag.injuries.name] = True
+    if(not(row[IncidentTag.children.name]) and row['n_participants_child'] > 0):
+        new_row[IncidentTag.children.name] = True
+    if(row[IncidentTag.death.name] and row['n_killed'] == 0):
+        new_row[IncidentTag.death.name] = False
+    if(row[IncidentTag.injuries.name] and row['n_injured'] == 0):
+        new_row[IncidentTag.injuries.name] = False
+    if(row[IncidentTag.children.name] and row['n_participants_child'] == 0):
+        new_row[IncidentTag.children.name] = False
+    if((row["incident_characteristics1"] == "Non-Shooting Incident" or row["incident_characteristics2"] ==
+        "Non-Shooting Incident") and row[IncidentTag.shots.name]):
+        new_row[IncidentTag.shots.name] = False
+    if((row["incident_characteristics1"] == "Non-Aggression Incident" or row["incident_characteristics2"] ==
+        "Non-Aggression Incident") and row[IncidentTag.aggression.name]):
+        new_row[IncidentTag.aggression.name] = False
+    return new_row
