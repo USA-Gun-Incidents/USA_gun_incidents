@@ -2217,34 +2217,15 @@ else:
     incidents_df['tag_consistency'] = True
     incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
     incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
-    save_checkpoint(incidents_df[tags_columns], 'tags') #TODO: guarda cella sotto,fa la stessa cosa
+    save_checkpoint(incidents_df[tags_columns], 'checkpoint_tags')
 
 # %%
 incidents_df['tag_consistency'].value_counts()
 
 # %%
-# correct inconcistencies
-for index, record in incidents_df.iterrows():
-    if(not(record[IncidentTag.death.name]) and record['n_killed'] > 0):
-        incidents_df.at[index, IncidentTag.death.name] = True
-    if(not(record[IncidentTag.injuries.name]) and record['n_injured'] > 0):
-        incidents_df.at[index, IncidentTag.injuries.name] = True
-    if(not(record[IncidentTag.children.name]) and record['n_participants_child'] > 0):
-        incidents_df.at[index, IncidentTag.children.name] = True
-    if(record[IncidentTag.death.name] and record['n_killed'] == 0):
-        incidents_df.at[index, IncidentTag.death.name] = False
-    if(record[IncidentTag.injuries.name] and record['n_injured'] == 0):
-        incidents_df.at[index, IncidentTag.injuries.name] = False
-    if(record[IncidentTag.children.name] and record['n_participants_child'] == 0):
-        incidents_df.at[index, IncidentTag.children.name] = False
-    if((record["incident_characteristics1"] == "Non-Shooting Incident" or record["incident_characteristics2"] ==
-        "Non-Shooting Incident") and record[IncidentTag.shots.name]):
-        incidents_df.at[index, IncidentTag.shots.name] = False
-    if((record["incident_characteristics1"] == "Non-Aggression Incident" or record["incident_characteristics2"] ==
-        "Non-Aggression Incident") and record[IncidentTag.aggression.name]):
-        incidents_df.at[index, IncidentTag.aggression.name] = False
+incidents_df = incidents_df.apply(lambda row: set_tags_consistent_data(row), axis=1) # correct inconcistencies
 
-# %%
+# check inconsistencies left on new data 
 incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
 incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
 save_checkpoint(incidents_df[tags_columns], 'tags')
