@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 # %% [markdown]
+# **Data mining Project - University of Pisa, acedemic year 2023/24**
+#
+# **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
+
+# %% [markdown]
 # # Task 1 Data Understanding and Preparation
 
 # %% [markdown]
@@ -38,7 +43,7 @@ pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 
 # %% [markdown]
-# # Poverty Data
+# ## Poverty Data
 
 # %% [markdown]
 # We load the dataset:
@@ -282,7 +287,7 @@ fig.show()
 # fig.tight_layout()
 
 # %% [markdown]
-# # Elections Data
+# ## Elections Data
 
 # %% [markdown]
 # We load the dataset:
@@ -565,7 +570,7 @@ pyo.plot(fig, filename='../html/animation_elections.html', auto_open=False)
 fig.show()
 
 # %% [markdown]
-# # Incidents Data
+# ## Incidents Data
 
 # %% [markdown]
 # ### Preliminaries
@@ -760,7 +765,7 @@ def load_checkpoint(checkpoint_name, casting=None, parse_dates=False):
 
 
 # %% [markdown]
-# ## Date attribute: exploration and preparation
+# ### Date attribute: exploration and preparation
 
 # %% [markdown]
 # We plot the distribution of the dates using different binning strategies:
@@ -839,8 +844,30 @@ plot_dates(incidents_df['date_median'], 'Dates distribution (oor replaced with m
 # %%
 incidents_df.drop(columns=['date_minus10', 'date_minus11', 'date_mean', 'date_median'], inplace=True)
 
+# %%
+incidents_df['month'] = incidents_df['date'].dt.month
+incidents_df.groupby('month').size().plot(
+    kind='bar',
+    figsize=(10, 5),
+    title='Number of incidents per month',
+    xlabel='Month',
+    ylabel='Number of incidents'
+)
+plt.xticks(range(12), calendar.month_name[1:13], rotation=45);
+
+# %%
+incidents_df['day_of_week'] = incidents_df['date'].dt.dayofweek
+incidents_df.groupby('day_of_week').size().plot(
+    kind='bar',
+    figsize=(10, 5),
+    title='Number of incidents per day of the week',
+    xlabel='Day of the week',
+    ylabel='Number of incidents'
+)
+plt.xticks(range(7), calendar.day_name[0:7], rotation=45);
+
 # %% [markdown]
-# ## Geospatial features: exploration and preparation
+# ### Geospatial features: exploration and preparation
 
 # %% [markdown]
 # We check if the values of the attribute `state` are admissible comparing them with an official list of states:
@@ -964,8 +991,7 @@ geo_df = pd.DataFrame(columns=['state', 'city_or_county', 'address', 'latitude',
     'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 'importance_geopy', 'addresstype_geopy', 
     'coord_presence', 'suburb_geopy'])
 geo_df[['state', 'city_or_county', 'address', 'latitude', 'longitude']] = incidents_df[[
-    'state', 'city_or_county', 'address', 'latitude', 'longitude']] # FIX: questa non è una copia, modifica i campi di incidents
-                                                                    # si pyò fare meglio?
+    'state', 'city_or_county', 'address', 'latitude', 'longitude']] # FIX: questa non è una copia, modifica i campi di incidents, è cmq ok?
 geo_df[['address_geopy', 'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 
     'importance_geopy', 'addresstype_geopy', 'coord_presence', 'suburb_geopy']] = geopy_df.loc[incidents_df.index][['display_name', 'village', 'town', 'city', 
     'county', 'state', 'importance', 'addresstype', 'coord_presence', 'suburb']]
@@ -1026,7 +1052,7 @@ else:
 #
 
 # %% [markdown]
-# ### Visualize Consistent Geographical Data
+# #### Visualize Consistent Geographical Data
 
 # %%
 print('Number of rows with all null values: ', geo_df.isnull().all(axis=1).sum())
@@ -1130,7 +1156,7 @@ plot_scattermap_plotly(dummy_df, 'state', zoom=2, title='Missing city')
 # Out of the total of 216,464 lines, either the information is definitive or can be derived with a high degree of accuracy.
 
 # %% [markdown]
-# ### Infer Missing City Values
+# #### Infer Missing City Values
 
 # %% [markdown]
 # For entries where we have missing values for *city* but not for *latitude* and *longitude*, we attempt to assign the *city* value based on the entry's distance from the centroid.
@@ -1232,7 +1258,7 @@ if LOAD_DATA_FROM_CHECKPOINT:
     final_geo_df = load_checkpoint('checkpoint_geo')
 else:
     final_geo_df = geo_df.apply(lambda row: substitute_city(row, info_city), axis=1)
-    save_checkpoint(final_geo_df, 'checkpoint_geo') # FIX_ possiamo sovrascrivere geo_df? Sarebbe carino evitare di avere mille variabili (alcune delle quali riferiscono le stesse cose)
+    save_checkpoint(final_geo_df, 'checkpoint_geo') # FIX_ possiamo chiamare queste variabili in modo più chiaro?
 
 # %%
 final_geo_df.head(2)
@@ -1245,7 +1271,7 @@ print('Number of rows with null values for city: ', final_geo_df['city'].isnull(
 # From this process, we infer 2248 *city* values.
 
 # %% [markdown]
-# ### Visualize new data
+# #### Visualize new data
 
 # %%
 geo_null_counts = [] # FIXME: mettere in dataframe come sopra
@@ -1289,7 +1315,7 @@ incidents_df = pd.concat([incidents_df.reset_index(drop=True), final_geo_df.rese
 incidents_df['state'] = incidents_df['state'].apply(lambda x: x.upper()) # FIXME: da spostare?
 
 # %% [markdown]
-# We check if the attribute `congressional_district` is numbered consistently (with '0' for states with only one congressional district). To do so we use the data from the dataset containing the data about elections in the period of interest (congressional districts are redrawn when (year%10)==0):
+# We check if the attribute `congressional_district` is numbered consistently (with '0' for states with only one congressional district). To do so we use the dataset containing the data about elections in the period of interest (congressional districts are redrawn when (year%10)==0):
 
 # %%
 at_large_states = elections_df[
@@ -1332,12 +1358,18 @@ wrong_congr_states = elections_df.groupby('state')['congressional_district'].max
 for state in wrong_congr_states[wrong_congr_states==False].index:
     print(f"State {state} has more districts in the incidents data than in the elections data")
 
+# %% [markdown]
+# We display the rows with inconsistent congressional district in Kentucky:
+
 # %%
 incidents_df[
     (incidents_df['state']=='KENTUCKY') &
     (incidents_df['congressional_district'] > 
         elections_df[(elections_df['state']=='KENTUCKY') & (elections_df['year']>2012)]['congressional_district'].max())
-] # actually 6
+]
+
+# %% [markdown]
+# Searching online we found that Kentucky has 6 congressional districts, so we'll set to nan the congressional district for the row above:
 
 # %%
 incidents_df.loc[
@@ -1346,12 +1378,18 @@ incidents_df.loc[
         elections_df[(elections_df['state']=='KENTUCKY') & (elections_df['year']>2012)]['congressional_district'].max()),
     'congressional_district'] = np.nan
 
+# %% [markdown]
+# We display the rows with inconsistent congressional district in Oregon:
+
 # %%
 incidents_df[
     (incidents_df['state']=='OREGON') &
     (incidents_df['congressional_district'] > 
         elections_df[(elections_df['state']=='OREGON') & (elections_df['year']>2012)]['congressional_district'].max())
-] # actually 5
+]
+
+# %% [markdown]
+# Searching online we found that Oregon has 5 congressional districts, so we'll set to nan the congressional district for the row above:
 
 # %%
 incidents_df.loc[
@@ -1360,12 +1398,18 @@ incidents_df.loc[
         elections_df[(elections_df['state']=='OREGON') & (elections_df['year']>2012)]['congressional_district'].max()),
     'congressional_district'] = np.nan 
 
+# %% [markdown]
+# We display the rows with inconsistent congressional district in West Virginia:
+
 # %%
 incidents_df[
     (incidents_df['state']=='WEST VIRGINIA') &
     (incidents_df['congressional_district'] > 
         elections_df[(elections_df['state']=='WEST VIRGINIA') & (elections_df['year']>2012)]['congressional_district'].max())
-] # actually 3
+]
+
+# %% [markdown]
+# Searching online we found that West Virginia has 3 congressional districts, so we'll set to nan the congressional district for the row above:
 
 # %%
 incidents_df.loc[
@@ -1684,11 +1728,18 @@ plot_scattermap_plotly(
 # %% [markdown]
 # These attributes have a lot of missing values, sometimes spread over large areas where there are no other points. Given this scarcity of training examples, we cannot apply the same method to recover the missing values.
 
-# %% [markdown]
-# ## Age, gender and number of participants: exploration and preparation
+# %%
+incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
+    kind='bar',
+    figsize=(10,6),
+    title='Counts of the addresses with the 50 highest number of incidents'
+)
 
 # %% [markdown]
-# ### Features
+# ### Age, gender and number of participants: exploration and preparation
+
+# %% [markdown]
+# #### Features
 
 # %% [markdown]
 # Columns of the dataset are considered in order to verify the correctness and consistency of data related to age, gender, and the number of participants for each incident:
@@ -1765,7 +1816,7 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 # These 126 values can be inferred.
 
 # %% [markdown]
-# ### Studying Data Consistency
+# #### Studying Data Consistency
 
 # %% [markdown]
 # We create some functions to identify and, if possible, correct missing and inconsistent data.
@@ -1848,7 +1899,7 @@ else: # compute data
     save_checkpoint(age_temporary_df, 'checkpoint_age_temporary') # save data
 
 # %% [markdown]
-# ### Data Exploration without Out-of-Range Data
+# #### Data Exploration without Out-of-Range Data
 
 # %%
 age_temporary_df.head(2)
@@ -2021,7 +2072,7 @@ age_temporary_df.iloc[42353]
 # In cases where we were unable to obtain consistent data for a certain value, we have set the corresponding field to *NaN*.
 
 # %% [markdown]
-# ### Fix Inconsistent Data
+# #### Fix Inconsistent Data
 
 # %% [markdown]
 # We have created a new DataFrame in which we have recorded the corrected and consistent data. Note that all these checks are performed based on the assumptions made in previous stages of the analysis.
@@ -2038,7 +2089,7 @@ if LOAD_DATA_FROM_CHECKPOINT:
     new_age_df = load_checkpoint('checkpoint_age')
 else:
     new_age_df = age_temporary_df.apply(lambda row: set_gender_age_consistent_data(row), axis=1)
-    save_checkpoint(new_age_df, 'checkpoint_age') # FIX: possiamo sempre usare age_df? Sovrascrivendo?
+    save_checkpoint(new_age_df, 'checkpoint_age') # FIX: possiamo chiamare in modo più chiaro queste variabili?
 
 # %% [markdown]
 # We display the first 2 rows and a concise summary of the DataFrame:
@@ -2169,10 +2220,26 @@ incidents_df = pd.concat([incidents_df.reset_index(drop=True), new_age_df.reset_
 # gli indici sono diversi...
 
 # %% [markdown]
-# ## Incident characteristics features: exploration and preparation
+# ### Incident characteristics features: exploration and preparation
 
 # %%
 # FIXME: aggiungere commenti
+
+# %%
+nltk.download('stopwords')
+stopwords = set(stopwords.words('english'))
+
+word_cloud_all_train = WordCloud(
+    width=1500,
+    height=1200,
+    stopwords=stopwords,
+    collocations=False,
+    background_color='white'
+    ).generate(' '.join(incidents_df[incidents_df['notes'].notna()]['notes'].tolist()));
+
+plt.imshow(word_cloud_all_train)
+plt.axis('off')
+plt.title('Word cloud of notes')
 
 # %%
 # check if ch1 and ch2 are always different
@@ -2180,7 +2247,6 @@ incidents_df[incidents_df['incident_characteristics1']==incidents_df['incident_c
 
 # %%
 # merge characteristics list
-
 ch1_counts = incidents_df['incident_characteristics1'].value_counts()
 ch2_counts = incidents_df['incident_characteristics2'].value_counts()
 ch_counts = ch1_counts.add(ch2_counts, fill_value=0).sort_values(ascending=True)
@@ -2204,7 +2270,7 @@ ax.set_title('Counts of incident characteristics')
 plt.tight_layout()
 
 # %%
-fig, ax = plt.subplots(figsize=(20, 15))
+fig, ax = plt.subplots(figsize=(20, 15)) # FIX: questo possiamo toglierlo? dovrebbe essere equivalente al plot sotto
 sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(by="Shot - Dead (murder, accidental, suicide)", inplace=False, ascending=False).tail(-1),
             cmap='coolwarm', yticklabels=True)
 
@@ -2231,15 +2297,34 @@ else:
     incidents_df['tag_consistency'] = True
     incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
     incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
-    save_checkpoint(incidents_df[tags_columns], 'checkpoint_tags')
+    save_checkpoint(incidents_df[tags_columns], 'tags') #TODO: guarda cella sotto,fa la stessa cosa
 
 # %%
 incidents_df['tag_consistency'].value_counts()
 
 # %%
-incidents_df = incidents_df.apply(lambda row: set_tags_consistent_data(row), axis=1) # correct inconcistencies
+# correct inconcistencies
+for index, record in incidents_df.iterrows():
+    if(not(record[IncidentTag.death.name]) and record['n_killed'] > 0):
+        incidents_df.at[index, IncidentTag.death.name] = True
+    if(not(record[IncidentTag.injuries.name]) and record['n_injured'] > 0):
+        incidents_df.at[index, IncidentTag.injuries.name] = True
+    if(not(record[IncidentTag.children.name]) and record['n_participants_child'] > 0):
+        incidents_df.at[index, IncidentTag.children.name] = True
+    if(record[IncidentTag.death.name] and record['n_killed'] == 0):
+        incidents_df.at[index, IncidentTag.death.name] = False
+    if(record[IncidentTag.injuries.name] and record['n_injured'] == 0):
+        incidents_df.at[index, IncidentTag.injuries.name] = False
+    if(record[IncidentTag.children.name] and record['n_participants_child'] == 0):
+        incidents_df.at[index, IncidentTag.children.name] = False
+    if((record["incident_characteristics1"] == "Non-Shooting Incident" or record["incident_characteristics2"] ==
+        "Non-Shooting Incident") and record[IncidentTag.shots.name]):
+        incidents_df.at[index, IncidentTag.shots.name] = False
+    if((record["incident_characteristics1"] == "Non-Aggression Incident" or record["incident_characteristics2"] ==
+        "Non-Aggression Incident") and record[IncidentTag.aggression.name]):
+        incidents_df.at[index, IncidentTag.aggression.name] = False
 
-# check inconsistencies left on new data 
+# %%
 incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
 incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
 save_checkpoint(incidents_df[tags_columns], 'tags')
@@ -2247,21 +2332,21 @@ save_checkpoint(incidents_df[tags_columns], 'tags')
 incidents_df['tag_consistency'].value_counts()
 
 # %%
-tags_partitions_counts = {}
-tags_partitions_counts['Murder'] = incidents_df[
+tags_counts = {}
+tags_counts['Murder'] = incidents_df[
     (incidents_df['death']==True) &
     ((incidents_df['aggression']==True) |
      (incidents_df['social_reasons']==True))].shape[0] # not accidental nor defensive
-tags_partitions_counts['Suicide'] = incidents_df[
+tags_counts['Suicide'] = incidents_df[
     (incidents_df['death']==True) &
     (incidents_df['suicide']==True)].shape[0] # warninig: if murder/suicide is counted twice
-tags_partitions_counts['Defensive'] = incidents_df[
+tags_counts['Defensive'] = incidents_df[
     (incidents_df['death']==True) &
     (incidents_df['defensive']==True)].shape[0]
-tags_partitions_counts['Accidental'] = incidents_df[
+tags_counts['Accidental'] = incidents_df[
     (incidents_df['death']==True) &
     (incidents_df['unintentional']==True)].shape[0]
-tags_partitions_counts['Others or not known'] = incidents_df[
+tags_counts['Others or not known'] = incidents_df[
     (incidents_df['death']==True) &
     (incidents_df['aggression']==False) &
     (incidents_df['social_reasons']==False) &
@@ -2270,68 +2355,40 @@ tags_partitions_counts['Others or not known'] = incidents_df[
     (incidents_df['unintentional']==False)].shape[0]
 
 fig, ax = plt.subplots()
-ax.pie(tags_partitions_counts.values(), labels=tags_partitions_counts.keys(), autopct='%1.1f%%');
+total = sum(tags_counts.values())
+ax.pie(tags_counts.values())
+legend_labels = [f'{label}: {(size/total)*100:.1f}%' for label, size in tags_counts.items()]
+plt.legend(legend_labels)
+plt.title("Gun incidents")
+plt.show()
 
 # %%
-n_cols = 3
-fig, ax = plt.subplots(figsize=(12,16), nrows=7, ncols=n_cols)
-row = 0
-for i, tag in enumerate(tags_columns):
-    n_rows_tag = incidents_df[(incidents_df[tag]==True)].shape[0]
-    if i!=0 and i%n_cols==0:
-        row += 1
-    ax[row][i%n_cols].pie([n_rows_tag, incidents_df.shape[0]-n_rows_tag], labels=[tag, 'no '+tag], autopct='%1.1f%%')
-
-# %%
-incidents_df[(incidents_df['death']==True) &
-    (incidents_df['aggression']==False) &
-    (incidents_df['social_reasons']==False) &
-    (incidents_df['suicide']==False) & 
-    (incidents_df['defensive']==False) &
-    (incidents_df['unintentional']==False)]
-
-# %%
-numerical_columns = incidents_df.select_dtypes(include=['float64', 'int64']).columns
-plt.figure(figsize=(15, 12))
-corr_matrix = incidents_df[numerical_columns].corr()
-sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
+ax = (incidents_df[tags_columns].apply(lambda col: col.value_counts()).T.sort_values(by=True)/incidents_df.shape[0]*100).plot(kind='barh', stacked=True, alpha=0.8, edgecolor='black')
+for container in ax.containers:
+    ax.bar_label(container, fmt='%.1f%%', label_type='center', fontsize=8)
+plt.title("Incidents characteristic (%)")
 
 # %%
 # compute correlation between accidental incidents and presence of children
 incidents_df['unintentional'].corr(incidents_df['n_participants_child']>0) # not correlated
 
 # %%
-fig, axs = plt.subplots(ncols=2, figsize=(20,10))
-incidents_df[incidents_df['n_females']>1]['incident_characteristics1'].value_counts().plot(kind='bar', title='Characteristic 1 counts of incidents with females involved', ax=axs[0])
-incidents_df[incidents_df['n_females']>1]['incident_characteristics2'].value_counts().plot(kind='bar',  title='Characteristic 2 counts of incidents with females involved', ax=axs[1])
-
-# %%
-incidents_df.groupby(['latitude', 'longitude']).size().sort_values(ascending=False)[:50].plot(
+ch1_females_counts = incidents_df[incidents_df['n_females']>1]['incident_characteristics1'].value_counts()
+ch2_females_counts = incidents_df[incidents_df['n_females']>1]['incident_characteristics2'].value_counts()
+ch_females_counts = ch1_females_counts.add(ch2_females_counts, fill_value=0).sort_values(ascending=False).plot(
     kind='bar',
-    figsize=(10,6),
-    title='Counts of the locations with the 50 highest number of incidents'
-)
-
-# %%
-incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
-    kind='bar',
-    figsize=(10,6),
-    title='Counts of the addresses with the 50 highest number of incidents'
+    title='Characteristics counts of incidents with females involved',
+    figsize=(20,10)
 )
 
 # %% [markdown]
 # We are aware of the fact that we could use classifier to inferr missing values. We chose not to do it because we think such method do not align with the nature of gun incidents. Citando il libro "Classification is the task of learning a target function f that maps each attribute set x to one of the predefined class labels y", il problema è che non può esistere una tale funzione (possono esserci (e immagino siano anche molti comuni) record uguali su tutti gli attributi tranne uno, per cui l'inferenza è impossibile).
 
 # %% [markdown]
-# # Save Final Data
+# ## Join analysis of the datasets
 
 # %% [markdown]
-# ## Join population, poverty and eletion data
-
-# %%
-#TODO: probabilmente da spostare (?) 
-# per ora ho messo il sottotitolo a questa sezione così da capire che è un blocco a parte guardando outline
-# poi bisognerebbe fare le join sul dataset pulito
+# ### Join population, poverty and eletion data
 
 # %% [markdown]
 # We join the poverty data with the incidents data:
@@ -2350,28 +2407,6 @@ elections_df_copy['year'] = elections_df_copy['year'] + 1
 elections_df = pd.concat([elections_df, elections_df_copy], ignore_index=True)
 incidents_df = incidents_df.merge(elections_df, on=['state', 'year', 'congressional_district'], how='left')
 incidents_df.head()
-
-# %%
-incidents_df['month'] = incidents_df['date'].dt.month
-incidents_df.groupby('month').size().plot(
-    kind='bar',
-    figsize=(10, 5),
-    title='Number of incidents per month',
-    xlabel='Month',
-    ylabel='Number of incidents'
-)
-plt.xticks(range(12), calendar.month_name[1:13], rotation=45);
-
-# %%
-incidents_df['day_of_week'] = incidents_df['date'].dt.dayofweek
-incidents_df.groupby('day_of_week').size().plot(
-    kind='bar',
-    figsize=(10, 5),
-    title='Number of incidents per day of the week',
-    xlabel='Day of the week',
-    ylabel='Number of incidents'
-)
-plt.xticks(range(7), calendar.day_name[0:7], rotation=45);
 
 # %% [markdown]
 # We read and join the data about the USA population from the 2010 census downloaded from [Wikipedia](https://en.wikipedia.org/wiki/2010_United_States_census). This time we won't use the ACS population data because we simply need aggregated data for each state over the period of interest.
@@ -2412,22 +2447,6 @@ incidents_df[incidents_df['state']=='DISTRICT OF COLUMBIA'].groupby(['latitude',
 
 # %%
 incidents_df.groupby(['latitude', 'longitude', 'date']).size()[lambda x: x>1]
-
-# %%
-nltk.download('stopwords')
-stopwords = set(stopwords.words('english'))
-
-word_cloud_all_train = WordCloud(
-    width=1500,
-    height=1200,
-    stopwords=stopwords,
-    collocations=False,
-    background_color='white'
-    ).generate(' '.join(incidents_df[incidents_df['notes'].notna()]['notes'].tolist()));
-
-plt.imshow(word_cloud_all_train)
-plt.axis('off')
-plt.title('Word cloud of notes')
 
 # %%
 incidents_per_month_per_state = incidents_df.groupby(['state', 'month', 'year']).size()
@@ -2549,32 +2568,6 @@ plt.xticks(rotation=90)
 plt.tight_layout()
 
 # %%
-incidents_per_year_per_state = incidents_df.groupby(['state', 'year']).size()
-incidents_per_year_per_state = incidents_per_year_per_state.to_frame(name='incidents').reset_index()
-incidents_per_year_per_state['incidents_per_100k_inhabitants'] = incidents_per_year_per_state.apply(
-    lambda row: (row['incidents'] / usa_population_df[usa_population_df['state']==row['state']]['population_state_2010'].iloc[0])*100000,
-    axis=1
-)
-fig = px.line(
-    incidents_per_year_per_state[incidents_per_year_per_state.year<=2020].pivot(
-        index='year',
-        columns='state',
-        values='incidents_per_100k_inhabitants'
-    ),
-    title='Number of incidents in the US over the years')
-fig.show()
-
-# %%
-fig = px.line(
-    incidents_per_year_per_state[(incidents_per_year_per_state.year<=2020) & (incidents_per_year_per_state['state']!='DISTRICT OF COLUMBIA')].pivot(
-        index='year',
-        columns='state',
-        values='incidents_per_100k_inhabitants'
-    ),
-    title='Number of incidents in the US over the years')
-fig.show()
-
-# %%
 # merge data about the winning party
 winning_party_per_state_copy = winning_party_per_state.copy()
 winning_party_per_state_copy['year'] = winning_party_per_state['year'] + 1
@@ -2600,38 +2593,11 @@ pyo.plot(fig, filename='../html/scatter_poverty.html', auto_open=False)
 fig.show()
 
 
-# %% [markdown]
-# ## Cose da rivedere per merge
-
-# %% [markdown]
-# **colonne da mergiare**:
-#
-# date, colonna pulita, il check point è stato cancellato
-#
-# final_geo_df \
-# colonne: ['state', 'county', 'city', 'latitude', 'longitude', 'state_consistency',
-#        'county_consistency', 'address_consistency', 'importance',
-#        'address_type']
-#
-# incidents_df['congressional_district'] + 
-# incidents_df['state_house_district']
-#
-# new_age_df \
-# colonne: ['participant_age1', 'participant1_child', 'participant1_teen',
-#        'participant1_adult', 'participant1_male', 'participant1_female',
-#        'min_age_participants', 'avg_age_participants', 'max_age_participants',
-#        'n_participants_child', 'n_participants_teen', 'n_participants_adult',
-#        'n_males', 'n_females', 'n_killed', 'n_injured', 'n_arrested',
-#        'n_unharmed', 'n_participants']
-#
-# incidents_df[tags_columns]
-
 # %%
-# TODO: spostare queste liste nelle sezioni dei notebook in cui si analizzano gli attributi (appendendo le nuove features)
-time_columns = ['date'] # TODO: aggiungere month come stringa, day of week come
+time_columns = ['date'] # TODO: aggiungere year, month, day of week?
 
 geo_columns = ['state', 'city_or_county', # togliere?
-'address', 'latitude', 'longitude', 'county', 'city', 'state_consistency', 'county_consistency',
+'address', 'latitude', 'longitude', 'county', 'city', 'state_consistency', 'county_consistency', # togliere?
 'address_consistency', 'importance', 'address_type', 'congressional_district', 'state_house_district', 'state_senate_district', 'px_code']
 
 participants_columns = ['participant_age1', 'participant1_child',
@@ -2645,21 +2611,32 @@ characteristic_columns = ['notes', 'incident_characteristics1', 'incident_charac
     'firearm', 'air_gun', 'shots', 'aggression', 'suicide', 'injuries',
     'death', 'road', 'illegal_holding', 'house', 'school', 'children',
     'drugs', 'officers', 'organized', 'social_reasons', 'defensive',
-    'workplace', 'abduction', 'unintentional', 'tag_consistency']
+    'workplace', 'abduction', 'unintentional', 'tag_consistency'] # togliere?
 
 external_columns = ['povertyPercentage', 'party', 'candidatevotes', 'totalvotes', 'candidateperc', 'population_state_2010']
 # majority state party?
 
 # TODO: rinominare fuori dal notebook la colonna 'importance' in 'location_importance' o qualcosa di simile, basta che si capisca che è relativo al posto
-# rimuovere nan_values, rimuovere attributi che hanno check di consistenza?
-
-
 
 # %%
 incidents_df = incidents_df[time_columns + geo_columns + participants_columns + characteristic_columns + external_columns]
+incidents_df = incidents_df.rename(
+    columns={
+        'povertyPercentage': 'poverty_perc',
+        'candidatevotes': 'candidate_votes',
+        'totalvotes': 'total_votes',
+        'candidateperc': 'candidate_perc'
+    }
+)
 
 # %%
 incidents_df.shape[0]
+
+# %%
+numerical_columns = incidents_df.select_dtypes(include=['float64', 'int64']).columns
+plt.figure(figsize=(15, 12))
+corr_matrix = incidents_df[numerical_columns].corr()
+sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
 
 # %% [markdown]
 # We re-order the columns and we save the cleaned dataset:
