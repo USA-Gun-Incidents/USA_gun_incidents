@@ -2275,7 +2275,7 @@ else:
     incidents_df['tag_consistency'] = True
     incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
     incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
-    save_checkpoint(incidents_df[tags_columns], 'tags')
+    save_checkpoint(incidents_df[tags_columns], 'tags') #TODO: guarda cella sotto,fa la stessa cosa
 
 incidents_df.head()
 
@@ -2660,6 +2660,32 @@ pyo.plot(fig, filename='../html/scatter_poverty.html', auto_open=False)
 fig.show()
 
 
+# %% [markdown]
+# ## Cose da rivedere per merge
+
+# %% [markdown]
+# **colonne da mergiare**:
+#
+# date, colonna pulita, il check point è stato cancellato
+#
+# final_geo_df \
+# colonne: ['state', 'county', 'city', 'latitude', 'longitude', 'state_consistency',
+#        'county_consistency', 'address_consistency', 'importance',
+#        'address_type']
+#
+# incidents_df['congressional_district'] + 
+# incidents_df['state_house_district']
+#
+# new_age_df \
+# colonne: ['participant_age1', 'participant1_child', 'participant1_teen',
+#        'participant1_adult', 'participant1_male', 'participant1_female',
+#        'min_age_participants', 'avg_age_participants', 'max_age_participants',
+#        'n_participants_child', 'n_participants_teen', 'n_participants_adult',
+#        'n_males', 'n_females', 'n_killed', 'n_injured', 'n_arrested',
+#        'n_unharmed', 'n_participants']
+#
+# incidents_df[tags_columns]
+
 # %%
 incidents_df.columns
 # TODO: spostare queste liste nelle sezioni dei notebook in cui si analizzano gli attributi (appendendo le nuove features)
@@ -2703,9 +2729,6 @@ incidents_df.columns
 # %%
 # incidents_data[time_columns+geo_columns+participants_columns+characteristic_columns+external_columns]
 incidents_df.to_csv('../data/incidents_cleaned.csv', index=False)
-
-# %%
-final_geo_df.columns
 
 # %%
 final_geo_df['state'].unique()
