@@ -2079,24 +2079,6 @@ new_age_df[new_age_df['n_participants_adult'] > 60][['n_participants', 'n_partic
     'n_participants_child', 'n_participants_teen']]
 
 # %%
-# distribuition number of participants per age group
-plt.figure(figsize=(20, 5))
-plt.hist(new_age_df[new_age_df['n_participants_adult']>0]['n_participants_adult'], bins=103, density=True, 
-    histtype='step', alpha=0.8, linewidth=4, color='green', label='Adult')
-plt.hist(new_age_df[new_age_df['n_participants_teen']>0]['n_participants_teen'], bins=103, density=True, 
-    histtype='step', alpha=0.8, linewidth=4, color='orange', label='Teen')
-plt.hist(new_age_df[new_age_df['n_participants_child']>0]['n_participants_child'], bins=103, density=True, 
-    histtype='step', alpha=0.8, linewidth=4, color='blue', label='Children')
-
-plt.xlabel('Number of participants')
-plt.ylabel('Frequency')
-plt.xticks(np.arange(1, 103, 2))
-plt.yscale('log')
-plt.legend()
-plt.title('Distribution of number of participants per age group')
-plt.show()
-
-# %%
 # distribuition number of participants per age group 
 fig, (ax0, ax1, ax2) = plt.subplots(3, 1, figsize=(20, 12), sharex=True, sharey=True)
 
@@ -2791,6 +2773,9 @@ sns.heatmap(incidents_df[['date', 'state', 'city_or_county', 'address', 'latitud
 
 # %% [markdown]
 # We are aware of the fact that we could use classifier to inferr missing values. We chose not to do it because we think such method do not align with the nature of gun incidents. Citando il libro "Classification is the task of learning a target function f that maps each attribute set x to one of the predefined class labels y", il problema è che non può esistere una tale funzione (possono esserci (e immagino siano anche molti comuni) record uguali su tutti gli attributi tranne uno, per cui l'inferenza è impossibile).
+
+# %% [markdown]
+# ## Save Final Data
 
 # %%
 incidents_df.columns
