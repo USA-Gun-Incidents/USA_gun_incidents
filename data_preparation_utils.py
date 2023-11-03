@@ -39,6 +39,7 @@ FREQUENT_WORDS = ['of',
     'East', 
     'Blvd', 
     'Boulevard']
+
 state_map = { 
     'Alabama': 'Alabama',
     'Alaska': 'Alaska',
@@ -97,6 +98,11 @@ state_map = {
     'West Virginia': 'West Virginia',
     'Wisconsin': 'Wisconsin', 
     'Wyoming': 'Wyoming'
+}
+
+city_map = {
+    'Garden Lakes, City of Rome': 'City of Rome',
+    'Cairo, Georgia': 'Cairo'
 }
 
 def lower_case(string):
@@ -372,7 +378,8 @@ def check_geographical_data_consistency(row, additional_data):
     if state_consistency+county_consistency+address_consistency >= 1:
         clean_geo_data_row.loc[['state']] = row['state_geopy']
         clean_geo_data_row.loc[['county']] = first_not_null(row, ['county_geopy', 'suburb_geopy'])
-        clean_geo_data_row.loc[['city']] = first_not_null(row, ['city_geopy', 'town_geopy', 'village_geopy'])
+        city = first_not_null(row, ['city_geopy', 'town_geopy', 'village_geopy'])
+        clean_geo_data_row.loc[['city']] = city_map[city] if city in city_map.keys() else city                                
         clean_geo_data_row.loc[['latitude']] = row['latitude']
         clean_geo_data_row.loc[['longitude']] = row['longitude'] 
         clean_geo_data_row.loc[['importance']] = row['importance_geopy']
