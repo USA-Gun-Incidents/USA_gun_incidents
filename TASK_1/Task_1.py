@@ -736,24 +736,18 @@ incidents_df.describe(include='all', datetime_is_numeric=True)
 # To avoid re-running some cells, we save checkpoints of the dataframe at different stages of the analysis and load the dataframe from the last checkpoint using the following functions:
 
 # %%
-LOAD_DATA_FROM_CHECKPOINT = True
-CHECKPOINT_FOLDER_PATH = '../data/checkpoints/'
+LOAD_DATA_FROM_CHECKPOINT = False
+CHECKPOINT_FOLDER_PATH = 'checkpoints/'
 
 def save_checkpoint(df, checkpoint_name):
     df.to_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv')
 
-def load_checkpoint(checkpoint_name, casting=None, parse_dates=False):
-    dates = False
-    date_parser = None
-    if parse_dates:
-        dates = ['date']
-        date_parser = lambda x: pd.to_datetime(x, format='%Y-%m-%d')
+def load_checkpoint(checkpoint_name, casting=None):
     df = pd.read_csv(
         CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv',
         low_memory=False,
         index_col=0,
-        parse_dates=dates,
-        date_parser=date_parser,
+        parse_dates=['date', 'date_original'],
         dtype=casting
         )
     return df
@@ -839,6 +833,19 @@ plot_dates(incidents_df['date_median'], 'Dates distribution (oor replaced with m
 # %%
 incidents_df.drop(columns=['date_minus10', 'date_minus11', 'date_mean', 'date_median'], inplace=True)
 
+# %%
+#TODO: scrivere qualcosa per dire che abbiamo inizializzato il dataframe finale e abbiamo salvato due colonne per le date, 
+# una con la data originale e una con la data escludendo quelle nel futuro
+
+# %%
+if LOAD_DATA_FROM_CHECKPOINT:
+    final_incidents_df = load_checkpoint('checkpoint_1')
+else:
+    final_incidents_df = pd.DataFrame() # init DataFrame to save the final version of the dataset
+    final_incidents_df['date'] = incidents_df['date'].apply(lambda x : pd.NaT if x.year>2018 else x)
+    final_incidents_df['date_original'] = incidents_df['date']
+    save_checkpoint(final_incidents_df, 'checkpoint_1')
+
 # %% [markdown]
 # ## Geospatial features: exploration and preparation
 
@@ -906,10 +913,10 @@ incidents_df[(incidents_df['latitude'] == 37.6499) & (incidents_df['longitude'] 
 # %% [markdown]
 # That point has probably the correct values for the attributes `state` and `city_or_county`.
 
+# %%
+#FIXME: abbiamo usato geolocator = Nominatim(user_agent="?????"), assicurarsi abbia confini 2013-2020
+
 # %% [markdown]
-# FIXME: abbiamo usato
-# geolocator = Nominatim(user_agent="?????"), assicurarsi abbia confini 2013-2020
-#
 # To fix these inconsistencies we used the library [GeoPy]((https://geopy.readthedocs.io/en/stable/)). This library allows to retrieve the address (state, county, suburb, city, town, village, location name, and other features) corresponding to a given latitude and longitude. We queried the library using all the latitudes and longitudes of the points in the dataset and we saved the results in the CSV file we now load:
 
 # %%

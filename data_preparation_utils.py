@@ -376,7 +376,7 @@ def check_geographical_data_consistency(row, additional_data):
         state_consistency, county_consistency, address_consistency = check_consistency_geopy_display_name(row)
 
     if state_consistency+county_consistency+address_consistency >= 1:
-        clean_geo_data_row.loc[['state']] = row['state_geopy']
+        clean_geo_data_row.loc[['state']] = row['state_geopy'].upper()
         clean_geo_data_row.loc[['county']] = first_not_null(row, ['county_geopy', 'suburb_geopy'])
         city = first_not_null(row, ['city_geopy', 'town_geopy', 'village_geopy'])
         clean_geo_data_row.loc[['city']] = city_map[city] if city in city_map.keys() else city                                
@@ -387,7 +387,7 @@ def check_geographical_data_consistency(row, additional_data):
 
     else: # check consistency with additional data
         state, county = check_consistency_additional_data(row['state'], row['city_or_county'], additional_data)
-        clean_geo_data_row.loc[['state']] = state
+        clean_geo_data_row.loc[['state']] = state.upper()
         clean_geo_data_row.loc[['county']] = county
 
     clean_geo_data_row.loc[['state_consistency']] = state_consistency
