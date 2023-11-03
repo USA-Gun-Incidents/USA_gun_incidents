@@ -39,6 +39,65 @@ FREQUENT_WORDS = ['of',
     'East', 
     'Blvd', 
     'Boulevard']
+state_map = { 
+    'Alabama': 'Alabama',
+    'Alaska': 'Alaska',
+    'American Samoa': 'American Samoa', # not in geopy
+    'Arizona': 'Arizona',
+    'Arkansas': 'Arkansas',
+    'California': 'California',
+    'Colorado': 'Colorado',
+    'Connecticut': 'Connecticut',
+    'Delaware': 'Delaware',
+    'District of Columbia': 'District of Columbia',
+    'Florida': 'Florida', 
+    'Georgia': 'Georgia',
+    'Guam': np.nan,
+    'Hawaiʻi': 'Hawaii',
+    'Idaho': 'Idaho',
+    'Illinois': 'Illinois',
+    'Indiana':'Indiana',
+    'Iowa': 'Iowa', 
+    'Kansas': 'Kansas', 
+    'Kentucky': 'Kentucky',
+    'Louisiana': 'Louisiana', 
+    'Maine': 'Maine',
+    'Maryland': 'Maryland', 
+    'Massachusetts': 'Massachusetts',
+    'Michigan': 'Michigan',
+    'Minnesota': 'Minnesota', 
+    'Mississippi': 'Mississippi', 
+    'Missouri': 'Missouri',
+    'Montana': 'Montana', 
+    'Nebraska': 'Nebraska',
+    'Nevada': 'Nevada',
+    'New Hampshire': 'New Hampshire', 
+    'New Jersey': 'New Jersey', 
+    'New Mexico': 'New Mexico', 
+    'New York': 'New York',
+    'North Carolina': 'North Carolina',
+    'North Dakota': 'North Dakota',
+    'Northern Mariana Islands': 'Northern Mariana Islands', # not in geopy
+    'Ohio': 'Ohio',
+    'Oklahoma': 'Oklahoma', 
+    'Oregon': 'Oregon', 
+    'Pennsylvania': 'Pennsylvania',
+    'Puerto Rico': 'Puerto Rico', # not in geopy
+    'Rhode Island': 'Rhode Island',
+    'South Carolina': 'South Carolina', 
+    'South Dakota': 'South Dakota', 
+    'Tennessee': 'Tennessee',
+    'Texas': 'Texas', 
+    'U.S. Minor Outlying Islands': np.nan,
+    'Utah': 'Utah',
+    'Vermont': 'Vermont',
+    'Virgin Islands (U.S.)': np.nan,
+    'Virginia': 'Virginia',
+    'Washington': 'Washington',
+    'West Virginia': 'West Virginia',
+    'Wisconsin': 'Wisconsin', 
+    'Wyoming': 'Wyoming'
+}
 
 def lower_case(string):
     '''
@@ -102,7 +161,12 @@ def delete_numbers(string):
 
 # TODO: scrivere commenti come sopra
 def clean_data_incidents(data):
-    """clean state or county_or_city from incidents dataset"""
+    """
+    clean state or county_or_city from incidents dataset
+    
+    :param data: state or county_or_city to clean
+    :return: list of cleaned state or county_or_city
+    """
 
     data = lower_case(data)
     data = data.replace('county', '').replace('city of',  '')
@@ -267,7 +331,7 @@ def check_consistency_additional_data(state, county, additional_data):
     if state_consistency:
         if county in additional_data[additional_data['State or equivalent'] == state_current
                                      ]['County or equivalent'].unique():
-            return state_current, county
+            return state_map[state_current], county
         else: # check typo
             county_list = clean_data_incidents(county)
             for c in additional_data[additional_data['State or equivalent'] == state_current
@@ -278,7 +342,7 @@ def check_consistency_additional_data(state, county, additional_data):
                     if check_string_typo(county_incidents, c_clean) == 1:
                         if 'City of' in c:
                             return state_current, c.split(',')[0]
-                        else: return state_current, c + ' County'
+                        else: return state_map[state_current], c + ' County'
     
     return state_current, np.nan
 
