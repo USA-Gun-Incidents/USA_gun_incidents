@@ -2102,7 +2102,6 @@ ax2.set_ylabel('Numer of incidents')
 ax0.set_title('Number of participants for each incident per age')
 plt.show()
 
-
 # %% [markdown]
 # We observe that in incidents involving children and teenagers under the age of 18, the total number of participants was less than 7 and 27, respectively. In general, incidents involving a single person are much more frequent than other incidents, and most often, they involve teenagers and children, with a smaller percentage involving adults. On the other hand, incidents with multiple participants mostly consist of adults, and as the number of participants increases, the frequency of such incidents decreases. 
 #
@@ -2126,7 +2125,6 @@ plt.legend()
 plt.title('Number of participants for each incident per gender')
 plt.show()
 
-
 # %% [markdown]
 # Note that for 1567 entries in the dataset, we have the total number of participants, but we do not have the number of males and females
 # and that the y-axis of the histogram is in logaritmic scale.
@@ -2147,16 +2145,34 @@ plt.show()
 new_age_df.describe()
 
 # %% [markdown]
-# ## Characteristic forse (da cancellare)
+# ## Incident characteristics features: exploration and preparation
 
 # %%
-#TODO: rivedere cosa dovrebbe fare questa funzione, così non funziona
+# FIXME: aggiungere commenti
+
+# %%
+# check if ch1 and ch2 are always different
+incidents_df[incidents_df['incident_characteristics1']==incidents_df['incident_characteristics2']].shape[0]==0
+
+# %%
+ch1_counts = incidents_df['incident_characteristics1'].value_counts()
+ch2_counts = incidents_df['incident_characteristics2'].value_counts()
+ch_counts = ch1_counts.add(ch2_counts, fill_value=0).sort_values(ascending=True)
+ch_counts
+
+# %%
+fig = ch_counts.plot(kind='barh', figsize=(5, 18))
+fig.set_xscale("log")
+plt.title("Counts of 'incident_characteristics'")
+plt.xlabel('Count')
+plt.ylabel('Incident characteristics')
+plt.tight_layout()
 
 # %%
 # merge characteristics list
 
-characteristics1_frequency = pd.Series.to_dict(incidents_data.pivot_table(columns=['incident_characteristics1'], aggfunc='size'))
-characteristics2_frequency = pd.Series.to_dict(incidents_data.pivot_table(columns=['incident_characteristics2'], aggfunc='size'))
+characteristics1_frequency = pd.Series.to_dict(incidents_df.pivot_table(columns=['incident_characteristics1'], aggfunc='size'))
+characteristics2_frequency = pd.Series.to_dict(incidents_df.pivot_table(columns=['incident_characteristics2'], aggfunc='size'))
 
 characteristics_frequency = {}
 keys1 = list(characteristics1_frequency.keys())
@@ -2191,7 +2207,6 @@ characteristics_frequency_df = pd.DataFrame({'characteristics': list(characteris
 characteristics_frequency_df
 
 # %%
-
 fig = pd.DataFrame(characteristics_frequency_df).plot(kind='barh', figsize=(5, 18))
 fig.set_yticklabels(characteristics_frequency_df['characteristics'])
 fig.set_xscale("log")
@@ -2201,11 +2216,11 @@ plt.ylabel('Incident characteristics')
 plt.tight_layout()
 
 # %%
-characteristics_count_matrix = pd.crosstab(incidents_data['incident_characteristics2'], incidents_data['incident_characteristics1'])
+characteristics_count_matrix = pd.crosstab(incidents_df['incident_characteristics2'], incidents_df['incident_characteristics1'])
 fig, ax = plt.subplots(figsize=(25, 20))
 sns.heatmap(characteristics_count_matrix, cmap='coolwarm', ax=ax, xticklabels=True, yticklabels=True, linewidths=.5)
-ax.set_xlabel('incident_characteristics2')
-ax.set_ylabel('incident_characteristics1')  
+ax.set_xlabel('incident_characteristics1')
+ax.set_ylabel('incident_characteristics2')  
 ax.set_title('Counts of incident characteristics')
 plt.tight_layout()
 
@@ -2215,73 +2230,157 @@ sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suic
             cmap='coolwarm', yticklabels=True)
 
 # %%
-# da capire meglio come inserire il tutto
-
-# create all the tags for each record
-from tags_mapping import *
-
-tagged_incidents_data = build_tagged_dataframe('../data/')
-
-tagged_incidents_data
-
-# %%
-# add tag consistency column
-tag_consistency_attr_name = "tag_consistency"
-col = [True] * tagged_incidents_data.shape[0] #tag consistency assumed true
-tagged_incidents_data.insert(tagged_incidents_data.shape[1], tag_consistency_attr_name, col)
+characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(
+    by="Shot - Dead (murder, accidental, suicide)",
+    inplace=False,
+    ascending=False).plot(
+        kind='bar',
+        figsize=(20,10)
+    )
 
 # %%
-from data_preparation_utils import check_consistency_tag, check_consistency_characteristics
-
-# consistency check
-unconsistencies_characteristics = 0
-unconsistencies_tag = 0
-for index, record in tagged_incidents_data.iterrows():
-    if not check_consistency_tag(record):
-        tagged_incidents_data.at[index, tag_consistency_attr_name] = False
-        unconsistencies_tag += 1
-    if not check_consistency_characteristics(record):
-        tagged_incidents_data.at[index, tag_consistency_attr_name] = False # if there is an unconsistencies with characteristics it will be reflected by tags
-        unconsistencies_characteristics += 1
-
-print("characteristics unconsistencies: " + str(unconsistencies_characteristics) + "\ntags unconsistencies: " + str(unconsistencies_tag))
-print("total: " + str(unconsistencies_characteristics + unconsistencies_tag))
+fig = pd.DataFrame(characteristics_frequency_df).plot(kind='barh', figsize=(5, 18))
+fig.set_yticklabels(characteristics_frequency_df['characteristics'])
+fig.set_xscale("log")
+plt.title("Counts of 'incident_characteristics'")
+plt.xlabel('Count')
+plt.ylabel('Incident characteristics')
+plt.tight_layout()
 
 # %%
-# correct unconcistencies
-
-# ora questo lavoro è fatto sui dati sporchi
-# poi quando il dataset sarà pulito avrà effettivamente senso
-for index, record in tagged_incidents_data.iterrows():
-    if not(type(record['n_killed']) == str or type(record['n_injured']) == str or type(record['n_participants_child']) == str): # non ce ne sarà bisogno
-        if not(record[IncidentTag.death.name]) and record['n_killed'] > 0:
-            tagged_incidents_data.at[index, IncidentTag.death.name] = True
-        if not(record[IncidentTag.injuries.name]) and record['n_injured'] > 0:
-            tagged_incidents_data.at[index, IncidentTag.injuries.name] = True
-        if not(record[IncidentTag.children.name]) and record['n_participants_child'] > 0:
-            tagged_incidents_data.at[index, IncidentTag.children.name] = True
+fig, ax = plt.subplots(figsize=(20, 15))
+sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(by="Shot - Dead (murder, accidental, suicide)", inplace=False, ascending=False).tail(-1),
+            cmap='coolwarm', yticklabels=True)
 
 # %%
-# check tags unconsistencies again
-unconsistencies_tag = 0
-for index, record in tagged_incidents_data.iterrows():
-    if check_consistency_tag(record):
-        if check_consistency_characteristics(record):
-            tagged_incidents_data.at[index, tag_consistency_attr_name] = True # set it back to true if issues are resolved
-    else:
-        unconsistencies_tag += 1
-
-print(unconsistencies_tag)
+characteristics_count_matrix = pd.crosstab(incidents_df['incident_characteristics2'], incidents_df['incident_characteristics1'])
+fig, ax = plt.subplots(figsize=(25, 20))
+sns.heatmap(characteristics_count_matrix, cmap='coolwarm', ax=ax, xticklabels=True, yticklabels=True, linewidths=.5)
+ax.set_xlabel('incident_characteristics2')
+ax.set_ylabel('incident_characteristics1')  
+ax.set_title('Counts of incident characteristics')
+plt.tight_layout()
 
 # %%
-cnt = 0
-for index, record in tagged_incidents_data.iterrows():
-    if not tagged_incidents_data.loc[index, tag_consistency_attr_name]:
-        cnt += 1
-print(cnt)
+from data_preparation_utils import add_tags, check_tag_consistency, check_characteristics_consistency, IncidentTag
+
+tags_columns = [tag.name for tag in IncidentTag]
+tags_columns.append('tag_consistency')
+
+if LOAD_DATA_FROM_CHECKPOINT:
+    tags_df = load_checkpoint('checkpoint_tags')
+    incidents_df[tags_columns] = tags_df[tags_columns]
+else:
+    incidents_df = add_tags(incidents_df)
+    incidents_df['tag_consistency'] = True
+    incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
+    incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
+    save_checkpoint(incidents_df[tags_columns], 'tags')
+
+incidents_df.head()
 
 # %%
-incidents_data[incidents_data['state']=='DISTRICT OF COLUMBIA'].size
+incidents_df['tag_consistency'].value_counts()
+
+# %%
+# correct inconcistencies
+for index, record in incidents_df.iterrows():
+    if not(record[IncidentTag.death.name]) and record['n_killed'] > 0:
+        incidents_df.at[index, IncidentTag.death.name] = True
+    if not(record[IncidentTag.injuries.name]) and record['n_injured'] > 0:
+        incidents_df.at[index, IncidentTag.injuries.name] = True
+    if not(record[IncidentTag.children.name]) and record['n_participants_child'] > 0:
+        incidents_df.at[index, IncidentTag.children.name] = True
+
+# %%
+incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
+incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
+save_checkpoint(incidents_df[tags_columns], 'tags')
+
+incidents_df['tag_consistency'].value_counts()
+
+# %%
+tags_partitions_counts = {}
+tags_partitions_counts['Murder'] = incidents_df[
+    (incidents_df['death']==True) &
+    ((incidents_df['aggression']==True) |
+     (incidents_df['social_reasons']==True))].shape[0] # not accidental nor defensive
+tags_partitions_counts['Suicide'] = incidents_df[
+    (incidents_df['death']==True) &
+    (incidents_df['suicide']==True)].shape[0] # warninig: if murder/suicide is counted twice
+tags_partitions_counts['Defensive'] = incidents_df[
+    (incidents_df['death']==True) &
+    (incidents_df['defensive']==True)].shape[0]
+tags_partitions_counts['Accidental'] = incidents_df[
+    (incidents_df['death']==True) &
+    (incidents_df['unintentional']==True)].shape[0]
+tags_partitions_counts['Others or not known'] = incidents_df[
+    (incidents_df['death']==True) &
+    (incidents_df['aggression']==False) &
+    (incidents_df['social_reasons']==False) &
+    (incidents_df['suicide']==False) & 
+    (incidents_df['defensive']==False) &
+    (incidents_df['unintentional']==False)].shape[0]
+
+fig, ax = plt.subplots()
+ax.pie(tags_partitions_counts.values(), labels=tags_partitions_counts.keys(), autopct='%1.1f%%');
+
+# %%
+n_cols = 3
+fig, ax = plt.subplots(figsize=(12,16), nrows=7, ncols=n_cols)
+row = 0
+for i, tag in enumerate(tags_columns):
+    n_rows_tag = incidents_df[(incidents_df[tag]==True)].shape[0]
+    if i!=0 and i%n_cols==0:
+        row += 1
+    ax[row][i%n_cols].pie([n_rows_tag, incidents_df.shape[0]-n_rows_tag], labels=[tag, 'no '+tag], autopct='%1.1f%%')
+
+# %%
+incidents_df[(incidents_df['death']==True) &
+    (incidents_df['aggression']==False) &
+    (incidents_df['social_reasons']==False) &
+    (incidents_df['suicide']==False) & 
+    (incidents_df['defensive']==False) &
+    (incidents_df['unintentional']==False)]
+
+# %%
+numerical_columns = incidents_df.select_dtypes(include=['float64', 'int64']).columns
+plt.figure(figsize=(15, 12))
+corr_matrix = incidents_df[numerical_columns].corr()
+sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
+
+# %%
+# compute correlation between accidental incidents and presence of children
+incidents_df['unintentional'].corr(incidents_df['n_participants_child']>0) # not correlated
+
+# %%
+fig, axs = plt.subplots(ncols=2, figsize=(20,10))
+incidents_df[incidents_df['n_females']>1]['incident_characteristics1'].value_counts().plot(kind='bar', title='Characteristic 1 counts of incidents with females involved', ax=axs[0])
+incidents_df[incidents_df['n_females']>1]['incident_characteristics2'].value_counts().plot(kind='bar',  title='Characteristic 2 counts of incidents with females involved', ax=axs[1])
+
+# %%
+incidents_df.groupby(['latitude', 'longitude']).size().sort_values(ascending=False)[:50].plot(
+    kind='bar',
+    figsize=(10,6),
+    title='Counts of the locations with the 50 highest number of incidents'
+)
+
+# %%
+incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
+    kind='bar',
+    figsize=(10,6),
+    title='Counts of the addresses with the 50 highest number of incidents'
+)
+
+# %%
+fig, ax = plt.subplots(figsize=(12,8)) 
+sns.heatmap(incidents_df[['date', 'state', 'city_or_county', 'address', 'latitude', 'longitude', 'congressional_district', 'state_house_district', 'state_senate_district', 'participant_age1', 'participant_age_group1', 'participant_gender1', 'min_age_participants', 'avg_age_participants', 'max_age_participants', 'n_participants_child', 'n_participants_teen', 'n_participants_adult', 'n_males', 'n_females', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 'n_participants', 'notes', 'incident_characteristics1', 'incident_characteristics2']].isnull(), cbar=False, xticklabels=True, ax=ax)
+
+# %% [markdown]
+# We are aware of the fact that we could use classifier to inferr missing values. We chose not to do it because we think such method do not align with the nature of gun incidents. Citando il libro "Classification is the task of learning a target function f that maps each attribute set x to one of the predefined class labels y", il problema è che non può esistere una tale funzione (possono esserci (e immagino siano anche molti comuni) record uguali su tutti gli attributi tranne uno, per cui l'inferenza è impossibile).
+
+# %% [markdown]
+# # Save Final Data
 
 # %% [markdown]
 # ## Join population, poverty and eletion data
@@ -2561,222 +2660,6 @@ pyo.plot(fig, filename='../html/scatter_poverty.html', auto_open=False)
 fig.show()
 
 
-
-# %% [markdown]
-# ## Incident characteristics features: exploration and preparation
-
-# %%
-# FIXME: aggiungere commenti
-
-# %%
-# check if ch1 and ch2 are always different
-incidents_df[incidents_df['incident_characteristics1']==incidents_df['incident_characteristics2']].shape[0]==0
-
-# %%
-ch1_counts = incidents_df['incident_characteristics1'].value_counts()
-ch2_counts = incidents_df['incident_characteristics2'].value_counts()
-ch_counts = ch1_counts.add(ch2_counts, fill_value=0).sort_values(ascending=True)
-ch_counts
-
-# %%
-fig = ch_counts.plot(kind='barh', figsize=(5, 18))
-fig.set_xscale("log")
-plt.title("Counts of 'incident_characteristics'")
-plt.xlabel('Count')
-plt.ylabel('Incident characteristics')
-plt.tight_layout()
-
-# %%
-# merge characteristics list
-
-characteristics1_frequency = pd.Series.to_dict(incidents_df.pivot_table(columns=['incident_characteristics1'], aggfunc='size'))
-characteristics2_frequency = pd.Series.to_dict(incidents_df.pivot_table(columns=['incident_characteristics2'], aggfunc='size'))
-
-characteristics_frequency = {}
-keys1 = list(characteristics1_frequency.keys())
-keys2 = list(characteristics2_frequency.keys())
-
-i = 0
-j = 0
-while i < len(characteristics1_frequency) and j < len(characteristics2_frequency):
-    if keys1[i] > keys2[j]:
-        characteristics_frequency[keys2[j]] = characteristics2_frequency[keys2[j]]
-        j += 1
-    elif keys1[i] == keys2[j]:
-        characteristics_frequency[keys2[j]] = characteristics2_frequency[keys2[j]] + characteristics1_frequency[keys1[i]]
-        i += 1
-        j += 1
-    else:
-        characteristics_frequency[keys1[i]] = characteristics1_frequency[keys1[i]]
-        i += 1
-
-if(len(characteristics1_frequency) < len(characteristics2_frequency)):
-    for j in range(len(characteristics1_frequency), len(characteristics2_frequency)):
-        characteristics_frequency[keys2[j]] = characteristics2_frequency[keys2[j]]
-elif(len(characteristics2_frequency) < len(characteristics1_frequency)):
-    for i in range(len(characteristics2_frequency), len(characteristics1_frequency)):
-        characteristics_frequency[keys1[i]] = characteristics1_frequency[keys1[i]]
-
-characteristics_frequency = dict(sorted(characteristics_frequency.items(), key=lambda x:x[1])) # sort by value
-
-# %%
-characteristics_frequency_df = pd.DataFrame({'characteristics': list(characteristics_frequency.keys()), 'occurrences': list(characteristics_frequency.values())})
-
-characteristics_frequency_df
-
-# %%
-fig = pd.DataFrame(characteristics_frequency_df).plot(kind='barh', figsize=(5, 18))
-fig.set_yticklabels(characteristics_frequency_df['characteristics'])
-fig.set_xscale("log")
-plt.title("Counts of 'incident_characteristics'")
-plt.xlabel('Count')
-plt.ylabel('Incident characteristics')
-plt.tight_layout()
-
-# %%
-characteristics_count_matrix = pd.crosstab(incidents_df['incident_characteristics2'], incidents_df['incident_characteristics1'])
-fig, ax = plt.subplots(figsize=(25, 20))
-sns.heatmap(characteristics_count_matrix, cmap='coolwarm', ax=ax, xticklabels=True, yticklabels=True, linewidths=.5)
-ax.set_xlabel('incident_characteristics1')
-ax.set_ylabel('incident_characteristics2')  
-ax.set_title('Counts of incident characteristics')
-plt.tight_layout()
-
-# %%
-fig, ax = plt.subplots(figsize=(20, 15))
-sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(by="Shot - Dead (murder, accidental, suicide)", inplace=False, ascending=False).tail(-1),
-            cmap='coolwarm', yticklabels=True)
-
-# %%
-characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(
-    by="Shot - Dead (murder, accidental, suicide)",
-    inplace=False,
-    ascending=False).plot(
-        kind='bar',
-        figsize=(20,10)
-    )
-
-# %%
-from data_preparation_utils import add_tags, check_tag_consistency, check_characteristics_consistency, IncidentTag
-
-tags_columns = [tag.name for tag in IncidentTag]
-tags_columns.append('tag_consistency')
-
-if LOAD_DATA_FROM_CHECKPOINT:
-    tags_df = load_checkpoint('checkpoint_tags')
-    incidents_df[tags_columns] = tags_df[tags_columns]
-else:
-    incidents_df = add_tags(incidents_df)
-    incidents_df['tag_consistency'] = True
-    incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
-    incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
-    save_checkpoint(incidents_df[tags_columns], 'tags')
-
-incidents_df.head()
-
-# %%
-incidents_df['tag_consistency'].value_counts()
-
-# %%
-# correct inconcistencies
-for index, record in incidents_df.iterrows():
-    if not(record[IncidentTag.death.name]) and record['n_killed'] > 0:
-        incidents_df.at[index, IncidentTag.death.name] = True
-    if not(record[IncidentTag.injuries.name]) and record['n_injured'] > 0:
-        incidents_df.at[index, IncidentTag.injuries.name] = True
-    if not(record[IncidentTag.children.name]) and record['n_participants_child'] > 0:
-        incidents_df.at[index, IncidentTag.children.name] = True
-
-# %%
-incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
-incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
-save_checkpoint(incidents_df[tags_columns], 'tags')
-
-incidents_df['tag_consistency'].value_counts()
-
-# %%
-tags_partitions_counts = {}
-tags_partitions_counts['Murder'] = incidents_df[
-    (incidents_df['death']==True) &
-    ((incidents_df['aggression']==True) |
-     (incidents_df['social_reasons']==True))].shape[0] # not accidental nor defensive
-tags_partitions_counts['Suicide'] = incidents_df[
-    (incidents_df['death']==True) &
-    (incidents_df['suicide']==True)].shape[0] # warninig: if murder/suicide is counted twice
-tags_partitions_counts['Defensive'] = incidents_df[
-    (incidents_df['death']==True) &
-    (incidents_df['defensive']==True)].shape[0]
-tags_partitions_counts['Accidental'] = incidents_df[
-    (incidents_df['death']==True) &
-    (incidents_df['unintentional']==True)].shape[0]
-tags_partitions_counts['Others or not known'] = incidents_df[
-    (incidents_df['death']==True) &
-    (incidents_df['aggression']==False) &
-    (incidents_df['social_reasons']==False) &
-    (incidents_df['suicide']==False) & 
-    (incidents_df['defensive']==False) &
-    (incidents_df['unintentional']==False)].shape[0]
-
-fig, ax = plt.subplots()
-ax.pie(tags_partitions_counts.values(), labels=tags_partitions_counts.keys(), autopct='%1.1f%%');
-
-# %%
-n_cols = 3
-fig, ax = plt.subplots(figsize=(12,16), nrows=7, ncols=n_cols)
-row = 0
-for i, tag in enumerate(tags_columns):
-    n_rows_tag = incidents_df[(incidents_df[tag]==True)].shape[0]
-    if i!=0 and i%n_cols==0:
-        row += 1
-    ax[row][i%n_cols].pie([n_rows_tag, incidents_df.shape[0]-n_rows_tag], labels=[tag, 'no '+tag], autopct='%1.1f%%')
-
-# %%
-incidents_df[(incidents_df['death']==True) &
-    (incidents_df['aggression']==False) &
-    (incidents_df['social_reasons']==False) &
-    (incidents_df['suicide']==False) & 
-    (incidents_df['defensive']==False) &
-    (incidents_df['unintentional']==False)]
-
-# %%
-numerical_columns = incidents_df.select_dtypes(include=['float64', 'int64']).columns
-plt.figure(figsize=(15, 12))
-corr_matrix = incidents_df[numerical_columns].corr()
-sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
-
-# %%
-# compute correlation between accidental incidents and presence of children
-incidents_df['unintentional'].corr(incidents_df['n_participants_child']>0) # not correlated
-
-# %%
-fig, axs = plt.subplots(ncols=2, figsize=(20,10))
-incidents_df[incidents_df['n_females']>1]['incident_characteristics1'].value_counts().plot(kind='bar', title='Characteristic 1 counts of incidents with females involved', ax=axs[0])
-incidents_df[incidents_df['n_females']>1]['incident_characteristics2'].value_counts().plot(kind='bar',  title='Characteristic 2 counts of incidents with females involved', ax=axs[1])
-
-# %%
-incidents_df.groupby(['latitude', 'longitude']).size().sort_values(ascending=False)[:50].plot(
-    kind='bar',
-    figsize=(10,6),
-    title='Counts of the locations with the 50 highest number of incidents'
-)
-
-# %%
-incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
-    kind='bar',
-    figsize=(10,6),
-    title='Counts of the addresses with the 50 highest number of incidents'
-)
-
-# %%
-fig, ax = plt.subplots(figsize=(12,8)) 
-sns.heatmap(incidents_df[['date', 'state', 'city_or_county', 'address', 'latitude', 'longitude', 'congressional_district', 'state_house_district', 'state_senate_district', 'participant_age1', 'participant_age_group1', 'participant_gender1', 'min_age_participants', 'avg_age_participants', 'max_age_participants', 'n_participants_child', 'n_participants_teen', 'n_participants_adult', 'n_males', 'n_females', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 'n_participants', 'notes', 'incident_characteristics1', 'incident_characteristics2']].isnull(), cbar=False, xticklabels=True, ax=ax)
-
-# %% [markdown]
-# We are aware of the fact that we could use classifier to inferr missing values. We chose not to do it because we think such method do not align with the nature of gun incidents. Citando il libro "Classification is the task of learning a target function f that maps each attribute set x to one of the predefined class labels y", il problema è che non può esistere una tale funzione (possono esserci (e immagino siano anche molti comuni) record uguali su tutti gli attributi tranne uno, per cui l'inferenza è impossibile).
-
-# %% [markdown]
-# ## Save Final Data
-
 # %%
 incidents_df.columns
 # TODO: spostare queste liste nelle sezioni dei notebook in cui si analizzano gli attributi (appendendo le nuove features)
@@ -2820,3 +2703,11 @@ incidents_df.columns
 # %%
 # incidents_data[time_columns+geo_columns+participants_columns+characteristic_columns+external_columns]
 incidents_df.to_csv('../data/incidents_cleaned.csv', index=False)
+
+# %%
+final_geo_df.columns
+
+# %%
+final_geo_df['state'].unique()
+
+
