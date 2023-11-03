@@ -857,13 +857,13 @@ def check_tag_consistency(row):
     :param row: row of the incidents dataframe
     :return row: row of the dataframe with setted consistency tags features
     '''
-    if (row[IncidentTag.death.name] and row['n_killed'] == 0) or (not(row[IncidentTag.death.name]) and row['n_killed'] > 0):
+    if ((row[IncidentTag.death.name] and row['n_killed'] == 0) or (not(row[IncidentTag.death.name]) and row['n_killed'] > 0)):
         row['tag_consistency'] = False
         return row
-    if (row[IncidentTag.injuries.name] and row['n_injured'] == 0) or (not(row[IncidentTag.injuries.name]) and row['n_injured'] > 0):
+    if ((row[IncidentTag.injuries.name] and row['n_injured'] == 0) or (not(row[IncidentTag.injuries.name]) and row['n_injured'] > 0)):
         row['tag_consistency'] = False
         return row
-    if (row[IncidentTag.children.name] and row['n_participants_child'] == 0) or (not(row[IncidentTag.children.name]) and row['n_participants_child'] > 0):
+    if ((row[IncidentTag.children.name] and row['n_participants_child'] == 0) or (not(row[IncidentTag.children.name]) and row['n_participants_child'] > 0)):
         row['tag_consistency'] = False
         return row
     if((row["incident_characteristics1"] == "Non-Shooting Incident" or row["incident_characteristics2"] ==
