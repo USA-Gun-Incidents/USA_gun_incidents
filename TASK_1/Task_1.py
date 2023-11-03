@@ -2096,6 +2096,7 @@ plt.show()
 # distribuition number of participants per age group 
 fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 8), sharey=False) 
 # FIXME: binning come sopra, valutare se fare 3 istogrammi con sharey in subplots distinti
+# questi con 1! grafico in scala logaritmica è illeggibile
 
 ax0.hist(age_temporary_df['n_participants_child'], bins=15, range=(0,10), density=False, histtype='step',
     linewidth=4, color='blue', label='Children')
@@ -2108,22 +2109,22 @@ ax0.set_ylabel('Frequency')
 ax0.legend()
 ax0.set_title('Distribution of number of participants (1-10 participants)')
 
-ax1.hist(age_temporary_df['n_participants_child'], bins=15, range=(10,30), density=False, histtype='step',
+ax1.hist(age_temporary_df['n_participants_child'], bins=20, range=(10,30), density=False, histtype='step',
     linewidth=4, color='blue', label='Children')
-ax1.hist(age_temporary_df['n_participants_teen'], bins=15, range=(10,30), density=False, histtype='step',
+ax1.hist(age_temporary_df['n_participants_teen'], bins=20, range=(10,30), density=False, histtype='step',
     linewidth=4, color='magenta', label='Teens')
-ax1.hist(age_temporary_df['n_participants_adult'], bins=15, range=(10,30), density=False, histtype='step',
+ax1.hist(age_temporary_df['n_participants_adult'], bins=20, range=(10,30), density=False, histtype='step',
     linewidth=4, color='green', label='Adults')
 ax1.set_xlabel('Number of participants')
 ax1.set_ylabel('Frequency')
 ax1.legend()
 ax1.set_title('Distribution of number of participants (10-30 participants)')
 
-ax2.hist(age_temporary_df['n_participants_child'], bins=15, range=(30,103), density=False, histtype='step',
+ax2.hist(age_temporary_df['n_participants_child'], bins=103-30, range=(30,103), density=False, histtype='step',
     linewidth=4, color='blue', label='Children')
-ax2.hist(age_temporary_df['n_participants_teen'], bins=15, range=(30,103), density=False, histtype='step',
+ax2.hist(age_temporary_df['n_participants_teen'], bins=103-30, range=(30,103), density=False, histtype='step',
     linewidth=4, color='magenta', label='Teens')
-ax2.hist(age_temporary_df['n_participants_adult'], bins=15, range=(30,103), density=False, histtype='step',
+ax2.hist(age_temporary_df['n_participants_adult'], bins=103-30, range=(30,103), density=False, histtype='step',
     linewidth=4, color='green', label='Adults')
 ax2.set_xlabel('Number of participants')
 ax2.set_ylabel('Frequency')
@@ -2142,29 +2143,29 @@ plt.show()
 
 # %%
 # distribuition number of participants per gender
-fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 8), sharey=False) # FIXME: idem come sopra
+fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 8), sharey=False)
 
-ax0.hist(age_temporary_df['n_males'], bins=15, range=(0,10), density=False, histtype='step',
+ax0.hist(age_temporary_df['n_males'], bins=10, range=(0,10), density=False, histtype='step',
     linewidth=4, color='blue', label='Males')
-ax0.hist(age_temporary_df['n_females'], bins=15, range=(0,10), density=False, histtype='step',
+ax0.hist(age_temporary_df['n_females'], bins=10, range=(0,10), density=False, histtype='step',
     linewidth=4, color='red', label='Females')
 ax0.set_xlabel('Number of participants')
 ax0.set_ylabel('Frequency')
 ax0.legend()
 ax0.set_title('Distribution of number of participants (1-10 participants)')
 
-ax1.hist(age_temporary_df['n_males'], bins=15, range=(10,30), density=False, histtype='step',
+ax1.hist(age_temporary_df['n_males'], bins=20, range=(10,30), density=False, histtype='step',
     linewidth=4, color='blue', label='Males')
-ax1.hist(age_temporary_df['n_females'], bins=15, range=(10,30), density=False, histtype='step',
+ax1.hist(age_temporary_df['n_females'], bins=20, range=(10,30), density=False, histtype='step',
     linewidth=4, color='red', label='Females')
 ax1.set_xlabel('Number of participants')
 ax1.set_ylabel('Frequency')
 ax1.legend()
 ax1.set_title('Distribution of number of participants (10-30 participants)')
 
-ax2.hist(age_temporary_df['n_males'], bins=15, range=(30,103), density=False, histtype='step',
+ax2.hist(age_temporary_df['n_males'], bins=103-30, range=(30,103), density=False, histtype='step',
     linewidth=4, color='blue', label='Males')
-ax2.hist(age_temporary_df['n_females'], bins=15, range=(30,103), density=False, histtype='step',
+ax2.hist(age_temporary_df['n_females'], bins=103-30, range=(30,103), density=False, histtype='step',
     linewidth=4, color='red', label='Females')
 ax2.set_xlabel('Number of participants')
 ax2.set_ylabel('Frequency')
@@ -2177,6 +2178,7 @@ plt.show()
 # From the plot, we can notice that when women are involved in incidents, most of the time, there is only one woman, while in incidents with more than two participants of the same gender, it is more frequent for the participants to be men.
 #
 # Note that for 1567 entries in the dataset, we have the total number of participants, but we do not have the number of males and females
+# and that the y-axis of the histograms is not equal.
 
 # %% [markdown]
 # Below, we plot the distribution of the average age of participants in each incident.
