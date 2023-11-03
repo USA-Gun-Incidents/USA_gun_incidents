@@ -534,7 +534,7 @@ winning_party_per_state = elections_df.groupby(['year', 'state', 'party'])['cand
 winning_party_per_state = winning_party_per_state.groupby(['year', 'state']).idxmax().apply(lambda x: x[2])
 winning_party_per_state = winning_party_per_state.to_frame()
 winning_party_per_state.reset_index(inplace=True)
-winning_party_per_state.rename(columns={'candidateperc': 'winningparty'}, inplace=True)
+winning_party_per_state.rename(columns={'candidateperc': 'majority_state_party'}, inplace=True)
 winning_party_per_state['px_code'] = winning_party_per_state['state'].str.title().map(usa_name_alphcode) # District of Columbia won't be plotted because 'of' is written with capital 'O'
 winning_party_per_state
 
@@ -546,7 +546,7 @@ fig = px.choropleth(
     winning_party_per_state[winning_party_per_state['year']>2004],
     locations='px_code',
     locationmode="USA-states",
-    color='winningparty',
+    color='majority_state_party',
     scope="usa",
     animation_frame='year',
     title="Results of the elections over the years", 
@@ -680,7 +680,7 @@ incidents_df.info()
 
 # %%
 print(f"# of rows before dropping duplicates: {incidents_df.shape[0]}")
-incidents_df.drop_duplicates(inplace=True)
+incidents_df.drop_duplicates(inplace=True, ignore_index=True)
 print(f"# of rows after dropping duplicates: {incidents_df.shape[0]}")
 
 # %% [markdown]
@@ -1268,7 +1268,7 @@ final_geo_df[final_geo_df['state']=='Hawaiʻi']
 # %%
 final_geo_df['state'] = final_geo_df['state'].apply(lambda x: 'Hawaii' if x=='Hawaiʻi' else x) # TODO: togliere (dovrebbe essere fixato altrove)
 incidents_df.drop(columns=['state', 'latitude', 'longitude'], inplace=True)
-incidents_df = pd.concat([incidents_df, final_geo_df], axis=1)
+incidents_df = pd.concat([incidents_df.reset_index(drop=True), final_geo_df.reset_index(drop=True)], axis=1)
 incidents_df['state'] = incidents_df['state'].apply(lambda x: x.upper()) # FIXME: da spostare?
 
 # %% [markdown]
@@ -2151,7 +2151,8 @@ new_age_df.describe()
 
 # %%
 incidents_df.drop(columns=participants_columns, inplace=True)
-incidents_df = pd.concat([incidents_df, new_age_df], axis=1)
+incidents_df = pd.concat([incidents_df.reset_index(drop=True), new_age_df.reset_index(drop=True)], axis=1)
+# gli indici sono diversi...
 
 # %% [markdown]
 # ## Incident characteristics features: exploration and preparation
@@ -2205,22 +2206,18 @@ characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort
 # %%
 from data_preparation_utils import add_tags, check_tag_consistency, check_characteristics_consistency, IncidentTag
 
-print(f"Shape before {incidents_df.shape[0]}")
-
 tags_columns = [tag.name for tag in IncidentTag]
 tags_columns.append('tag_consistency')
 
 if False:#LOAD_DATA_FROM_CHECKPOINT:
     tags_df = load_checkpoint('checkpoint_tags')
-    incidents_df[tags_columns] = tags_df[tags_columns]
+    incidents_df[tags_columns] = tags_df[tags_columns] # FIX: drop columns, concat along axis=1
 else:
     incidents_df = add_tags(incidents_df)
     incidents_df['tag_consistency'] = True
     incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
     incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
     save_checkpoint(incidents_df[tags_columns], 'tags') #TODO: guarda cella sotto,fa la stessa cosa
-
-print(f"Shape after {incidents_df.shape[0]}")
 
 # %%
 incidents_df['tag_consistency'].value_counts()
@@ -2402,8 +2399,8 @@ incidents_df = incidents_df.merge(usa_population_df, on=['state'], how='left')
 incidents_df.head()
 
 # %%
-incidents_per_state = incidents_df[incidents_df['year']<=2020].groupby(['state', 'population']).size()
-incidents_per_state = ((incidents_per_state / incidents_per_state.index.get_level_values('population'))*100000).to_frame(name='incidents_per_100k_inhabitants').sort_values(by='incidents_per_100k_inhabitants', ascending=True)
+incidents_per_state = incidents_df[incidents_df['year']<=2020].groupby(['state', 'population_state_2010']).size()
+incidents_per_state = ((incidents_per_state / incidents_per_state.index.get_level_values('population_state_2010'))*100000).to_frame(name='incidents_per_100k_inhabitants').sort_values(by='incidents_per_100k_inhabitants', ascending=True)
 incidents_per_state.reset_index(inplace=True)
 incidents_per_state.plot(
     kind='barh',
@@ -2442,7 +2439,7 @@ incidents_per_month_per_state = incidents_df.groupby(['state', 'month', 'year'])
 incidents_per_month_per_state = incidents_per_month_per_state.to_frame(name='incidents').reset_index()
 incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month', 'state'], ignore_index=True)
 incidents_per_month_per_state['incidents_per_100k_inhabitants'] = incidents_per_month_per_state.apply(
-    lambda row: (row['incidents'] / usa_population_df[usa_population_df['state']==row['state']]['population'].iloc[0])*100000,
+    lambda row: (row['incidents'] / usa_population_df[usa_population_df['state']==row['state']]['population_state_2010'].iloc[0])*100000,
     axis=1
 )
 fig, ax = plt.subplots(figsize=(20, 10))
@@ -2482,7 +2479,7 @@ incidents_per_month_per_state = incidents_df[incidents_df['incident_characterist
 incidents_per_month_per_state = incidents_per_month_per_state.to_frame(name='incidents').reset_index()
 incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month', 'state'], ignore_index=True)
 incidents_per_month_per_state['incidents_per_100k_inhabitants'] = incidents_per_month_per_state.apply(
-    lambda row: (row['incidents'] / usa_population_df[usa_population_df['state']==row['state']]['population'].iloc[0])*100000,
+    lambda row: (row['incidents'] / usa_population_df[usa_population_df['state']==row['state']]['population_state_2010'].iloc[0])*100000,
     axis=1
 )
 fig, ax = plt.subplots(figsize=(20, 10))
@@ -2560,7 +2557,7 @@ plt.tight_layout()
 incidents_per_year_per_state = incidents_df.groupby(['state', 'year']).size()
 incidents_per_year_per_state = incidents_per_year_per_state.to_frame(name='incidents').reset_index()
 incidents_per_year_per_state['incidents_per_100k_inhabitants'] = incidents_per_year_per_state.apply(
-    lambda row: (row['incidents'] / usa_population_df[usa_population_df['state']==row['state']]['population'].iloc[0])*100000,
+    lambda row: (row['incidents'] / usa_population_df[usa_population_df['state']==row['state']]['population_state_2010'].iloc[0])*100000,
     axis=1
 )
 fig = px.line(
@@ -2587,17 +2584,17 @@ fig.show()
 winning_party_per_state_copy = winning_party_per_state.copy()
 winning_party_per_state_copy['year'] = winning_party_per_state['year'] + 1
 winning_party_per_state = pd.concat([winning_party_per_state, winning_party_per_state_copy], ignore_index=True)
-incidents_df = incidents_df.merge(winning_party_per_state[['state', 'year', 'winningparty']], on=['state', 'year'], how='left') # FIX: rinominare in majority_state_party
+incidents_df = incidents_df.merge(winning_party_per_state[['state', 'year', 'majority_state_party']], on=['state', 'year'], how='left')
 
 # %%
-incidents_per_state_2016 = incidents_df[(incidents_df['n_killed']>0)].groupby(['state', 'year', 'population', 'povertyPercentage', 'winningparty']).size()
+incidents_per_state_2016 = incidents_df[(incidents_df['n_killed']>0)].groupby(['state', 'year', 'population_state_2010', 'povertyPercentage', 'majority_state_party']).size()
 incidents_per_state_2016 = incidents_per_state_2016.to_frame(name='incidents').reset_index()
-incidents_per_state_2016['incidents_per_100k_inhabitants'] = (incidents_per_state_2016['incidents'] / incidents_per_state_2016['population'])*100000
+incidents_per_state_2016['incidents_per_100k_inhabitants'] = (incidents_per_state_2016['incidents'] / incidents_per_state_2016['population_state_2010'])*100000
 fig = px.scatter(
     incidents_per_state_2016,
     x='povertyPercentage',
     y='incidents_per_100k_inhabitants',
-    color='winningparty',
+    color='majority_state_party',
     hover_name='state',
     hover_data={'povertyPercentage': True, 'incidents_per_100k_inhabitants': True},
     title='Mortal gun incidents in the USA',
@@ -2656,6 +2653,7 @@ characteristic_columns = ['notes', 'incident_characteristics1', 'incident_charac
     'workplace', 'abduction', 'unintentional', 'tag_consistency']
 
 external_columns = ['povertyPercentage', 'party', 'candidatevotes', 'totalvotes', 'candidateperc', 'population_state_2010']
+# majority state party?
 
 # TODO: rinominare fuori dal notebook la colonna 'importance' in 'location_importance' o qualcosa di simile, basta che si capisca che è relativo al posto
 # rimuovere nan_values, rimuovere attributi che hanno check di consistenza?
@@ -2664,6 +2662,9 @@ external_columns = ['povertyPercentage', 'party', 'candidatevotes', 'totalvotes'
 
 # %%
 incidents_df = incidents_df[time_columns + geo_columns + participants_columns + characteristic_columns + external_columns]
+
+# %%
+incidents_df.shape[0]
 
 # %% [markdown]
 # We re-order the columns and we save the cleaned dataset:
