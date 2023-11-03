@@ -1,1 +1,12 @@
+title: USA gun incidents
+description: This project has been developed for the "Data mining" course at the University of Pisa.
+authors:
+  aru:
+    name: Giacomo Aru
+  ghisolfi:
+    name: Giulia Ghisolfi
+  marini:
+    name: Luca Marini
+  testa:
+    name: Irene Testa
 theme: minima
