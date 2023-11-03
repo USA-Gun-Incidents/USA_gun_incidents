@@ -97,8 +97,7 @@ poverty_df.groupby(['state', 'year']).size().max()==1
 # Since it does not, we display the duplicated <`state`, `year`> tuples:
 
 # %%
-poverty_state_year_size = poverty_df.groupby(['state', 'year']).size()
-poverty_state_year_size[poverty_state_year_size>1]
+poverty_df.groupby(['state', 'year']).size()[lambda x: x> 1]
 
 # %% [markdown]
 # We display the data for Wyoming, the only one with this issue:
@@ -160,7 +159,7 @@ plt.ylabel('Poverty (%)')
 plt.title('Poverty (%) over the years')
 
 # %% [markdown]
-# The plot above shows that actually those values are not errors.
+# The plot above shows that those fliers could be realistic values, we don't need to correct them.
 
 # %%
 poverty_df.groupby('year')['povertyPercentage'].mean().plot(kind='line', figsize=(15, 5), label='USA average', color='black', style='--')
@@ -171,6 +170,10 @@ plt.fill_between(
     alpha=0.2,
     color='gray'
 )
+plt.legend()
+plt.xlabel('Year')
+plt.ylabel('Poverty (%)')
+plt.title('Average poverty (%) over the years')
 
 # %% [markdown]
 # We now plot the average poverty percentage over the years for each state:
@@ -248,7 +251,8 @@ pyo.plot(fig, filename='../html/animation_poverty.html', auto_open=False)
 fig.show()
 
 # %%
-# TODO: usare unica color bar e aggiustare dimensioni in modo che si leggano gli stati (questa versione potrebbe servire per il report)
+# TODO: usare unica color bar e aggiustare dimensioni in modo che si leggano gli stati?
+# per ora lasciamo il codice qua sotto che magari ci serve per il report
 
 # fig, axs = plt.subplots(ncols=3, nrows=6, figsize=(30, 40))
 # vmin, vmax = poverty_data['povertyPercentage'].agg(['min', 'max'])
@@ -477,7 +481,7 @@ for index, row in elections_df.iterrows():
 # %%
 elections_df[
     elections_df['year']>2012
-].groupby(['year', 'state']).agg('sum').boxplot(column='totalvotes', by='state', figsize=(20, 10), rot=90, xlabel='State', ylabel='Total votes')
+].groupby(['year', 'state']).agg('sum', numeric_only=True).boxplot(column='totalvotes', by='state', figsize=(20, 10), rot=90, xlabel='State', ylabel='Total votes')
 plt.suptitle('Total votes from 2014')
 plt.title('')
 plt.tight_layout()
@@ -518,18 +522,19 @@ elections_df[(elections_df['candidateperc']==100) & (elections_df['year']>2012)]
 # %% [markdown]
 # Wikipedia reports the same data, in those cases there was not an opponent party.
 #
-# The histogram above also shows that in some disticts the winner party obtained less than 50% of the votes. We display those districts:
-
-# %%
-elections_df[(elections_df['candidateperc']<=50) & (elections_df['year']>2012)] # TODO: maybe some are wrong
+# The histogram above also shows that in some disticts the winner party obtained less than 50% of the votes. We display some of those districts:
 
 # %%
 elections_df[(elections_df['candidateperc']<=30) & (elections_df['year']>2012)]
 
 # %% [markdown]
+# Searching in [Wikipedia](https://en.wikipedia.org/wiki/2016_United_States_House_of_Representatives_elections_in_Louisiana) we found that the number of candidatevotes refers to the votes obtained by the winner at the final runoff (in which less people went to vote) while the number of totalvotes refers to the voter at the runoff plus the votes for the other candidates at the primary election. We won't correct these errors but we will keep it in mind for later analysis.
+
+# %% [markdown]
 # Now we compute, for each year and state, the party with the highest percentage of votes, so to have a better understanding of the political orientation of each state:
 
 # %%
+# FIX: data l'osservazione sopra questo dato e questo plot non hanno più significato
 winning_party_per_state = elections_df.groupby(['year', 'state', 'party'])['candidateperc'].mean()
 winning_party_per_state = winning_party_per_state.groupby(['year', 'state']).idxmax().apply(lambda x: x[2])
 winning_party_per_state = winning_party_per_state.to_frame()
@@ -636,26 +641,28 @@ incidents_df.describe(include='all')
 
 # %%
 # NUMERIC ATTRIBUTES
-# positive integers
-incidents_df['participant_age1'] = pd.to_numeric(incidents_df['participant_age1'], downcast='unsigned', errors='coerce')
-incidents_df['n_males'] = pd.to_numeric(incidents_df['n_males'], downcast='unsigned', errors='coerce')
-incidents_df['n_females'] = pd.to_numeric(incidents_df['n_females'], downcast='unsigned', errors='coerce')
-incidents_df['n_killed'] = pd.to_numeric(incidents_df['n_killed'], downcast='unsigned', errors='coerce')
-incidents_df['n_injured'] = pd.to_numeric(incidents_df['n_injured'], downcast='unsigned', errors='coerce')
-incidents_df['n_arrested'] = pd.to_numeric(incidents_df['n_arrested'], downcast='unsigned', errors='coerce')
-incidents_df['n_unharmed'] = pd.to_numeric(incidents_df['n_unharmed'], downcast='unsigned', errors='coerce')
-incidents_df['n_participants'] = pd.to_numeric(incidents_df['n_participants'], downcast='unsigned', errors='coerce')
-incidents_df['min_age_participants'] = pd.to_numeric(incidents_df['min_age_participants'], downcast='unsigned', errors='coerce')
-incidents_df['max_age_participants'] = pd.to_numeric(incidents_df['max_age_participants'], downcast='unsigned', errors='coerce')
-incidents_df['n_participants_child'] = pd.to_numeric(incidents_df['n_participants_child'], downcast='unsigned', errors='coerce')
-incidents_df['n_participants_teen'] = pd.to_numeric(incidents_df['n_participants_teen'], downcast='unsigned', errors='coerce')
-incidents_df['n_participants_adult'] = pd.to_numeric(incidents_df['n_participants_adult'], downcast='unsigned', errors='coerce')
-# (the following attributes should be categorical, but for convenience we keep them numeric)
-incidents_df['congressional_district'] = pd.to_numeric(incidents_df['congressional_district'], downcast='unsigned', errors='coerce')
-incidents_df['state_house_district'] = pd.to_numeric(incidents_df['state_house_district'], downcast='unsigned', errors='coerce')
-incidents_df['state_senate_district'] = pd.to_numeric(incidents_df['state_senate_district'], downcast='unsigned', errors='coerce')
-# float
-incidents_df['avg_age_participants'] = pd.to_numeric(incidents_df['avg_age_participants'], errors='coerce')
+
+numerical_features = [
+    'participant_age1',
+    'n_males',
+    'n_females',
+    'n_killed',
+    'n_injured',
+    'n_arrested',
+    'n_unharmed', 
+    'n_participants',
+    'min_age_participants',
+    'avg_age_participants',
+    'max_age_participants',
+    'n_participants_child',
+    'n_participants_teen',
+    'n_participants_adult',
+    # (the following attributes should be categorical, but for convenience we keep them numeric)
+    'congressional_district',
+    'state_house_district',
+    'state_senate_district'
+    ]
+incidents_df[numerical_features] = incidents_df[numerical_features].apply(pd.to_numeric, errors='coerce')
 
 # DATE
 incidents_df['date'] = pd.to_datetime(incidents_df['date'], format='%Y-%m-%d')
@@ -723,26 +730,34 @@ incidents_df.describe(include='all', datetime_is_numeric=True)
 # - there are many inconsistencies and/or erros, for example:
 #     - the maximum value for the attribute `date` is 2030-11-28
 #     - the range of the attributes `age`, `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` is outside the domain of the attributes (e.g. the maximum value for the attribute age is 311)
-
-# %% [markdown]
-# FIXME: spostare e introdurre lo studio "more in depth"
 #
-# To avoid having to recompute the data every time the kernel is interrupted and to make the results reproducible in a short execution time, we decided to save the data to CSV files at the end of each data preparation phase.
+# In the following sections of this notebook we will analyze each attribute in detail.
 #
-# Below, we provide two specific functions to perform this task.
+# To avoid re-running some cells, we save checkpoints of the dataframe at different stages of the analysis and load the dataframe from the last checkpoint using the following functions:
 
 # %%
-LOAD_DATA_FROM_CHECKPOINT = True # boolean: True if you want to load data, False if you want to compute it
+LOAD_DATA_FROM_CHECKPOINT = True
 CHECKPOINT_FOLDER_PATH = '../data/checkpoints/'
 
 def save_checkpoint(df, checkpoint_name):
     df.to_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv')
 
-def load_checkpoint(checkpoint_name, casting={}):
-    if casting:
-        return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0, parse_dates=['date'], dtype=casting)
-    else: #TODO: sistemare il casting quando ci sono tutte le colonne 
-        return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0)#, parse_dates=['date'])
+def load_checkpoint(checkpoint_name, casting=None, parse_dates=False):
+    dates = False
+    date_parser = None
+    if parse_dates:
+        dates = ['date']
+        date_parser = lambda x: pd.to_datetime(x, format='%Y-%m-%d')
+    df = pd.read_csv(
+        CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv',
+        low_memory=False,
+        index_col=0,
+        parse_dates=dates,
+        date_parser=date_parser,
+        dtype=casting
+        )
+    return df
+
 
 # %% [markdown]
 # ## Date attribute: exploration and preparation
@@ -892,7 +907,7 @@ incidents_df[(incidents_df['latitude'] == 37.6499) & (incidents_df['longitude'] 
 # That point has probably the correct values for the attributes `state` and `city_or_county`.
 
 # %% [markdown]
-# FIXME: introdurre meglio, abbiamo usato
+# FIXME: abbiamo usato
 # geolocator = Nominatim(user_agent="?????"), assicurarsi abbia confini 2013-2020
 #
 # To fix these inconsistencies we used the library [GeoPy]((https://geopy.readthedocs.io/en/stable/)). This library allows to retrieve the address (state, county, suburb, city, town, village, location name, and other features) corresponding to a given latitude and longitude. We queried the library using all the latitudes and longitudes of the points in the dataset and we saved the results in the CSV file we now load:
@@ -919,14 +934,15 @@ geopy_df.head(n=2)
 # - *display_name*: User-friendly representation of the location, often formatted as a complete address. Used by us to cross-reference with the address in case we are unable to find a match between our data and the GeoPy data set using other information from the address.
 
 # %%
-# FIXME: allineare meglio
-print('Number of rows without surburbs: ', geopy_df.loc[geopy_df['suburb'].isna()].shape[0])
-print('Number of rows without coordinates: \n', geopy_df['coord_presence'].value_counts())
-print('\nNumber of rows without importance: \n', geopy_df['importance'].isnull().value_counts())
-print('Number of rows in which city is null and town is not null: ', 
-    geopy_df[(geopy_df['city'].isnull()) & (geopy_df['town'].notnull())].shape[0])
-print(geopy_df['addresstype'].unique()) # FIXME: descr
-print('Number of rows in which addresstype is null: ', geopy_df[geopy_df['addresstype'].isnull()].shape[0])
+print(f"Number of rows in which surburb is null: {geopy_df.loc[geopy_df['suburb'].isna()].shape[0]}\n")
+print('Coordinate presence:')
+display(geopy_df['coord_presence'].value_counts())
+print('Importance presence:')
+display(geopy_df['importance'].notna().value_counts())
+print(f"Number of rows in which city is null and town is not null: {geopy_df[(geopy_df['city'].isnull()) & (geopy_df['town'].notnull())].shape[0]}\n")
+print("Values of addresstype:")
+print(geopy_df['addresstype'].unique())
+print(f"\nNumber of rows in which addresstype is null: {geopy_df[geopy_df['addresstype'].isnull()].shape[0]}")
 
 # %% [markdown]
 # We also downloaded from [Wikipedia](https://en.wikipedia.org/wiki/County_(United_States)) the list of the counties (or their equivalent) in each state. 
@@ -948,7 +964,8 @@ geo_df = pd.DataFrame(columns=['state', 'city_or_county', 'address', 'latitude',
     'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 'importance_geopy', 'addresstype_geopy', 
     'coord_presence', 'suburb_geopy'])
 geo_df[['state', 'city_or_county', 'address', 'latitude', 'longitude']] = incidents_df[[
-    'state', 'city_or_county', 'address', 'latitude', 'longitude']]
+    'state', 'city_or_county', 'address', 'latitude', 'longitude']] # FIX: questa non è una copia, modifica i campi di incidents
+                                                                    # si pyò fare meglio?
 geo_df[['address_geopy', 'village_geopy', 'town_geopy', 'city_geopy', 'county_geopy', 'state_geopy', 
     'importance_geopy', 'addresstype_geopy', 'coord_presence', 'suburb_geopy']] = geopy_df.loc[incidents_df.index][['display_name', 'village', 'town', 'city', 
     'county', 'state', 'importance', 'addresstype', 'coord_presence', 'suburb']]
@@ -1211,11 +1228,11 @@ def substitute_city(row, info_city):
     return row
 
 # %%
-if LOAD_DATA_FROM_CHECKPOINT: # load data
+if LOAD_DATA_FROM_CHECKPOINT:
     final_geo_df = load_checkpoint('checkpoint_geo')
-else: # compute data
+else:
     final_geo_df = geo_df.apply(lambda row: substitute_city(row, info_city), axis=1)
-    save_checkpoint(final_geo_df, 'checkpoint_geo') # save data
+    save_checkpoint(final_geo_df, 'checkpoint_geo') # FIX_ possiamo sovrascrivere geo_df? Sarebbe carino evitare di avere mille variabili (alcune delle quali riferiscono le stesse cose)
 
 # %%
 final_geo_df.head(2)
@@ -1640,9 +1657,6 @@ plot_scattermap_plotly(
     title="USA Congressional districts (after inference)"
 )
 
-# %%
-incidents_df.shape[0]
-
 # %% [markdown]
 # We now plot on a map the location of the incidents, coloring them according to the value of the attribute `state_senate_district` and `state_house_district`, to assess wheter we can apply the same method to recover missing values:
 
@@ -2020,11 +2034,11 @@ age_temporary_df.iloc[42353]
 # %%
 from data_preparation_utils import set_gender_age_consistent_data
 
-if LOAD_DATA_FROM_CHECKPOINT: # load data
+if LOAD_DATA_FROM_CHECKPOINT:
     new_age_df = load_checkpoint('checkpoint_age')
-else: # compute data
+else:
     new_age_df = age_temporary_df.apply(lambda row: set_gender_age_consistent_data(row), axis=1)
-    save_checkpoint(new_age_df, 'checkpoint_age') # save data
+    save_checkpoint(new_age_df, 'checkpoint_age') # FIX: possiamo sempre usare age_df? Sovrascrivendo?
 
 # %% [markdown]
 # We display the first 2 rows and a concise summary of the DataFrame:
