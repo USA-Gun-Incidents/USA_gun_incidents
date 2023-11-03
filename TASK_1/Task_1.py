@@ -1263,11 +1263,12 @@ plot_scattermap_plotly(final_geo_df.loc[(final_geo_df['latitude'].notna()) &
 #TODO: plottare le città inferite e i centroidi dello stesso colore e quelle che rimangono nan di nero
 
 # %%
-final_geo_df.head(3)
+final_geo_df[final_geo_df['state']=='Hawaiʻi']
 
 # %%
 final_geo_df['state'] = final_geo_df['state'].apply(lambda x: 'Hawaii' if x=='Hawaiʻi' else x) # TODO: togliere (dovrebbe essere fixato altrove)
-incidents_df[final_geo_df.columns] = final_geo_df[final_geo_df.columns]
+incidents_df.drop(columns=['state', 'latitude', 'longitude'], inplace=True)
+incidents_df = pd.concat([incidents_df, final_geo_df], axis=1)
 incidents_df['state'] = incidents_df['state'].apply(lambda x: x.upper()) # FIXME: da spostare?
 
 # %% [markdown]
@@ -1639,6 +1640,9 @@ plot_scattermap_plotly(
     title="USA Congressional districts (after inference)"
 )
 
+# %%
+incidents_df.shape[0]
+
 # %% [markdown]
 # We now plot on a map the location of the incidents, coloring them according to the value of the attribute `state_senate_district` and `state_house_district`, to assess wheter we can apply the same method to recover missing values:
 
@@ -1692,12 +1696,13 @@ plot_scattermap_plotly(
 # - *n_participants*
 
 # %%
-age_df = incidents_df[['participant_age1', 'participant_age_group1', 'participant_gender1', 
+participants_columns = ['participant_age1', 'participant_age_group1', 'participant_gender1', 
     'min_age_participants', 'avg_age_participants', 'max_age_participants',
     'n_participants_child', 'n_participants_teen', 'n_participants_adult', 
     'n_males', 'n_females',
     'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 
-    'n_participants']]
+    'n_participants']
+age_df = incidents_df[participants_columns]
 
 # %%
 age_df.head(10)
@@ -2144,6 +2149,10 @@ plt.show()
 # %%
 new_age_df.describe()
 
+# %%
+incidents_df.drop(columns=participants_columns, inplace=True)
+incidents_df = pd.concat([incidents_df, new_age_df], axis=1)
+
 # %% [markdown]
 # ## Incident characteristics features: exploration and preparation
 
@@ -2196,10 +2205,12 @@ characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort
 # %%
 from data_preparation_utils import add_tags, check_tag_consistency, check_characteristics_consistency, IncidentTag
 
+print(f"Shape before {incidents_df.shape[0]}")
+
 tags_columns = [tag.name for tag in IncidentTag]
 tags_columns.append('tag_consistency')
 
-if LOAD_DATA_FROM_CHECKPOINT:
+if False:#LOAD_DATA_FROM_CHECKPOINT:
     tags_df = load_checkpoint('checkpoint_tags')
     incidents_df[tags_columns] = tags_df[tags_columns]
 else:
@@ -2209,7 +2220,7 @@ else:
     incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
     save_checkpoint(incidents_df[tags_columns], 'tags') #TODO: guarda cella sotto,fa la stessa cosa
 
-incidents_df.head()
+print(f"Shape after {incidents_df.shape[0]}")
 
 # %%
 incidents_df['tag_consistency'].value_counts()
@@ -2316,10 +2327,6 @@ incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
     title='Counts of the addresses with the 50 highest number of incidents'
 )
 
-# %%
-fig, ax = plt.subplots(figsize=(12,8)) 
-sns.heatmap(incidents_df[['date', 'state', 'city_or_county', 'address', 'latitude', 'longitude', 'congressional_district', 'state_house_district', 'state_senate_district', 'participant_age1', 'participant_age_group1', 'participant_gender1', 'min_age_participants', 'avg_age_participants', 'max_age_participants', 'n_participants_child', 'n_participants_teen', 'n_participants_adult', 'n_males', 'n_females', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 'n_participants', 'notes', 'incident_characteristics1', 'incident_characteristics2']].isnull(), cbar=False, xticklabels=True, ax=ax)
-
 # %% [markdown]
 # We are aware of the fact that we could use classifier to inferr missing values. We chose not to do it because we think such method do not align with the nature of gun incidents. Citando il libro "Classification is the task of learning a target function f that maps each attribute set x to one of the predefined class labels y", il problema è che non può esistere una tale funzione (possono esserci (e immagino siano anche molti comuni) record uguali su tutti gli attributi tranne uno, per cui l'inferenza è impossibile).
 
@@ -2387,10 +2394,10 @@ usa_population_df.info()
 usa_population_df.head()
 
 # %%
-usa_population_df.drop(columns=['Population as of 2000 census', 'Change', 'Percent change'], inplace=True)
-usa_population_df.rename(columns={'Population as of 2010 census':'population', 'State': 'state'}, inplace=True)
+usa_population_df.drop(columns=['Population as of 2000 census', 'Change', 'Percent change', 'Rank'], inplace=True) # FIX: fare solo cu col
+usa_population_df.rename(columns={'Population as of 2010 census':'population_state_2010', 'State': 'state'}, inplace=True)
 usa_population_df['state'] = usa_population_df['state'].str.upper()
-usa_population_df['population'] = usa_population_df['population'].str.replace(',', '').astype('int64')
+usa_population_df['population_state_2010'] = usa_population_df['population_state_2010'].str.replace(',', '').astype('int64')
 incidents_df = incidents_df.merge(usa_population_df, on=['state'], how='left')
 incidents_df.head()
 
@@ -2429,9 +2436,6 @@ word_cloud_all_train = WordCloud(
 plt.imshow(word_cloud_all_train)
 plt.axis('off')
 plt.title('Word cloud of notes')
-
-# %%
-incidents_df = incidents_df[incidents_df['state']!='HAWAIʻI'] # FIXME: una volta risolto il bug andrà tolto
 
 # %%
 incidents_per_month_per_state = incidents_df.groupby(['state', 'month', 'year']).size()
@@ -2583,7 +2587,7 @@ fig.show()
 winning_party_per_state_copy = winning_party_per_state.copy()
 winning_party_per_state_copy['year'] = winning_party_per_state['year'] + 1
 winning_party_per_state = pd.concat([winning_party_per_state, winning_party_per_state_copy], ignore_index=True)
-incidents_df = incidents_df.merge(winning_party_per_state[['state', 'year', 'winningparty']], on=['state', 'year'], how='left')
+incidents_df = incidents_df.merge(winning_party_per_state[['state', 'year', 'winningparty']], on=['state', 'year'], how='left') # FIX: rinominare in majority_state_party
 
 # %%
 incidents_per_state_2016 = incidents_df[(incidents_df['n_killed']>0)].groupby(['state', 'year', 'population', 'povertyPercentage', 'winningparty']).size()
@@ -2631,24 +2635,19 @@ fig.show()
 # incidents_df[tags_columns]
 
 # %%
-incidents_df.columns
 # TODO: spostare queste liste nelle sezioni dei notebook in cui si analizzano gli attributi (appendendo le nuove features)
-time_columns = ['date', 'year', 'month', 'day_of_week'] # TODO: aggiungere month come stringa, day of week come
+time_columns = ['date'] # TODO: aggiungere month come stringa, day of week come
 
 geo_columns = ['state', 'city_or_county', # togliere?
 'address', 'latitude', 'longitude', 'county', 'city', 'state_consistency', 'county_consistency',
 'address_consistency', 'importance', 'address_type', 'congressional_district', 'state_house_district', 'state_senate_district', 'px_code']
 
-participants_columns = ['participant_age1', 'participant_age_group1', 'participant_gender1',
-       'min_age_participants', 'avg_age_participants', 'max_age_participants',
+participants_columns = ['participant_age1', 'participant1_child',
+       'participant1_teen', 'participant1_adult', 'participant1_male',
+       'participant1_female', 'min_age_participants', 'avg_age_participants', 'max_age_participants',
        'n_participants_child', 'n_participants_teen', 'n_participants_adult',
        'n_males', 'n_females', 'n_killed', 'n_injured', 'n_arrested',
-       'n_unharmed', 'n_participants', 'participant1_child', 'participant1_teen',
-       'participant1_adult', 'participant1_male', 'participant1_female',
-       'consistency_age', 'consistency_n_participant', 'consistency_gender',
-       'consistency_participant1', 'consistency_participants1_wrt_n_participants',
-       'participant1_age_consistency_wrt_all_data', 'participant1_age_range_consistency_wrt_all_data',
-       'participant1_gender_consistency_wrt_all_data']
+       'n_unharmed', 'n_participants']
 
 characteristic_columns = ['notes', 'incident_characteristics1', 'incident_characteristics2', 
     'firearm', 'air_gun', 'shots', 'aggression', 'suicide', 'injuries',
@@ -2656,16 +2655,15 @@ characteristic_columns = ['notes', 'incident_characteristics1', 'incident_charac
     'drugs', 'officers', 'organized', 'social_reasons', 'defensive',
     'workplace', 'abduction', 'unintentional', 'tag_consistency']
 
-external_columns = ['povertyPercentage', 'party', 'candidatevotes', 'totalvotes', 'candidateperc', 'population']
+external_columns = ['povertyPercentage', 'party', 'candidatevotes', 'totalvotes', 'candidateperc', 'population_state_2010']
 
 # TODO: rinominare fuori dal notebook la colonna 'importance' in 'location_importance' o qualcosa di simile, basta che si capisca che è relativo al posto
-# TODO: togliere attributo RANK (viene da Geopy?)
 # rimuovere nan_values, rimuovere attributi che hanno check di consistenza?
 
 
 
 # %%
-incidents_df.columns
+incidents_df = incidents_df[time_columns + geo_columns + participants_columns + characteristic_columns + external_columns]
 
 # %% [markdown]
 # We re-order the columns and we save the cleaned dataset:
@@ -2673,8 +2671,3 @@ incidents_df.columns
 # %%
 # incidents_data[time_columns+geo_columns+participants_columns+characteristic_columns+external_columns]
 incidents_df.to_csv('../data/incidents_cleaned.csv', index=False)
-
-# %%
-final_geo_df['state'].unique()
-
-
