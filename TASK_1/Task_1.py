@@ -2155,6 +2155,8 @@ new_age_df.describe()
 incidents_df[incidents_df['incident_characteristics1']==incidents_df['incident_characteristics2']].shape[0]==0
 
 # %%
+# merge characteristics list
+
 ch1_counts = incidents_df['incident_characteristics1'].value_counts()
 ch2_counts = incidents_df['incident_characteristics2'].value_counts()
 ch_counts = ch1_counts.add(ch2_counts, fill_value=0).sort_values(ascending=True)
@@ -2162,53 +2164,6 @@ ch_counts
 
 # %%
 fig = ch_counts.plot(kind='barh', figsize=(5, 18))
-fig.set_xscale("log")
-plt.title("Counts of 'incident_characteristics'")
-plt.xlabel('Count')
-plt.ylabel('Incident characteristics')
-plt.tight_layout()
-
-# %%
-# merge characteristics list
-
-characteristics1_frequency = pd.Series.to_dict(incidents_df.pivot_table(columns=['incident_characteristics1'], aggfunc='size'))
-characteristics2_frequency = pd.Series.to_dict(incidents_df.pivot_table(columns=['incident_characteristics2'], aggfunc='size'))
-
-characteristics_frequency = {}
-keys1 = list(characteristics1_frequency.keys())
-keys2 = list(characteristics2_frequency.keys())
-
-i = 0
-j = 0
-while i < len(characteristics1_frequency) and j < len(characteristics2_frequency):
-    if keys1[i] > keys2[j]:
-        characteristics_frequency[keys2[j]] = characteristics2_frequency[keys2[j]]
-        j += 1
-    elif keys1[i] == keys2[j]:
-        characteristics_frequency[keys2[j]] = characteristics2_frequency[keys2[j]] + characteristics1_frequency[keys1[i]]
-        i += 1
-        j += 1
-    else:
-        characteristics_frequency[keys1[i]] = characteristics1_frequency[keys1[i]]
-        i += 1
-
-if(len(characteristics1_frequency) < len(characteristics2_frequency)):
-    for j in range(len(characteristics1_frequency), len(characteristics2_frequency)):
-        characteristics_frequency[keys2[j]] = characteristics2_frequency[keys2[j]]
-elif(len(characteristics2_frequency) < len(characteristics1_frequency)):
-    for i in range(len(characteristics2_frequency), len(characteristics1_frequency)):
-        characteristics_frequency[keys1[i]] = characteristics1_frequency[keys1[i]]
-
-characteristics_frequency = dict(sorted(characteristics_frequency.items(), key=lambda x:x[1])) # sort by value
-
-# %%
-characteristics_frequency_df = pd.DataFrame({'characteristics': list(characteristics_frequency.keys()), 'occurrences': list(characteristics_frequency.values())})
-
-characteristics_frequency_df
-
-# %%
-fig = pd.DataFrame(characteristics_frequency_df).plot(kind='barh', figsize=(5, 18))
-fig.set_yticklabels(characteristics_frequency_df['characteristics'])
 fig.set_xscale("log")
 plt.title("Counts of 'incident_characteristics'")
 plt.xlabel('Count')
@@ -2239,29 +2194,6 @@ characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort
     )
 
 # %%
-fig = pd.DataFrame(characteristics_frequency_df).plot(kind='barh', figsize=(5, 18))
-fig.set_yticklabels(characteristics_frequency_df['characteristics'])
-fig.set_xscale("log")
-plt.title("Counts of 'incident_characteristics'")
-plt.xlabel('Count')
-plt.ylabel('Incident characteristics')
-plt.tight_layout()
-
-# %%
-fig, ax = plt.subplots(figsize=(20, 15))
-sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(by="Shot - Dead (murder, accidental, suicide)", inplace=False, ascending=False).tail(-1),
-            cmap='coolwarm', yticklabels=True)
-
-# %%
-characteristics_count_matrix = pd.crosstab(incidents_df['incident_characteristics2'], incidents_df['incident_characteristics1'])
-fig, ax = plt.subplots(figsize=(25, 20))
-sns.heatmap(characteristics_count_matrix, cmap='coolwarm', ax=ax, xticklabels=True, yticklabels=True, linewidths=.5)
-ax.set_xlabel('incident_characteristics2')
-ax.set_ylabel('incident_characteristics1')  
-ax.set_title('Counts of incident characteristics')
-plt.tight_layout()
-
-# %%
 from data_preparation_utils import add_tags, check_tag_consistency, check_characteristics_consistency, IncidentTag
 
 tags_columns = [tag.name for tag in IncidentTag]
@@ -2285,12 +2217,24 @@ incidents_df['tag_consistency'].value_counts()
 # %%
 # correct inconcistencies
 for index, record in incidents_df.iterrows():
-    if not(record[IncidentTag.death.name]) and record['n_killed'] > 0:
+    if(not(record[IncidentTag.death.name]) and record['n_killed'] > 0):
         incidents_df.at[index, IncidentTag.death.name] = True
-    if not(record[IncidentTag.injuries.name]) and record['n_injured'] > 0:
+    if(not(record[IncidentTag.injuries.name]) and record['n_injured'] > 0):
         incidents_df.at[index, IncidentTag.injuries.name] = True
-    if not(record[IncidentTag.children.name]) and record['n_participants_child'] > 0:
+    if(not(record[IncidentTag.children.name]) and record['n_participants_child'] > 0):
         incidents_df.at[index, IncidentTag.children.name] = True
+    if(record[IncidentTag.death.name] and record['n_killed'] == 0):
+        incidents_df.at[index, IncidentTag.death.name] = False
+    if(record[IncidentTag.injuries.name] and record['n_injured'] == 0):
+        incidents_df.at[index, IncidentTag.injuries.name] = False
+    if(record[IncidentTag.children.name] and record['n_participants_child'] == 0):
+        incidents_df.at[index, IncidentTag.children.name] = False
+    if((record["incident_characteristics1"] == "Non-Shooting Incident" or record["incident_characteristics2"] ==
+        "Non-Shooting Incident") and record[IncidentTag.shots.name]):
+        incidents_df.at[index, IncidentTag.shots.name] = False
+    if((record["incident_characteristics1"] == "Non-Aggression Incident" or record["incident_characteristics2"] ==
+        "Non-Aggression Incident") and record[IncidentTag.aggression.name]):
+        incidents_df.at[index, IncidentTag.aggression.name] = False
 
 # %%
 incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
