@@ -742,7 +742,7 @@ incidents_df.describe(include='all', datetime_is_numeric=True)
 # To avoid re-running some cells, we save checkpoints of the dataframe at different stages of the analysis and load the dataframe from the last checkpoint using the following functions:
 
 # %%
-LOAD_DATA_FROM_CHECKPOINT = True
+LOAD_DATA_FROM_CHECKPOINT = False#True
 CHECKPOINT_FOLDER_PATH = 'checkpoints/'
 
 def save_checkpoint(df, checkpoint_name):
@@ -841,10 +841,32 @@ plot_dates(incidents_df['date_median'], 'Dates distribution (oor replaced with m
 incidents_df.drop(columns=['date_minus10', 'date_minus11', 'date_mean', 'date_median'], inplace=True)
 incidents_df['date_original'] = incidents_df['date']
 incidents_df['date'] = incidents_df['date'].apply(lambda x : pd.NaT if x.year>2018 else x)
-incidents_df['year'] = incidents_df['date'].dt.year
-incidents_df['month'] = incidents_df['date'].dt.month
-incidents_df['day'] = incidents_df['date'].dt.day
-incidents_df['day_of_week'] = incidents_df['date'].dt.dayofweek
+incidents_df['year'] = incidents_df['date'].dt.year.astype('UInt64')
+incidents_df['month'] = incidents_df['date_original'].dt.month.astype('int64')
+incidents_df['month_name'] = incidents_df['date_original'].dt.month_name()
+incidents_df['day'] = incidents_df['date_original'].dt.day.astype('int64')
+incidents_df['day_of_week'] = incidents_df['date_original'].dt.dayofweek.astype('UInt64')
+incidents_df['day_of_week_name'] = incidents_df['date_original'].dt.day_name()
+
+# %%
+incidents_df.groupby('month').size().plot(
+    kind='bar',
+    figsize=(10, 5),
+    title='Number of incidents per month',
+    xlabel='Month',
+    ylabel='Number of incidents'
+)
+plt.xticks(range(12), calendar.month_name[1:13], rotation=45);
+
+# %%
+incidents_df.groupby('day_of_week').size().plot(
+    kind='bar',
+    figsize=(10, 5),
+    title='Number of incidents per day of the week',
+    xlabel='Day of the week',
+    ylabel='Number of incidents'
+)
+plt.xticks(range(7), calendar.day_name[0:7], rotation=45);
 
 # %% [markdown]
 # ### Geospatial features: exploration and preparation
@@ -970,13 +992,13 @@ counties_df.head()
 from data_preparation_utils import check_geographical_data_consistency
 
 if LOAD_DATA_FROM_CHECKPOINT:
-    incidents_df = load_checkpoint('checkpoint_2', date_cols=['date', 'date_original'])
+    incidents_df = load_checkpoint('checkpoint_1', date_cols=['date', 'date_original'])
 else:
     geo_df = incidents_df[['state', 'city_or_county', 'address', 'latitude', 'longitude']]
     geo_df = pd.concat([geo_df, geopy_df.loc[incidents_df.index]], axis=1) # TODO: geopy ha più righe perchè tiene anche quelle dei vecchi duplicati????
     geo_df = geo_df.apply(lambda row: check_geographical_data_consistency(row, additional_data=counties_df), axis=1)
     incidents_df[geo_df.columns] = geo_df[geo_df.columns]
-    save_checkpoint(incidents_df, 'checkpoint_2')
+    save_checkpoint(incidents_df, 'checkpoint_1')
 
 # %% [markdown]
 # The function called above performs the following operations:
@@ -1164,7 +1186,7 @@ info_city.head(2)
 
 # %%
 if LOAD_DATA_FROM_CHECKPOINT: # load data
-    info_city = load_checkpoint('checkpoint_3')
+    info_city = load_checkpoint('checkpoint_cities') # FIXME: uniformare ad altri?
 else: # compute data
     for state, county, city in centroids.index:
         dummy = []
@@ -1186,7 +1208,7 @@ else: # compute data
         info_city.loc[state, county, city][len(info_city.columns) - 3] = sum(dummy)/len(dummy)
         info_city.loc[state, county, city][len(info_city.columns) - 2] = centroids.loc[state, county, city]['latitude']
         info_city.loc[state, county, city][len(info_city.columns) - 1] = centroids.loc[state, county, city]['longitude']
-    save_checkpoint(info_city, 'checkpoint_3') # save data 
+    save_checkpoint(info_city, 'checkpoint_cities') # save data 
 
 # %%
 info_city.head()
@@ -1223,10 +1245,10 @@ def substitute_city(row, info_city):
 
 # %%
 if LOAD_DATA_FROM_CHECKPOINT:
-    incidents_df = load_checkpoint('checkpoint_4', date_cols=['date', 'date_original'])
+    incidents_df = load_checkpoint('checkpoint_2', date_cols=['date', 'date_original'])
 else:
     incidents_df = incidents_df.apply(lambda row: substitute_city(row, info_city), axis=1)
-    save_checkpoint(incidents_df, 'checkpoint_4')
+    save_checkpoint(incidents_df, 'checkpoint_2')
 
 # %%
 incidents_df.head(2)
@@ -1628,7 +1650,7 @@ incidents_df.groupby(['state', 'congressional_district']).size()[lambda x: x <= 
 
 # %%
 if LOAD_DATA_FROM_CHECKPOINT:
-    incidents_df = load_checkpoint('checkpoint_5', date_cols=['date', 'date_original'])
+    incidents_df = load_checkpoint('checkpoint_3', date_cols=['date', 'date_original'])
 else:
     for state in incidents_df['state'].unique():
         if state != "ALABAMA":
@@ -1647,7 +1669,7 @@ else:
             ] = knn_pred
     incidents_df.drop(columns=['congressional_district'], inplace=True)
     incidents_df.rename(columns={'KNN_congressional_district':'congressional_district'}, inplace=True)
-    save_checkpoint(incidents_df, 'checkpoint_5')
+    save_checkpoint(incidents_df, 'checkpoint_3')
 
 plot_scattermap_plotly(
     incidents_df,
@@ -1843,10 +1865,10 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 from data_preparation_utils import check_age_gender_data_consistency
 
 if True:#LOAD_DATA_FROM_CHECKPOINT: # load data
-    age_temporary_df = load_checkpoint('checkpoint_6')#, ['date', 'date_original']) # TODO: questa cosa è temporanea
+    age_temporary_df = load_checkpoint('checkpoint_tmp')#, ['date', 'date_original']) # TODO: questa cosa è temporanea
 else: # compute data
     age_temporary_df = age_df.apply(lambda row: check_age_gender_data_consistency(row), axis=1)
-    save_checkpoint(age_temporary_df, 'checkpoint_6') # save data
+    save_checkpoint(age_temporary_df, 'checkpoint_tmp') # save data
 
 # %% [markdown]
 # #### Data Exploration without Out-of-Range Data
@@ -2036,13 +2058,13 @@ age_temporary_df.iloc[42353]
 from data_preparation_utils import set_gender_age_consistent_data
 
 if LOAD_DATA_FROM_CHECKPOINT:
-    with zipfile.ZipFile('checkpoints/checkpoint_7.csv.zip', 'r') as zip_ref:
+    with zipfile.ZipFile('checkpoints/checkpoint_4.csv.zip', 'r') as zip_ref:
         zip_ref.extractall('checkpoints/') # TODO: magari fare all'inizio una chiamata che decomprime tutti i *.zip
-    incidents_df = load_checkpoint('checkpoint_7', date_cols=['date', 'date_original'])
+    incidents_df = load_checkpoint('checkpoint_4', date_cols=['date', 'date_original'])
 else:
     new_age_df = age_temporary_df.apply(lambda row: set_gender_age_consistent_data(row), axis=1)
     incidents_df[new_age_df.columns] = new_age_df[new_age_df.columns]
-    save_checkpoint(incidents_df, 'checkpoint_7')
+    save_checkpoint(incidents_df, 'checkpoint_4')
 
 # %% [markdown]
 # We display the first 2 rows and a concise summary of the DataFrame:
@@ -2174,6 +2196,22 @@ incidents_df.describe()
 # FIXME: aggiungere commenti + ricontrollare quando si usa incedeints_df e quando final_incidents_df
 
 # %%
+nltk.download('stopwords')
+stopwords = set(stopwords.words('english'))
+
+word_cloud_all_train = WordCloud(
+    width=1500,
+    height=1200,
+    stopwords=stopwords,
+    collocations=False,
+    background_color='white'
+    ).generate(' '.join(incidents_df[incidents_df['notes'].notna()]['notes'].tolist()));
+
+plt.imshow(word_cloud_all_train)
+plt.axis('off')
+plt.title('Word cloud of notes')
+
+# %%
 # check if ch1 and ch2 are always different
 incidents_df[incidents_df['incident_characteristics1']==incidents_df['incident_characteristics2']].shape[0]==0
 
@@ -2194,6 +2232,15 @@ plt.ylabel('Incident characteristics')
 plt.tight_layout()
 
 # %%
+ch1_females_counts = incidents_df[incidents_df['n_females']>1]['incident_characteristics1'].value_counts()
+ch2_females_counts = incidents_df[incidents_df['n_females']>1]['incident_characteristics2'].value_counts()
+ch_females_counts = ch1_females_counts.add(ch2_females_counts, fill_value=0).sort_values(ascending=False).plot(
+    kind='bar',
+    title='Characteristics counts of incidents with females involved',
+    figsize=(20,10)
+)
+
+# %%
 characteristics_count_matrix = pd.crosstab(incidents_df['incident_characteristics2'], incidents_df['incident_characteristics1'])
 fig, ax = plt.subplots(figsize=(25, 20))
 sns.heatmap(characteristics_count_matrix, cmap='coolwarm', ax=ax, xticklabels=True, yticklabels=True, linewidths=.5)
@@ -2203,7 +2250,7 @@ ax.set_title('Counts of incident characteristics')
 plt.tight_layout()
 
 # %%
-fig, ax = plt.subplots(figsize=(20, 15))
+fig, ax = plt.subplots(figsize=(20, 15)) # FIX: questo plot possiamo toglierlo? dovrebbe contenere la stessa informazione di quello sotto
 sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(by="Shot - Dead (murder, accidental, suicide)", inplace=False, ascending=False).tail(-1),
             cmap='coolwarm', yticklabels=True)
 
@@ -2223,15 +2270,15 @@ tags_columns = [tag.name for tag in IncidentTag]
 tags_columns.append('tag_consistency')
 
 if LOAD_DATA_FROM_CHECKPOINT:
-    with zipfile.ZipFile('checkpoints/checkpoint_8.csv.zip', 'r') as zip_ref:
+    with zipfile.ZipFile('checkpoints/checkpoint_5.csv.zip', 'r') as zip_ref:
         zip_ref.extractall('checkpoints/')
-    incidents_df = load_checkpoint('checkpoint_8', date_cols=['date', 'date_original'])
+    incidents_df = load_checkpoint('checkpoint_5', date_cols=['date', 'date_original'])
 else:
     incidents_df = add_tags(incidents_df)
     incidents_df['tag_consistency'] = True
     incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
     incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
-    save_checkpoint(incidents_df, 'checkpoint_8')
+    save_checkpoint(incidents_df, 'checkpoint_5')
 
 # %%
 incidents_df['tag_consistency'].value_counts()
@@ -2240,85 +2287,63 @@ incidents_df['tag_consistency'].value_counts()
 from data_preparation_utils import set_tags_consistent_data
 
 if LOAD_DATA_FROM_CHECKPOINT:
-    with zipfile.ZipFile('checkpoints/checkpoint_9.csv.zip', 'r') as zip_ref:
+    with zipfile.ZipFile('checkpoints/checkpoint_6.csv.zip', 'r') as zip_ref:
         zip_ref.extractall('checkpoints/')
-    incidents_df = load_checkpoint('checkpoint_9', date_cols=['date', 'date_original'])
+    incidents_df = load_checkpoint('checkpoint_6', date_cols=['date', 'date_original'])
 else:
     incidents_df = incidents_df.apply(lambda row: set_tags_consistent_data(row), axis=1)
     incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
     incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
-    save_checkpoint(incidents_df, 'checkpoint_9')
+    save_checkpoint(incidents_df, 'checkpoint_6')
 
 # %%
 incidents_df['tag_consistency'].value_counts()
 
 # %%
-tags_partitions_counts = {}
-tags_partitions_counts['Murder'] = incidents_df[
+tags_counts = {}
+tags_counts['Murder'] = incidents_df[
     (incidents_df['death']==True) &
     ((incidents_df['aggression']==True) |
-     (incidents_df['social_reasons']==True))].shape[0] # not accidental nor defensive
-tags_partitions_counts['Suicide'] = incidents_df[
+    (incidents_df['social_reasons']==True))].shape[0] # not accidental nor defensive
+tags_counts['Suicide'] = incidents_df[
     (incidents_df['death']==True) &
     (incidents_df['suicide']==True)].shape[0] # warninig: if murder/suicide is counted twice
-tags_partitions_counts['Defensive'] = incidents_df[
+tags_counts['Defensive'] = incidents_df[
     (incidents_df['death']==True) &
     (incidents_df['defensive']==True)].shape[0]
-tags_partitions_counts['Accidental'] = incidents_df[
+tags_counts['Accidental'] = incidents_df[
     (incidents_df['death']==True) &
     (incidents_df['unintentional']==True)].shape[0]
-tags_partitions_counts['Others or not known'] = incidents_df[
+tags_counts['Others or not known'] = incidents_df[
     (incidents_df['death']==True) &
     (incidents_df['aggression']==False) &
     (incidents_df['social_reasons']==False) &
-    (incidents_df['suicide']==False) & 
-    (incidents_df['defensive']==False) &
     (incidents_df['unintentional']==False)].shape[0]
 
 fig, ax = plt.subplots()
-ax.pie(tags_partitions_counts.values(), labels=tags_partitions_counts.keys(), autopct='%1.1f%%');
+total = sum(tags_counts.values())
+ax.pie(tags_counts.values())
+legend_labels = [f'{label}: {(size/total)*100:.1f}%' for label, size in tags_counts.items()]
+plt.legend(legend_labels)
+plt.title("Gun incidents")
+plt.show()
 
 # %%
-n_cols = 3
-fig, ax = plt.subplots(figsize=(12,16), nrows=7, ncols=n_cols)
-row = 0
-for i, tag in enumerate(tags_columns):
-    n_rows_tag = incidents_df[(incidents_df[tag]==True)].shape[0]
-    if i!=0 and i%n_cols==0:
-        row += 1
-    ax[row][i%n_cols].pie([n_rows_tag, incidents_df.shape[0]-n_rows_tag], labels=[tag, 'no '+tag], autopct='%1.1f%%')
-
-# %%
-incidents_df[(incidents_df['death']==True) &
-    (incidents_df['aggression']==False) &
-    (incidents_df['social_reasons']==False) &
-    (incidents_df['suicide']==False) & 
-    (incidents_df['defensive']==False) &
-    (incidents_df['unintentional']==False)]
+ax = (incidents_df[tags_columns].apply(lambda col: col.value_counts()).T.sort_values(by=True)/incidents_df.shape[0]*100).plot(kind='barh', stacked=True, alpha=0.8, edgecolor='black')
+for container in ax.containers:
+    ax.bar_label(container, fmt='%.1f%%', label_type='center', fontsize=8)
+plt.title("Incidents characteristic (%)")
 
 # %%
 # compute correlation between accidental incidents and presence of children
 incidents_df['unintentional'].corr(incidents_df['n_participants_child']>0) # not correlated
 
 # %%
-fig, axs = plt.subplots(ncols=2, figsize=(20,10))
-incidents_df[incidents_df['n_females']>1]['incident_characteristics1'].value_counts().plot(kind='bar', title='Characteristic 1 counts of incidents with females involved', ax=axs[0])
-incidents_df[incidents_df['n_females']>1]['incident_characteristics2'].value_counts().plot(kind='bar',  title='Characteristic 2 counts of incidents with females involved', ax=axs[1])
-
-# %%
-incidents_df.groupby(['latitude', 'longitude']).size().sort_values(ascending=False)[:50].plot(
-    kind='bar',
-    figsize=(10,6),
-    title='Counts of the locations with the 50 highest number of incidents'
-)
-plt.show()
-
-# %%
 incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
     kind='bar',
     figsize=(10,6),
     title='Counts of the addresses with the 50 highest number of incidents'
-)
+) # many airports!!
 
 # %% [markdown]
 # We are aware of the fact that we could use classifier to inferr missing values. We chose not to do it because we think such method do not align with the nature of gun incidents. Citando il libro "Classification is the task of learning a target function f that maps each attribute set x to one of the predefined class labels y", il problema è che non può esistere una tale funzione (possono esserci (e immagino siano anche molti comuni) record uguali su tutti gli attributi tranne uno, per cui l'inferenza è impossibile).
@@ -2343,26 +2368,6 @@ elections_df_copy['year'] = elections_df_copy['year'] + 1
 elections_df = pd.concat([elections_df, elections_df_copy], ignore_index=True)
 incidents_df = incidents_df.merge(elections_df, on=['state', 'year', 'congressional_district'], how='left')
 incidents_df.head()
-
-# %%
-incidents_df.groupby('month').size().plot(
-    kind='bar',
-    figsize=(10, 5),
-    title='Number of incidents per month',
-    xlabel='Month',
-    ylabel='Number of incidents'
-)
-plt.xticks(range(12), calendar.month_name[1:13], rotation=45);
-
-# %%
-incidents_df.groupby('day_of_week').size().plot(
-    kind='bar',
-    figsize=(10, 5),
-    title='Number of incidents per day of the week',
-    xlabel='Day of the week',
-    ylabel='Number of incidents'
-)
-plt.xticks(range(7), calendar.day_name[0:7], rotation=45);
 
 # %% [markdown]
 # We read and join the data about the USA population from the 2010 census downloaded from [Wikipedia](https://en.wikipedia.org/wiki/2010_United_States_census). This time we won't use the ACS population data because we simply need aggregated data for each state over the period of interest.
@@ -2405,26 +2410,6 @@ incidents_df[incidents_df['state']=='DISTRICT OF COLUMBIA'].groupby(['latitude',
 incidents_df.groupby(['latitude', 'longitude', 'date']).size()[lambda x: x>1]
 
 # %%
-nltk.download('stopwords')
-stopwords = set(stopwords.words('english'))
-
-word_cloud_all_train = WordCloud(
-    width=1500,
-    height=1200,
-    stopwords=stopwords,
-    collocations=False,
-    background_color='white'
-    ).generate(' '.join(incidents_df[incidents_df['notes'].notna()]['notes'].tolist()));
-
-plt.imshow(word_cloud_all_train)
-plt.axis('off')
-plt.title('Word cloud of notes')
-
-# %%
-incidents_df['year'] = incidents_df['year'].astype('UInt64')
-incidents_df['month'] = incidents_df['month'].astype('UInt64')
-
-# %%
 incidents_per_month_per_state = incidents_df.groupby(['state', 'month', 'year']).size()
 incidents_per_month_per_state = incidents_per_month_per_state.to_frame(name='incidents').reset_index()
 incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month', 'state'], ignore_index=True)
@@ -2436,7 +2421,7 @@ fig, ax = plt.subplots(figsize=(20, 10))
 sns.heatmap(
     incidents_per_month_per_state[incidents_per_month_per_state.year<=2020].pivot(
         index='state',
-        columns=['year', 'month'],
+        columns=['year', 'month_name'],
         values='incidents_per_100k_inhabitants'
     ).fillna(0),
     cmap='coolwarm',
@@ -2449,14 +2434,14 @@ ax.set_xlabel('Month-Year')
 ax.set_ylabel('State')
 ax.set_title('Number of incidents per month per state')
 
-xticks = []
-for label in ax.get_xticklabels():
-    txt_label = label.get_text()
-    year = txt_label[:txt_label.find('-')]
-    month = txt_label[txt_label.find('-')+1:]
-    xticks.append(year+' - '+calendar.month_name[int(month)]) #TODO: NON VA
+# xticks = []
+# for label in ax.get_xticklabels():
+#     txt_label = label.get_text()
+#     year = txt_label[:txt_label.find('-')]
+#     month = txt_label[txt_label.find('-')+1:]
+#     xticks.append(year+' - '+calendar.month_name[int(month)]) #TODO: NON VA
 
-ax.set_xticklabels(xticks);
+# ax.set_xticklabels(xticks);
 
 plt.xticks(rotation=90)
 plt.tight_layout() # 601,723 / 672,602
