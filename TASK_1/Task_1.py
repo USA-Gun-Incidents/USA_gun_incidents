@@ -30,6 +30,7 @@ import nltk
 from nltk.corpus import stopwords
 from wordcloud import WordCloud
 from pyproj import Transformer
+import zipfile
 
 # %% [markdown]
 # We define constants and settings for the notebook:
@@ -2035,6 +2036,8 @@ age_temporary_df.iloc[42353]
 from data_preparation_utils import set_gender_age_consistent_data
 
 if LOAD_DATA_FROM_CHECKPOINT:
+    with zipfile.ZipFile('checkpoints/checkpoint_7.csv.zip', 'r') as zip_ref:
+        zip_ref.extractall('checkpoints/') # TODO: magari fare all'inizio una chiamata che decomprime tutti i *.zip
     incidents_df = load_checkpoint('checkpoint_7', date_cols=['date', 'date_original'])
 else:
     new_age_df = age_temporary_df.apply(lambda row: set_gender_age_consistent_data(row), axis=1)
@@ -2220,6 +2223,8 @@ tags_columns = [tag.name for tag in IncidentTag]
 tags_columns.append('tag_consistency')
 
 if LOAD_DATA_FROM_CHECKPOINT:
+    with zipfile.ZipFile('checkpoints/checkpoint_8.csv.zip', 'r') as zip_ref:
+        zip_ref.extractall('checkpoints/')
     incidents_df = load_checkpoint('checkpoint_8', date_cols=['date', 'date_original'])
 else:
     incidents_df = add_tags(incidents_df)
@@ -2235,6 +2240,8 @@ incidents_df['tag_consistency'].value_counts()
 from data_preparation_utils import set_tags_consistent_data
 
 if LOAD_DATA_FROM_CHECKPOINT:
+    with zipfile.ZipFile('checkpoints/checkpoint_9.csv.zip', 'r') as zip_ref:
+        zip_ref.extractall('checkpoints/')
     incidents_df = load_checkpoint('checkpoint_9', date_cols=['date', 'date_original'])
 else:
     incidents_df = incidents_df.apply(lambda row: set_tags_consistent_data(row), axis=1)
