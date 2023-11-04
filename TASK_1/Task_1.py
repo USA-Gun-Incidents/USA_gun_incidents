@@ -742,7 +742,7 @@ incidents_df.describe(include='all', datetime_is_numeric=True)
 # To avoid re-running some cells, we save checkpoints of the dataframe at different stages of the analysis and load the dataframe from the last checkpoint using the following functions:
 
 # %%
-LOAD_DATA_FROM_CHECKPOINT = False
+LOAD_DATA_FROM_CHECKPOINT = True
 CHECKPOINT_FOLDER_PATH = 'checkpoints/'
 
 def save_checkpoint(df, checkpoint_name):
@@ -1164,7 +1164,7 @@ info_city.head(2)
 
 # %%
 if LOAD_DATA_FROM_CHECKPOINT: # load data
-    info_city = load_checkpoint('checkpoint_3', date_cols=['date', 'date_original'])
+    info_city = load_checkpoint('checkpoint_3')
 else: # compute data
     for state, county, city in centroids.index:
         dummy = []
@@ -2421,6 +2421,10 @@ plt.axis('off')
 plt.title('Word cloud of notes')
 
 # %%
+incidents_df['year'] = incidents_df['year'].astype('UInt64')
+incidents_df['month'] = incidents_df['month'].astype('UInt64')
+
+# %%
 incidents_per_month_per_state = incidents_df.groupby(['state', 'month', 'year']).size()
 incidents_per_month_per_state = incidents_per_month_per_state.to_frame(name='incidents').reset_index()
 incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month', 'state'], ignore_index=True)
@@ -2448,9 +2452,8 @@ ax.set_title('Number of incidents per month per state')
 xticks = []
 for label in ax.get_xticklabels():
     txt_label = label.get_text()
-    month = txt_label[txt_label.find('-')+1:]
     year = txt_label[:txt_label.find('-')]
-    xticks.append(year+' - '+calendar.month_name[month]) #TODO: NON VA
+    xticks.append(year+' - '+calendar.month_name[int(month)]) #TODO: NON VA
 
 ax.set_xticklabels(xticks);
 
@@ -2458,7 +2461,6 @@ plt.xticks(rotation=90)
 plt.tight_layout() # 601,723 / 672,602
 
 # %%
-# TODO: Non ci sono le caratteristiche
 incidents_df[incidents_df['state']=='DISTRICT OF COLUMBIA']['incident_characteristics1'].value_counts().plot(kind='barh', figsize=(20, 10))
 
 # %%
@@ -2573,7 +2575,7 @@ fig.show()
 winning_party_per_state_copy = winning_party_per_state.copy()
 winning_party_per_state_copy['year'] = winning_party_per_state['year'] + 1
 winning_party_per_state = pd.concat([winning_party_per_state, winning_party_per_state_copy], ignore_index=True)
-incidents_df = incidents_df.merge(winning_party_per_state[['state', 'year', 'majority_state_party']], on=['state', 'year'], how='left')
+incidents_df = incidents_df[incidents_df['year'].notna()].merge(winning_party_per_state[['state', 'year', 'majority_state_party']], on=['state', 'year'], how='left')
 
 # %%
 incidents_per_state_2016 = incidents_df[(incidents_df['n_killed']>0)].groupby(['state', 'year', 'population_state_2010', 'povertyPercentage', 'majority_state_party']).size()
