@@ -364,7 +364,7 @@ def check_geographical_data_consistency(row, additional_data):
     
     # initialize clean_geo_data
     clean_geo_data_row = pd.Series(index=['state', 'county', 'city', 'latitude', 'longitude', 'state_consistency', 
-                                'county_consistency', 'address_consistency', 'importance', 'address_type'], dtype=str)
+            'county_consistency', 'address_consistency', 'location_importance', 'address_type'], dtype=str)
     
     # initialize consistency variables
     state_consistency = -1
@@ -382,7 +382,7 @@ def check_geographical_data_consistency(row, additional_data):
         clean_geo_data_row.loc[['city']] = city_map[city] if city in city_map.keys() else city                                
         clean_geo_data_row.loc[['latitude']] = row['latitude']
         clean_geo_data_row.loc[['longitude']] = row['longitude'] 
-        clean_geo_data_row.loc[['importance']] = row['importance_geopy']
+        clean_geo_data_row.loc[['location_importance']] = row['importance_geopy']
         clean_geo_data_row.loc[['address_type']] = row['addresstype_geopy']
 
     else: # check consistency with additional data

@@ -844,7 +844,14 @@ else:
     final_incidents_df = pd.DataFrame() # init DataFrame to save the final version of the dataset
     final_incidents_df['date'] = incidents_df['date'].apply(lambda x : pd.NaT if x.year>2018 else x)
     final_incidents_df['date_original'] = incidents_df['date']
+    final_incidents_df['year'] = final_incidents_df['date'].dt.year
+    final_incidents_df['month'] = final_incidents_df['date'].dt.month
+    final_incidents_df['day'] = final_incidents_df['date'].dt.day
+    final_incidents_df['day_of_week'] = final_incidents_df['date'].dt.dayofweek
     save_checkpoint(final_incidents_df, 'checkpoint_1')
+
+# %%
+final_incidents_df.head(2)
 
 # %% [markdown]
 # ## Geospatial features: exploration and preparation
@@ -984,14 +991,15 @@ geo_df[['address_geopy', 'village_geopy', 'town_geopy', 'city_geopy', 'county_ge
 from data_preparation_utils import check_geographical_data_consistency
 
 if LOAD_DATA_FROM_CHECKPOINT:
-    geo_df = load_checkpoint('checkpoint_geo_temporary')
+    final_incidents_df = load_checkpoint('checkpoint_2')
 else:
     geo_df = geo_df.apply(
         lambda row: check_geographical_data_consistency(
             row, 
             additional_data=counties_df
         ), axis=1)
-    save_checkpoint(geo_df, 'checkpoint_geo_temporary')
+    final_incidents_df = pd.concat([final_incidents_df, geo_df], axis=1)
+    save_checkpoint(final_incidents_df, 'checkpoint_2')
 
 # %% [markdown]
 # The function called above performs the following operations:
@@ -1036,15 +1044,15 @@ else:
 # ### Visualize Consistent Geographical Data
 
 # %%
-print('Number of rows with all null values: ', geo_df.isnull().all(axis=1).sum())
-print('Number of rows with null value for state: ', geo_df['state'].isnull().sum())
-print('Number of rows with null value for county: ', geo_df['county'].isnull().sum())
-print('Number of rows with null value for city: ', geo_df['city'].isnull().sum())
-print('Number of rows with null value for latitude: ', geo_df['latitude'].isnull().sum())
-print('Number of rows with null value for longitude: ', geo_df['longitude'].isnull().sum())
+print('Number of rows with all null values: ', final_incidents_df.isnull().all(axis=1).sum())
+print('Number of rows with null value for state: ', final_incidents_df['state'].isnull().sum())
+print('Number of rows with null value for county: ', final_incidents_df['county'].isnull().sum())
+print('Number of rows with null value for city: ', final_incidents_df['city'].isnull().sum())
+print('Number of rows with null value for latitude: ', final_incidents_df['latitude'].isnull().sum())
+print('Number of rows with null value for longitude: ', final_incidents_df['longitude'].isnull().sum())
 
 # %%
-sns.heatmap(geo_df.isnull(), cbar=False, xticklabels=True)
+sns.heatmap(final_incidents_df.isnull(), cbar=False, xticklabels=True)
 
 # %% [markdown]
 # After this check, all the entries in the dataset have at least the state value not null and consistent. Only 12,796 data points, which account for 4.76% of the dataset, were found to have inconsistent latitude and longitude values.  FIXME: ogni volta che c'è un percentuale (o qualsiasi numero in generale) nel markdown bisognerebbe averli calcolati e stampati nelle celle di codice precedenti
@@ -1053,30 +1061,31 @@ sns.heatmap(geo_df.isnull(), cbar=False, xticklabels=True)
 # Below, we have included some plots to visualize the inconsistent values in the dataset.
 
 # %%
-geo_df.groupby(['state_consistency','county_consistency','address_consistency']).count().sort_index(ascending=False)
+final_incidents_df.groupby(['state_consistency','county_consistency','address_consistency']).count().sort_index(ascending=False)
 
 # %%
 stats = {}
 stats_columns = ['#null_val', '#not_null', '#value_count']
-for col in geo_df.columns:
+for col in ['state', 'county', 'city', 'latitude', 'longitude', 'state_consistency',
+       'county_consistency', 'address_consistency', 'location_importance', 'address_type']:
     stats[col] = []
-    stats[col].append(geo_df[col].isna().sum())
-    stats[col].append(len(geo_df[col]) - geo_df[col].isna().sum())
-    stats[col].append(len(geo_df[col].value_counts()))
+    stats[col].append(final_incidents_df[col].isna().sum())
+    stats[col].append(len(final_incidents_df[col]) - final_incidents_df[col].isna().sum())
+    stats[col].append(len(final_incidents_df[col].value_counts()))
     
 clean_geo_stat_stats = pd.DataFrame(stats, index=stats_columns).transpose()
 clean_geo_stat_stats
 
 # %%
 geo_null_counts = [] # FIXME: mettere in dataframe come sopra
-geo_null_counts.append(len(geo_df.loc[(geo_df['latitude'].notna()) & (geo_df['county'].notna()) & (geo_df['city'].notna())]))
-geo_null_counts.append(len(geo_df.loc[(geo_df['latitude'].notna()) & (geo_df['county'].notna()) & (geo_df['city'].isna())]))
-geo_null_counts.append(len(geo_df.loc[(geo_df['latitude'].notna()) & (geo_df['county'].isna()) & (geo_df['city'].notna())]))
-geo_null_counts.append(len(geo_df.loc[(geo_df['latitude'].notna()) & (geo_df['county'].isna()) & (geo_df['city'].isna())]))
-geo_null_counts.append(len(geo_df.loc[(geo_df['latitude'].isna()) & (geo_df['county'].notna()) & (geo_df['city'].notna())]))
-geo_null_counts.append(len(geo_df.loc[(geo_df['latitude'].isna()) & (geo_df['county'].notna()) & (geo_df['city'].isna())]))
-geo_null_counts.append(len(geo_df.loc[(geo_df['latitude'].isna()) & (geo_df['county'].isna()) & (geo_df['city'].notna())]))
-geo_null_counts.append(len(geo_df.loc[(geo_df['latitude'].isna()) & (geo_df['county'].isna()) & (geo_df['city'].isna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].notna()) & (final_incidents_df['county'].notna()) & (final_incidents_df['city'].notna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].notna()) & (final_incidents_df['county'].notna()) & (final_incidents_df['city'].isna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].notna()) & (final_incidents_df['county'].isna()) & (final_incidents_df['city'].notna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].notna()) & (final_incidents_df['county'].isna()) & (final_incidents_df['city'].isna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].isna()) & (final_incidents_df['county'].notna()) & (final_incidents_df['city'].notna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].isna()) & (final_incidents_df['county'].notna()) & (final_incidents_df['city'].isna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].isna()) & (final_incidents_df['county'].isna()) & (final_incidents_df['city'].notna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].isna()) & (final_incidents_df['county'].isna()) & (final_incidents_df['city'].isna())]))
 
 print('LAT/LONG     COUNTY     CITY             \t#samples')
 print( 'not null    not null   not null         \t', geo_null_counts[0])
@@ -1093,13 +1102,13 @@ print( 'Samples with not null values for lat/lon\t', geo_null_counts[0]+geo_null
 print( 'Samples with null values for lat/lon    \t', geo_null_counts[4]+geo_null_counts[5]+geo_null_counts[6]+geo_null_counts[7])
 
 # %%
-dummy_df = geo_df[geo_df['latitude'].notna()] # FIXME: possiamo sostituire tutte le variabili 'dummy' con nomi più significativi? (anche se temporanee)
+dummy_df = final_incidents_df[final_incidents_df['latitude'].notna()] # FIXME: possiamo sostituire tutte le variabili 'dummy' con nomi più significativi? (anche se temporanee)
 print('Number of entries with not null values for latitude and longitude: ', len(dummy_df))
 plot_scattermap_plotly(dummy_df, 'state', zoom=2,)
 
 # %%
-dummy_df = geo_df.loc[(geo_df['latitude'].notna()) & (geo_df['county'].isna()) & 
-    (geo_df['city'].notna())]
+dummy_df = final_incidents_df.loc[(final_incidents_df['latitude'].notna()) & (final_incidents_df['county'].isna()) & 
+    (final_incidents_df['city'].notna())]
 print('Number of entries with not null values for county but not for lat/lon and city: ', len(dummy_df))
 plot_scattermap_plotly(dummy_df, 'state', zoom=2, title='Missing county')
 
@@ -1107,13 +1116,13 @@ plot_scattermap_plotly(dummy_df, 'state', zoom=2, title='Missing county')
 # Visualize the number of entries for each city where we have the *city* value but not the *county* FIXME: dove stampiamo df dire 'display', visualize è più per le immagini
 
 # %%
-geo_df.loc[(geo_df['latitude'].notna()) & (geo_df['county'].isna()) & (geo_df['city'].notna())].groupby('city').count()
+final_incidents_df.loc[(final_incidents_df['latitude'].notna()) & (final_incidents_df['county'].isna()) & (final_incidents_df['city'].notna())].groupby('city').count()
 
 # %%
-geo_df[(geo_df['latitude'].notna()) & (geo_df['city'].isna()) & (geo_df['county'].isna())]
+final_incidents_df[(final_incidents_df['latitude'].notna()) & (final_incidents_df['city'].isna()) & (final_incidents_df['county'].isna())]
 
 # %%
-dummy_df = geo_df.loc[(geo_df['latitude'].notna()) & (geo_df['county'].notna()) & (geo_df['city'].isna())]
+dummy_df = final_incidents_df.loc[(final_incidents_df['latitude'].notna()) & (final_incidents_df['county'].notna()) & (final_incidents_df['city'].isna())]
 print('Number of rows with null values for city, but not for lat/lon and county: ', len(dummy_df))
 plot_scattermap_plotly(dummy_df, 'state', zoom=2, title='Missing city')
 
@@ -1146,13 +1155,13 @@ plot_scattermap_plotly(dummy_df, 'state', zoom=2, title='Missing city')
 # Visualize data group by *state*, *county* and *city*
 
 # %%
-geo_df.groupby(['state', 'county', 'city']).size().reset_index(name='count')
+final_incidents_df.groupby(['state', 'county', 'city']).size().reset_index(name='count')
 
 # %% [markdown]
 # Compute the centroid for each city and visualize the first 10 centroids in alphabetical order.
 
 # %%
-centroids = geo_df.loc[geo_df['latitude'].notna() & geo_df['city'].notna()][[
+centroids = final_incidents_df.loc[final_incidents_df['latitude'].notna() & final_incidents_df['city'].notna()][[
     'latitude', 'longitude', 'city', 'state', 'county']].groupby(['state', 'county', 'city']).mean()
 centroids.head(10)
 
@@ -1178,16 +1187,16 @@ info_city.head(2)
 
 # %%
 if LOAD_DATA_FROM_CHECKPOINT: # load data
-    info_city = load_checkpoint('checkpoint_geo_temporary2')
+    info_city = load_checkpoint('checkpoint_3')
 else: # compute data
     for state, county, city in centroids.index:
         dummy = []
-        for lat, long in zip(geo_df.loc[(geo_df['city'] == city) & 
-            (geo_df['state'] == state) & (geo_df['county'] == county) & 
-            geo_df['latitude'].notna()]['latitude'], 
-            geo_df.loc[(geo_df['city'] == city) & 
-            (geo_df['state'] == state) & (geo_df['county'] == county) & 
-            geo_df['longitude'].notna()]['longitude']):
+        for lat, long in zip(final_incidents_df.loc[(final_incidents_df['city'] == city) & 
+            (final_incidents_df['state'] == state) & (final_incidents_df['county'] == county) & 
+            final_incidents_df['latitude'].notna()]['latitude'], 
+            final_incidents_df.loc[(final_incidents_df['city'] == city) & 
+            (final_incidents_df['state'] == state) & (final_incidents_df['county'] == county) & 
+            final_incidents_df['longitude'].notna()]['longitude']):
             dummy.append(geopy_distance.geodesic([lat, long], centroids.loc[state, county, city]).km)
             
         dummy = sorted(dummy)
@@ -1200,7 +1209,7 @@ else: # compute data
         info_city.loc[state, county, city][len(info_city.columns) - 3] = sum(dummy)/len(dummy)
         info_city.loc[state, county, city][len(info_city.columns) - 2] = centroids.loc[state, county, city]['latitude']
         info_city.loc[state, county, city][len(info_city.columns) - 1] = centroids.loc[state, county, city]['longitude']
-    save_checkpoint(info_city, 'checkpoint_geo_temporary2') # save data 
+    save_checkpoint(info_city, 'checkpoint_3') # save data 
 
 # %%
 info_city.head()
@@ -1236,17 +1245,17 @@ def substitute_city(row, info_city):
 
 # %%
 if LOAD_DATA_FROM_CHECKPOINT:
-    final_geo_df = load_checkpoint('checkpoint_geo')
+    final_final_incidents_df = load_checkpoint('checkpoint_4')
 else:
-    final_geo_df = geo_df.apply(lambda row: substitute_city(row, info_city), axis=1)
-    save_checkpoint(final_geo_df, 'checkpoint_geo') # FIX_ possiamo sovrascrivere geo_df? Sarebbe carino evitare di avere mille variabili (alcune delle quali riferiscono le stesse cose)
+    final_final_incidents_df = final_incidents_df.apply(lambda row: substitute_city(row, info_city), axis=1)
+    save_checkpoint(final_final_incidents_df, 'checkpoint_4')
 
 # %%
-final_geo_df.head(2)
+final_final_incidents_df.head(2)
 
 # %%
-print('Number of rows with null values for city before: ', geo_df['city'].isnull().sum())
-print('Number of rows with null values for city: ', final_geo_df['city'].isnull().sum())
+print('Number of rows with null values for city before: ', final_incidents_df['city'].isnull().sum())
+print('Number of rows with null values for city: ', final_final_incidents_df['city'].isnull().sum())
 
 # %% [markdown]
 # From this process, we infer 2248 *city* values.
@@ -1256,14 +1265,14 @@ print('Number of rows with null values for city: ', final_geo_df['city'].isnull(
 
 # %%
 geo_null_counts = [] # FIXME: mettere in dataframe come sopra
-geo_null_counts.append(len(final_geo_df.loc[(final_geo_df['latitude'].notna()) & (final_geo_df['county'].notna()) & (final_geo_df['city'].notna())]))
-geo_null_counts.append(len(final_geo_df.loc[(final_geo_df['latitude'].notna()) & (final_geo_df['county'].notna()) & (final_geo_df['city'].isna())]))
-geo_null_counts.append(len(final_geo_df.loc[(final_geo_df['latitude'].notna()) & (final_geo_df['county'].isna()) & (final_geo_df['city'].notna())]))
-geo_null_counts.append(len(final_geo_df.loc[(final_geo_df['latitude'].notna()) & (final_geo_df['county'].isna()) & (final_geo_df['city'].isna())]))
-geo_null_counts.append(len(final_geo_df.loc[(final_geo_df['latitude'].isna()) & (final_geo_df['county'].notna()) & (final_geo_df['city'].notna())]))
-geo_null_counts.append(len(final_geo_df.loc[(final_geo_df['latitude'].isna()) & (final_geo_df['county'].notna()) & (final_geo_df['city'].isna())]))
-geo_null_counts.append(len(final_geo_df.loc[(final_geo_df['latitude'].isna()) & (final_geo_df['county'].isna()) & (final_geo_df['city'].notna())]))
-geo_null_counts.append(len(final_geo_df.loc[(final_geo_df['latitude'].isna()) & (final_geo_df['county'].isna()) & (final_geo_df['city'].isna())]))
+geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].notna()) & (final_final_incidents_df['county'].notna()) & (final_final_incidents_df['city'].notna())]))
+geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].notna()) & (final_final_incidents_df['county'].notna()) & (final_final_incidents_df['city'].isna())]))
+geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].notna()) & (final_final_incidents_df['county'].isna()) & (final_final_incidents_df['city'].notna())]))
+geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].notna()) & (final_final_incidents_df['county'].isna()) & (final_final_incidents_df['city'].isna())]))
+geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].isna()) & (final_final_incidents_df['county'].notna()) & (final_final_incidents_df['city'].notna())]))
+geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].isna()) & (final_final_incidents_df['county'].notna()) & (final_final_incidents_df['city'].isna())]))
+geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].isna()) & (final_final_incidents_df['county'].isna()) & (final_final_incidents_df['city'].notna())]))
+geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].isna()) & (final_final_incidents_df['county'].isna()) & (final_final_incidents_df['city'].isna())]))
 
 print('LAT/LONG     COUNTY     CITY             \t#samples')
 print( 'not null    not null   not null         \t', geo_null_counts[0])
@@ -1280,19 +1289,19 @@ print( 'Samples with not null values for lat/lon\t', geo_null_counts[0]+geo_null
 print( 'Samples with null values for lat/lon    \t', geo_null_counts[4]+geo_null_counts[5]+geo_null_counts[6]+geo_null_counts[7])
 
 # %%
-plot_scattermap_plotly(final_geo_df.loc[(final_geo_df['latitude'].notna()) & 
-    (final_geo_df['county'].notna()) & (final_geo_df['city'].isna())], 'state', zoom=2, title='Missing city')
+plot_scattermap_plotly(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].notna()) & 
+    (final_final_incidents_df['county'].notna()) & (final_final_incidents_df['city'].isna())], 'state', zoom=2, title='Missing city')
 
 # %%
 #TODO: plottare le città inferite e i centroidi dello stesso colore e quelle che rimangono nan di nero
 
 # %%
-final_geo_df[final_geo_df['state']=='Hawaiʻi']
+final_final_incidents_df[final_final_incidents_df['state']=='Hawaiʻi']
 
 # %%
-final_geo_df['state'] = final_geo_df['state'].apply(lambda x: 'Hawaii' if x=='Hawaiʻi' else x) # TODO: togliere (dovrebbe essere fixato altrove)
+final_final_incidents_df['state'] = final_final_incidents_df['state'].apply(lambda x: 'Hawaii' if x=='Hawaiʻi' else x) # TODO: togliere (dovrebbe essere fixato altrove)
 incidents_df.drop(columns=['state', 'latitude', 'longitude'], inplace=True)
-incidents_df = pd.concat([incidents_df.reset_index(drop=True), final_geo_df.reset_index(drop=True)], axis=1)
+incidents_df = pd.concat([incidents_df.reset_index(drop=True), final_final_incidents_df.reset_index(drop=True)], axis=1)
 incidents_df['state'] = incidents_df['state'].apply(lambda x: x.upper()) # FIXME: da spostare?
 
 # %% [markdown]
@@ -1632,8 +1641,8 @@ incidents_df.groupby(['state', 'congressional_district']).size()[lambda x: x <= 
 
 # %%
 if LOAD_DATA_FROM_CHECKPOINT:
-    congressional_district_df = load_checkpoint('congressional_district')
-    incidents_df['congressional_district'] = congressional_district_df['congressional_district']
+    final_incidents_df = load_checkpoint('checkpoint_5')
+    incidents_df['congressional_district'] = final_incidents_df['congressional_district']
     incidents_df.drop(columns=['KNN_congressional_district'], inplace=True)
 else:
     for state in incidents_df['state'].unique():
@@ -1653,7 +1662,8 @@ else:
             ] = knn_pred
     incidents_df.drop(columns=['congressional_district'], inplace=True)
     incidents_df.rename(columns={'KNN_congressional_district':'congressional_district'}, inplace=True)
-    save_checkpoint(incidents_df['congressional_district'], 'congressional_district')
+    final_incidents_df = pd.concat([final_incidents_df, incidents_df['congressional_district']], axis=1)
+    save_checkpoint(final_incidents_df, 'checkpoint_5')
 
 plot_scattermap_plotly(
     incidents_df,
@@ -1849,10 +1859,10 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 from data_preparation_utils import check_age_gender_data_consistency
 
 if LOAD_DATA_FROM_CHECKPOINT: # load data
-    age_temporary_df = load_checkpoint('checkpoint_age_temporary')
+    age_temporary_df = load_checkpoint('checkpoint_6')
 else: # compute data
     age_temporary_df = age_df.apply(lambda row: check_age_gender_data_consistency(row), axis=1)
-    save_checkpoint(age_temporary_df, 'checkpoint_age_temporary') # save data
+    save_checkpoint(age_temporary_df, 'checkpoint_6') # save data
 
 # %% [markdown]
 # ### Data Exploration without Out-of-Range Data
@@ -2042,35 +2052,36 @@ age_temporary_df.iloc[42353]
 from data_preparation_utils import set_gender_age_consistent_data
 
 if LOAD_DATA_FROM_CHECKPOINT:
-    new_age_df = load_checkpoint('checkpoint_age')
+    final_incidents_df = load_checkpoint('checkpoint_7')
 else:
     new_age_df = age_temporary_df.apply(lambda row: set_gender_age_consistent_data(row), axis=1)
-    save_checkpoint(new_age_df, 'checkpoint_age') # FIX: possiamo sempre usare age_df? Sovrascrivendo?
+    final_incidents_df = pd.concat([final_incidents_df, new_age_df], axis=1)
+    save_checkpoint(final_incidents_df, 'checkpoint_7')
 
 # %% [markdown]
 # We display the first 2 rows and a concise summary of the DataFrame:
 
 # %%
-new_age_df.head(2)
+final_incidents_df.head(2)
 
 # %%
-new_age_df.info()
+final_incidents_df.info()
 
 # %%
-print('Number of rows in which all data are null: ', new_age_df.isnull().all(axis=1).sum())
-print('Number of rows with some null data: ', new_age_df.isnull().any(axis=1).sum())
-print('Number of rows in which number of participants is null: ', new_age_df[new_age_df['n_participants'].isnull()].shape[0])
-print('Number of rows in which number of participants is 0: ', new_age_df[new_age_df['n_participants'] == 0].shape[0])
-print('Number of rows in which number of participants is null and n_killed is not null: ', new_age_df[
-    new_age_df['n_participants'].isnull() & new_age_df['n_killed'].notnull()].shape[0])
+print('Number of rows in which all data are null: ', final_incidents_df.isnull().all(axis=1).sum())
+print('Number of rows with some null data: ', final_incidents_df.isnull().any(axis=1).sum())
+print('Number of rows in which number of participants is null: ', final_incidents_df[final_incidents_df['n_participants'].isnull()].shape[0])
+print('Number of rows in which number of participants is 0: ', final_incidents_df[final_incidents_df['n_participants'] == 0].shape[0])
+print('Number of rows in which number of participants is null and n_killed is not null: ', final_incidents_df[
+    final_incidents_df['n_participants'].isnull() & final_incidents_df['n_killed'].notnull()].shape[0])
 
 # %%
-print('Total rows with null value for n_participants: ', new_age_df['n_participants'].isnull().sum())
-print('Total rows with null value for n_participants_child: ', new_age_df['n_participants_child'].isnull().sum())
-print('Total rows with null value for n_participants_teen: ', new_age_df['n_participants_teen'].isnull().sum())
-print('Total rows with null value for n_participants_adult: ', new_age_df['n_participants_adult'].isnull().sum())
-print('Total rows with null value for n_males: ', new_age_df['n_males'].isnull().sum())
-print('Total rows with null value for n_females: ', new_age_df['n_females'].isnull().sum())
+print('Total rows with null value for n_participants: ', final_incidents_df['n_participants'].isnull().sum())
+print('Total rows with null value for n_participants_child: ', final_incidents_df['n_participants_child'].isnull().sum())
+print('Total rows with null value for n_participants_teen: ', final_incidents_df['n_participants_teen'].isnull().sum())
+print('Total rows with null value for n_participants_adult: ', final_incidents_df['n_participants_adult'].isnull().sum())
+print('Total rows with null value for n_males: ', final_incidents_df['n_males'].isnull().sum())
+print('Total rows with null value for n_females: ', final_incidents_df['n_females'].isnull().sum())
 
 # %% [markdown]
 # We can observe that for any entries in the dataset, all data related to age and gender are *NaN*, while for 98973 entries, almost one value is *NaN*. From the plot below, we can visualize the null values (highlighted).
@@ -2078,7 +2089,7 @@ print('Total rows with null value for n_females: ', new_age_df['n_females'].isnu
 # It's important to note that we have complete data for *n_killed* and *n_injured* entries, and the majority of missing data are related to age-related features.
 
 # %%
-sns.heatmap(new_age_df.isnull(), cbar=False)
+sns.heatmap(final_incidents_df.isnull(), cbar=False)
 
 # %% [markdown]
 # Below, we have provided the distribution of the total number of participants and the number of participant per age range for each incident. Once again, to make the histograms more comprehensible use a logaritmic scale for y-axes.
@@ -2086,7 +2097,7 @@ sns.heatmap(new_age_df.isnull(), cbar=False)
 # %%
 # distribuition number of participants
 plt.figure(figsize=(20, 5))
-plt.hist(new_age_df['n_participants'], bins=104, edgecolor='black', linewidth=0.8)
+plt.hist(final_incidents_df['n_participants'], bins=104, edgecolor='black', linewidth=0.8)
 plt.xlabel('Number of participants')
 plt.ylabel('Frequency (log scale)')
 plt.xticks(np.arange(1, 104, 2))
@@ -2095,13 +2106,13 @@ plt.title('Distribution of number of participants')
 plt.show()
 
 # %%
-print('Max number of participants: ', new_age_df['n_participants'].max())
-print('Max number of children: ', new_age_df['n_participants_child'].max())
-print('Max number of teens: ', new_age_df['n_participants_teen'].max())
-print('Max number of adults: ', new_age_df['n_participants_adult'].max())
+print('Max number of participants: ', final_incidents_df['n_participants'].max())
+print('Max number of children: ', final_incidents_df['n_participants_child'].max())
+print('Max number of teens: ', final_incidents_df['n_participants_teen'].max())
+print('Max number of adults: ', final_incidents_df['n_participants_adult'].max())
 
 # %%
-new_age_df[new_age_df['n_participants_adult'] > 60][['n_participants', 'n_participants_adult', 
+final_incidents_df[final_incidents_df['n_participants_adult'] > 60][['n_participants', 'n_participants_adult', 
     'n_participants_child', 'n_participants_teen']]
 
 # %%
@@ -2160,7 +2171,7 @@ plt.show()
 
 # %%
 plt.figure(figsize=(20, 8))
-plt.hist(new_age_df['avg_age_participants'], bins=100, density=False, edgecolor='black', linewidth=0.8) # FIXME: provare + binning (magare anche sturges's rule)
+plt.hist(final_incidents_df['avg_age_participants'], bins=100, density=False, edgecolor='black', linewidth=0.8) # FIXME: provare + binning (magare anche sturges's rule)
 plt.xlim(0, 100)
 plt.xlabel('Participants average age')
 plt.ylabel('Frequency')
@@ -2168,11 +2179,11 @@ plt.title('Distribution of participants average age')
 plt.show()
 
 # %%
-new_age_df.describe()
+final_incidents_df.describe()
 
 # %%
 incidents_df.drop(columns=participants_columns, inplace=True)
-incidents_df = pd.concat([incidents_df.reset_index(drop=True), new_age_df.reset_index(drop=True)], axis=1)
+incidents_df = pd.concat([incidents_df.reset_index(drop=True), final_incidents_df.reset_index(drop=True)], axis=1)
 # gli indici sono diversi...
 
 # %% [markdown]
@@ -2230,20 +2241,21 @@ from data_preparation_utils import add_tags, check_tag_consistency, check_charac
 tags_columns = [tag.name for tag in IncidentTag]
 tags_columns.append('tag_consistency')
 
-if False:#LOAD_DATA_FROM_CHECKPOINT:
-    tags_df = load_checkpoint('checkpoint_tags')
-    incidents_df[tags_columns] = tags_df[tags_columns] # FIX: drop columns, concat along axis=1
+if LOAD_DATA_FROM_CHECKPOINT:
+    final_incidents_df = load_checkpoint('checkpoint_8')
 else:
     incidents_df = add_tags(incidents_df)
     incidents_df['tag_consistency'] = True
     incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
     incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
-    save_checkpoint(incidents_df[tags_columns], 'checkpoint_tags')
+    final_incidents_df = pd.concat([final_incidents_df, incidents_df[tags_columns]], axis=1)
+    save_checkpoint(final_incidents_df, 'checkpoint_8')
 
 # %%
 incidents_df['tag_consistency'].value_counts()
 
 # %%
+from data_preparation_utils import set_tags_consistent_data
 incidents_df = incidents_df.apply(lambda row: set_tags_consistent_data(row), axis=1) # correct inconcistencies
 
 # check inconsistencies left on new data 
@@ -2330,23 +2342,15 @@ incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
 # We are aware of the fact that we could use classifier to inferr missing values. We chose not to do it because we think such method do not align with the nature of gun incidents. Citando il libro "Classification is the task of learning a target function f that maps each attribute set x to one of the predefined class labels y", il problema è che non può esistere una tale funzione (possono esserci (e immagino siano anche molti comuni) record uguali su tutti gli attributi tranne uno, per cui l'inferenza è impossibile).
 
 # %% [markdown]
-# # Save Final Data
-
-# %% [markdown]
 # ## Join population, poverty and eletion data
-
-# %%
-#TODO: probabilmente da spostare (?) 
-# per ora ho messo il sottotitolo a questa sezione così da capire che è un blocco a parte guardando outline
-# poi bisognerebbe fare le join sul dataset pulito
 
 # %% [markdown]
 # We join the poverty data with the incidents data:
 
 # %%
 poverty_df['state'] = poverty_df['state'].str.upper()
-incidents_df = incidents_df.merge(poverty_df, on=['state', 'year'], how='left', validate="m:1")
-incidents_df.head()
+final_incidents_df = final_incidents_df.merge(poverty_df, on=['state', 'year'], how='left', validate="m:1")
+final_incidents_df.head()
 
 # %% [markdown]
 # We join the elections data with the incidents data:
@@ -2355,11 +2359,10 @@ incidents_df.head()
 elections_df_copy = elections_df.copy()
 elections_df_copy['year'] = elections_df_copy['year'] + 1
 elections_df = pd.concat([elections_df, elections_df_copy], ignore_index=True)
-incidents_df = incidents_df.merge(elections_df, on=['state', 'year', 'congressional_district'], how='left')
-incidents_df.head()
+final_incidents_df = final_incidents_df.merge(elections_df, on=['state', 'year', 'congressional_district'], how='left')
+final_incidents_df.head()
 
 # %%
-incidents_df['month'] = incidents_df['date'].dt.month
 incidents_df.groupby('month').size().plot(
     kind='bar',
     figsize=(10, 5),
@@ -2370,8 +2373,7 @@ incidents_df.groupby('month').size().plot(
 plt.xticks(range(12), calendar.month_name[1:13], rotation=45);
 
 # %%
-incidents_df['day_of_week'] = incidents_df['date'].dt.dayofweek
-incidents_df.groupby('day_of_week').size().plot(
+final_incidents_df.groupby('day_of_week').size().plot(
     kind='bar',
     figsize=(10, 5),
     title='Number of incidents per day of the week',
@@ -2397,11 +2399,11 @@ usa_population_df.drop(columns=['Population as of 2000 census', 'Change', 'Perce
 usa_population_df.rename(columns={'Population as of 2010 census':'population_state_2010', 'State': 'state'}, inplace=True)
 usa_population_df['state'] = usa_population_df['state'].str.upper()
 usa_population_df['population_state_2010'] = usa_population_df['population_state_2010'].str.replace(',', '').astype('int64')
-incidents_df = incidents_df.merge(usa_population_df, on=['state'], how='left')
-incidents_df.head()
+final_incidents_df = final_incidents_df.merge(usa_population_df, on=['state'], how='left')
+final_incidents_df.head()
 
 # %%
-incidents_per_state = incidents_df[incidents_df['year']<=2020].groupby(['state', 'population_state_2010']).size()
+incidents_per_state = final_incidents_df[final_incidents_df['year']<=2020].groupby(['state', 'population_state_2010']).size()
 incidents_per_state = ((incidents_per_state / incidents_per_state.index.get_level_values('population_state_2010'))*100000).to_frame(name='incidents_per_100k_inhabitants').sort_values(by='incidents_per_100k_inhabitants', ascending=True)
 incidents_per_state.reset_index(inplace=True)
 incidents_per_state.plot(
@@ -2415,10 +2417,10 @@ incidents_per_state.plot(
 )
 
 # %%
-incidents_df[incidents_df['state']=='DISTRICT OF COLUMBIA'].groupby(['latitude', 'longitude', 'date']).size()[lambda x: x > 1].sort_values(ascending=False)
+final_incidents_df[final_incidents_df['state']=='DISTRICT OF COLUMBIA'].groupby(['latitude', 'longitude', 'date']).size()[lambda x: x > 1].sort_values(ascending=False)
 
 # %%
-incidents_df.groupby(['latitude', 'longitude', 'date']).size()[lambda x: x>1]
+final_incidents_df.groupby(['latitude', 'longitude', 'date']).size()[lambda x: x>1]
 
 # %%
 nltk.download('stopwords')
@@ -2437,7 +2439,7 @@ plt.axis('off')
 plt.title('Word cloud of notes')
 
 # %%
-incidents_per_month_per_state = incidents_df.groupby(['state', 'month', 'year']).size()
+incidents_per_month_per_state = final_incidents_df.groupby(['state', 'month', 'year']).size()
 incidents_per_month_per_state = incidents_per_month_per_state.to_frame(name='incidents').reset_index()
 incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month', 'state'], ignore_index=True)
 incidents_per_month_per_state['incidents_per_100k_inhabitants'] = incidents_per_month_per_state.apply(
@@ -2474,10 +2476,10 @@ plt.xticks(rotation=90)
 plt.tight_layout() # 601,723 / 672,602
 
 # %%
-incidents_df[incidents_df['state']=='DISTRICT OF COLUMBIA']['incident_characteristics1'].value_counts().plot(kind='barh', figsize=(20, 10))
+final_incidents_df[final_incidents_df['state']=='DISTRICT OF COLUMBIA']['incident_characteristics1'].value_counts().plot(kind='barh', figsize=(20, 10))
 
 # %%
-incidents_per_month_per_state = incidents_df[incidents_df['incident_characteristics1']!='Non-Shooting Incident'].groupby(['state', 'month', 'year']).size()
+incidents_per_month_per_state = final_incidents_df[final_incidents_df['incident_characteristics1']!='Non-Shooting Incident'].groupby(['state', 'month', 'year']).size()
 incidents_per_month_per_state = incidents_per_month_per_state.to_frame(name='incidents').reset_index()
 incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month', 'state'], ignore_index=True)
 incidents_per_month_per_state['incidents_per_100k_inhabitants'] = incidents_per_month_per_state.apply(
@@ -2514,13 +2516,16 @@ plt.xticks(rotation=90)
 plt.tight_layout() # 601,723 / 672,602
 
 # %%
-incidents_df[(incidents_df['state']=='DISTRICT OF COLUMBIA') & (incidents_df['year']==2014) & (incidents_df['month']==1)]
+final_incidents_df[(final_incidents_df['state']=='DISTRICT OF COLUMBIA') & (final_incidents_df['year']==2014) & 
+    (final_incidents_df['month']==1)]
 
 # %%
-incidents_df[(incidents_df['state']=='DISTRICT OF COLUMBIA')& (incidents_df['year']==2014) & (incidents_df['month']==1)]['incident_characteristics1'].value_counts().plot(kind='barh', figsize=(20, 10))
+# FIXME: non ho salvato le caratteristiche, le vogliamo? se si andrebbero aggiunte nel checkpoint_8
+#final_incidents_df[(final_incidents_df['state']=='DISTRICT OF COLUMBIA') & (final_incidents_df['year']==2014) & 
+#    (final_incidents_df['month']==1)]['incident_characteristics1'].value_counts().plot(kind='barh', figsize=(20, 10))
 
 # %%
-incidents_df[(incidents_df['state']=='DISTRICT OF COLUMBIA')& (incidents_df['date']=="2014-01-01")]
+final_incidents_df[(final_incidents_df['state']=='DISTRICT OF COLUMBIA')& (final_incidents_df['date']=="2014-01-01")]
 
 # %% [markdown]
 # https://mpdc.dc.gov/sites/default/files/dc/sites/mpdc/publication/attachments/MPD%20Annual%20Report%202017_lowres.pdf
@@ -2556,7 +2561,7 @@ plt.xticks(rotation=90)
 plt.tight_layout()
 
 # %%
-incidents_per_year_per_state = incidents_df.groupby(['state', 'year']).size()
+incidents_per_year_per_state = final_incidents_df.groupby(['state', 'year']).size()
 incidents_per_year_per_state = incidents_per_year_per_state.to_frame(name='incidents').reset_index()
 incidents_per_year_per_state['incidents_per_100k_inhabitants'] = incidents_per_year_per_state.apply(
     lambda row: (row['incidents'] / usa_population_df[usa_population_df['state']==row['state']]['population_state_2010'].iloc[0])*100000,
@@ -2586,10 +2591,10 @@ fig.show()
 winning_party_per_state_copy = winning_party_per_state.copy()
 winning_party_per_state_copy['year'] = winning_party_per_state['year'] + 1
 winning_party_per_state = pd.concat([winning_party_per_state, winning_party_per_state_copy], ignore_index=True)
-incidents_df = incidents_df.merge(winning_party_per_state[['state', 'year', 'majority_state_party']], on=['state', 'year'], how='left')
+final_incidents_df = final_incidents_df.merge(winning_party_per_state[['state', 'year', 'majority_state_party']], on=['state', 'year'], how='left')
 
 # %%
-incidents_per_state_2016 = incidents_df[(incidents_df['n_killed']>0)].groupby(['state', 'year', 'population_state_2010', 'povertyPercentage', 'majority_state_party']).size()
+incidents_per_state_2016 = final_incidents_df[(final_incidents_df['n_killed']>0)].groupby(['state', 'year', 'population_state_2010', 'povertyPercentage', 'majority_state_party']).size()
 incidents_per_state_2016 = incidents_per_state_2016.to_frame(name='incidents').reset_index()
 incidents_per_state_2016['incidents_per_100k_inhabitants'] = (incidents_per_state_2016['incidents'] / incidents_per_state_2016['population_state_2010'])*100000
 fig = px.scatter(
@@ -2608,6 +2613,18 @@ fig.show()
 
 
 # %% [markdown]
+# # Save Final Data
+
+# %% [markdown]
+# We re-order the columns and we save the cleaned dataset:
+
+# %%
+final_incidents_df.to_csv('final_incidents.csv', index=False)
+
+# %%
+final_incidents_df.shape[0]
+
+# %% [markdown]
 # ## Cose da rivedere per merge
 
 # %% [markdown]
@@ -2615,7 +2632,7 @@ fig.show()
 #
 # date, colonna pulita, il check point è stato cancellato
 #
-# final_geo_df \
+# final_final_incidents_df \
 # colonne: ['state', 'county', 'city', 'latitude', 'longitude', 'state_consistency',
 #        'county_consistency', 'address_consistency', 'importance',
 #        'address_type']
@@ -2623,7 +2640,7 @@ fig.show()
 # incidents_df['congressional_district'] + 
 # incidents_df['state_house_district']
 #
-# new_age_df \
+# final_incidents_df \
 # colonne: ['participant_age1', 'participant1_child', 'participant1_teen',
 #        'participant1_adult', 'participant1_male', 'participant1_female',
 #        'min_age_participants', 'avg_age_participants', 'max_age_participants',
@@ -2663,14 +2680,4 @@ external_columns = ['povertyPercentage', 'party', 'candidatevotes', 'totalvotes'
 
 
 # %%
-incidents_df = incidents_df[time_columns + geo_columns + participants_columns + characteristic_columns + external_columns]
-
-# %%
-incidents_df.shape[0]
-
-# %% [markdown]
-# We re-order the columns and we save the cleaned dataset:
-
-# %%
-# incidents_data[time_columns+geo_columns+participants_columns+characteristic_columns+external_columns]
-incidents_df.to_csv('../data/incidents_cleaned.csv', index=False)
+#incidents_df = incidents_df[time_columns + geo_columns + participants_columns + characteristic_columns + external_columns]
