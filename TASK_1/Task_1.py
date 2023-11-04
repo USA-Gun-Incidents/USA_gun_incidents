@@ -742,7 +742,7 @@ incidents_df.describe(include='all', datetime_is_numeric=True)
 # To avoid re-running some cells, we save checkpoints of the dataframe at different stages of the analysis and load the dataframe from the last checkpoint using the following functions:
 
 # %%
-LOAD_DATA_FROM_CHECKPOINT = False#True
+LOAD_DATA_FROM_CHECKPOINT = True
 CHECKPOINT_FOLDER_PATH = 'checkpoints/'
 
 def save_checkpoint(df, checkpoint_name):
@@ -2410,9 +2410,9 @@ incidents_df[incidents_df['state']=='DISTRICT OF COLUMBIA'].groupby(['latitude',
 incidents_df.groupby(['latitude', 'longitude', 'date']).size()[lambda x: x>1]
 
 # %%
-incidents_per_month_per_state = incidents_df.groupby(['state', 'month', 'year']).size()
+incidents_per_month_per_state = incidents_df.groupby(['state', 'month_name', 'year']).size()
 incidents_per_month_per_state = incidents_per_month_per_state.to_frame(name='incidents').reset_index()
-incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month', 'state'], ignore_index=True)
+incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month_name', 'state'], ignore_index=True)
 incidents_per_month_per_state['incidents_per_100k_inhabitants'] = incidents_per_month_per_state.apply(
     lambda row: (row['incidents'] / usa_population_df[usa_population_df['state']==row['state']]['population_state_2010'].iloc[0])*100000,
     axis=1
@@ -2434,25 +2434,16 @@ ax.set_xlabel('Month-Year')
 ax.set_ylabel('State')
 ax.set_title('Number of incidents per month per state')
 
-# xticks = []
-# for label in ax.get_xticklabels():
-#     txt_label = label.get_text()
-#     year = txt_label[:txt_label.find('-')]
-#     month = txt_label[txt_label.find('-')+1:]
-#     xticks.append(year+' - '+calendar.month_name[int(month)]) #TODO: NON VA
-
-# ax.set_xticklabels(xticks);
-
 plt.xticks(rotation=90)
-plt.tight_layout() # 601,723 / 672,602
+plt.tight_layout()
 
 # %%
 incidents_df[incidents_df['state']=='DISTRICT OF COLUMBIA']['incident_characteristics1'].value_counts().plot(kind='barh', figsize=(20, 10))
 
 # %%
-incidents_per_month_per_state = incidents_df[incidents_df['incident_characteristics1']!='Non-Shooting Incident'].groupby(['state', 'month', 'year']).size()
+incidents_per_month_per_state = incidents_df[incidents_df['incident_characteristics1']!='Non-Shooting Incident'].groupby(['state', 'month_name', 'year']).size()
 incidents_per_month_per_state = incidents_per_month_per_state.to_frame(name='incidents').reset_index()
-incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month', 'state'], ignore_index=True)
+incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month_name', 'state'], ignore_index=True)
 incidents_per_month_per_state['incidents_per_100k_inhabitants'] = incidents_per_month_per_state.apply(
     lambda row: (row['incidents'] / usa_population_df[usa_population_df['state']==row['state']]['population_state_2010'].iloc[0])*100000,
     axis=1
@@ -2461,7 +2452,7 @@ fig, ax = plt.subplots(figsize=(20, 10))
 sns.heatmap(
     incidents_per_month_per_state[incidents_per_month_per_state.year<=2020].pivot(
         index='state',
-        columns=['year', 'month'],
+        columns=['year', 'month_name'],
         values='incidents_per_100k_inhabitants'
     ).fillna(0),
     cmap='coolwarm',
@@ -2474,17 +2465,8 @@ ax.set_xlabel('Month-Year')
 ax.set_ylabel('State')
 ax.set_title('Number of incidents per month per state (excluding non-shooting incidents)')
 
-xticks = []
-for label in ax.get_xticklabels():
-    txt_label = label.get_text()
-    month = txt_label[txt_label.find('-')+1:]
-    year = txt_label[:txt_label.find('-')]
-    xticks.append(year+' - '+calendar.month_name[int(month)])
-
-ax.set_xticklabels(xticks);
-
 plt.xticks(rotation=90)
-plt.tight_layout() # 601,723 / 672,602
+plt.tight_layout()
 
 # %%
 incidents_df[(incidents_df['state']=='DISTRICT OF COLUMBIA') & (incidents_df['year']==2014) & 
@@ -2505,7 +2487,7 @@ fig, ax = plt.subplots(figsize=(20, 10))
 sns.heatmap(
     incidents_per_month_per_state[(incidents_per_month_per_state.year<=2020) & (incidents_per_month_per_state['state']!='DISTRICT OF COLUMBIA')].pivot(
         index='state',
-        columns=['year', 'month'],
+        columns=['year', 'month_name'],
         values='incidents_per_100k_inhabitants'
     ).fillna(0),
     cmap='coolwarm',
@@ -2518,14 +2500,6 @@ ax.set_xlabel('Month-Year')
 ax.set_ylabel('State')
 ax.set_title('Number of incidents per month per state')
 
-xticks = []
-for label in ax.get_xticklabels():
-    txt_label = label.get_text()
-    month = txt_label[txt_label.find('-')+1:]
-    year = txt_label[:txt_label.find('-')]
-    xticks.append(year+' - '+calendar.month_name[int(month)])
-
-ax.set_xticklabels(xticks)
 
 plt.xticks(rotation=90)
 plt.tight_layout()
