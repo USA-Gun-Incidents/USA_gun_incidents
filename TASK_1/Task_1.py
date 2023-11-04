@@ -2241,9 +2241,15 @@ plt.imshow(word_cloud_all_train)
 plt.axis('off')
 plt.title('Word cloud of notes')
 
+# %% [markdown]
+# We check if given the first characteristic of a record, the second one is different. This to ensure that the info we have are not redundant.
+
 # %%
 # check if ch1 and ch2 are always different
 incidents_df[incidents_df['incident_characteristics1']==incidents_df['incident_characteristics2']].shape[0]==0
+
+# %% [markdown]
+# We check the frequency of each characteristic in the whole dataset, then we plot it.
 
 # %%
 # merge characteristics list
@@ -2269,6 +2275,9 @@ ax.set_ylabel('incident_characteristics2')
 ax.set_title('Counts of incident characteristics')
 plt.tight_layout()
 
+# %% [markdown]
+# We plot, for a specific characteristic, the most common characteristic that is paired to it.
+
 # %%
 fig, ax = plt.subplots(figsize=(20, 15)) # FIX: questo possiamo toglierlo? dovrebbe essere equivalente al plot sotto
 sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(by="Shot - Dead (murder, accidental, suicide)", inplace=False, ascending=False).tail(-1),
@@ -2282,6 +2291,38 @@ characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort
         kind='bar',
         figsize=(20,10)
     )
+
+# %% [markdown]
+# We can see that the most of the other characteristics are not paired to the one we're analyzing, in particular there are very few ones which are paired to it for a significant number of times.
+
+# %% [markdown]
+# ### Tags
+# We create some binary tags to standardize the characteristics of each incident, in this way we can easyly get detailed information on the type of all the incidents.<br>
+# We based the tags creation only on the info we could get from the characteristics. The logic behind the conversion is that the tag is true if and only if we could get the semantic information of the tag with 100% certainty; if the tag is false, it means that or the tag represent info wich are false for the specific record, or that we don't have enough data to assume something for that particular incident.<br>
+# The tags we cretaed are the following:
+# - <b>firearm</b>: it tells if a firearm is involved in the incident
+# - <b>air_gun</b>: it tells if an air gun is involved in the incident
+# - <b>shots</b>: it tells if it was an incident involving one or more shootings
+# - <b>aggression</b>: it tells if there was an aggression (both using a gun or not) in the incident
+# - <b>suicide</b>: it tells if the incident involve a suicide (attempts are included)
+# - <b>injuries</b>: it tells if there was one ore more injuried subjects in the incident
+# - <b>death</b>: it tells if there was one ore more deaths in the incident
+# - <b>road</b>: it tells if the incident involves a bad street behavior
+# - <b>illegal_holding</b>: it tells if the incident involve a stealing act or an illegaly possessed gun
+# - <b>house</b>: it tells if the incident is happened in a house
+# - <b>school</b>: it tells if the incident is happened next to a school
+# - <b>children</b>: it tells if the incident involves one or more children
+# - <b>drugs</b>: it tells if the incident involves drug interests
+# - <b>officers</b>: it tells if one or more officiers are involved in the incident
+# - <b>organized</b>: it tells if the incident was planned by an organization or a group
+# - <b>social_reasons</b>: it tells if the incident involves social discriminations or terrorism
+# - <b>defensive</b>: it tells if there was a defensive use of a gun during the incident
+# - <b>workplace</b>: it tells if the incident happened in a workplace
+# - <b>abduction</b>: it tells if the incident involves any form of abduction
+# - <b>unintentional</b>: it tells if the incident was unintentional
+
+# %% [markdown]
+# We set all the tags and check their consistency w.r.t. the other data of the record.
 
 # %%
 from data_preparation_utils import add_tags, check_tag_consistency, check_characteristics_consistency, IncidentTag
@@ -2297,10 +2338,13 @@ else:
     incidents_df['tag_consistency'] = True
     incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
     incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
-    save_checkpoint(incidents_df[tags_columns], 'tags') #TODO: guarda cella sotto,fa la stessa cosa
+    save_checkpoint(incidents_df[tags_columns], 'checkpoint_tags') #TODO: guarda cella sotto,fa la stessa cosa
 
 # %%
 incidents_df['tag_consistency'].value_counts()
+
+# %% [markdown]
+# We correct the inconsistencies and then we check again to see if there are any improvement.
 
 # %%
 # correct inconcistencies
@@ -2330,6 +2374,9 @@ incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(
 save_checkpoint(incidents_df[tags_columns], 'tags')
 
 incidents_df['tag_consistency'].value_counts()
+
+# %% [markdown]
+# We create 5 partitions: Murder, Suicide, Defensive, Accidental and Others. Then we show grafically, in percentage, how many incidents belong to each class.
 
 # %%
 tags_counts = {}
@@ -2362,15 +2409,33 @@ plt.legend(legend_labels)
 plt.title("Gun incidents")
 plt.show()
 
+# %% [markdown]
+# We can see that the biggest part of the incidents involves Murder, while even if Suicide, Defensive and Accidental are the most common, they're very few compare to murders. The other big slice of the pie belongs to Others, showing that there are a lot of different incidents that are less common.
+
+# %% [markdown]
+# We show which are the most common tags. In particular we display, for each tag, in how many records it's set to True w.r.t. all the records.
+
 # %%
 ax = (incidents_df[tags_columns].apply(lambda col: col.value_counts()).T.sort_values(by=True)/incidents_df.shape[0]*100).plot(kind='barh', stacked=True, alpha=0.8, edgecolor='black')
 for container in ax.containers:
     ax.bar_label(container, fmt='%.1f%%', label_type='center', fontsize=8)
 plt.title("Incidents characteristic (%)")
 
+# %% [markdown]
+# We can see that the most common tags are firearm, shots, aggression and injuries (above 50% of the records), in particular firearm is True for almost every record (97.7 %). On the other hand there are tags that are very rare (less than 1% of the records): air_gun, school, social_reasons and abduction.
+
+# %% [markdown]
+# We try to see if there are correlations between accidental incidents and the presence of children.
+
 # %%
 # compute correlation between accidental incidents and presence of children
 incidents_df['unintentional'].corr(incidents_df['n_participants_child']>0) # not correlated
+
+# %% [markdown]
+# We can see that the two events are not correlated
+
+# %% [markdown]
+# We display the most common characteristics for incidents involving women.
 
 # %%
 ch1_females_counts = incidents_df[incidents_df['n_females']>1]['incident_characteristics1'].value_counts()
@@ -2380,6 +2445,9 @@ ch_females_counts = ch1_females_counts.add(ch2_females_counts, fill_value=0).sor
     title='Characteristics counts of incidents with females involved',
     figsize=(20,10)
 )
+
+# %% [markdown]
+# We can see that the distribution is very similar to the one involving both men and women. Some of the main differences are that, for women, the frequency of suicides is higher than normal, while the officiers involving incidents have the opposite behavior.
 
 # %% [markdown]
 # We are aware of the fact that we could use classifier to inferr missing values. We chose not to do it because we think such method do not align with the nature of gun incidents. Citando il libro "Classification is the task of learning a target function f that maps each attribute set x to one of the predefined class labels y", il problema è che non può esistere una tale funzione (possono esserci (e immagino siano anche molti comuni) record uguali su tutti gli attributi tranne uno, per cui l'inferenza è impossibile).
