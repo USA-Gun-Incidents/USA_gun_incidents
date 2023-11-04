@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 # %% [markdown]
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
-#
+# 
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
 
 # %% [markdown]
@@ -36,7 +35,7 @@ import zipfile
 # We define constants and settings for the notebook:
 
 # %%
-# %matplotlib inline
+%matplotlib inline
 
 DATA_FOLDER_PATH = '../data/'
 
@@ -61,15 +60,15 @@ poverty_df.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about the poverty percentage for each USA state and year.
-#
+# 
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas dtype for later analysis.
-#
+# 
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :------------: |
 # | 0 | state | Categorical (Nominal) | Name of the state | object |
 # | 1 | year | Numeric (Interval) | Year | int64 |
 # | 2 | povertyPercentage | Numeric (Ratio) | Poverty percentage for the corresponding state and year | float64 |
-#
+# 
 
 # %% [markdown]
 # We display a concise summary of the DataFrame:
@@ -129,7 +128,7 @@ poverty_df.loc[
 
 # %% [markdown]
 # Since the tuple <`state`, `year`> uniquely identifies each row we can conclude that there are no missing rows.
-#
+# 
 # Now, we count how many rows have missing values:
 
 # %%
@@ -143,7 +142,7 @@ poverty_df[poverty_df['povertyPercentage'].isnull()]['year'].unique()
 
 # %% [markdown]
 # As expected we have no data from 2012. Later we will fix this issue.
-#
+# 
 # Now we visualize the distribution of poverty percentage for each state.
 
 # %%
@@ -192,7 +191,7 @@ plt.ylabel('Average Poverty (%)')
 
 # %% [markdown]
 # It is evident that New Hampshire's average poverty rate is markedly lower than that of the other states, whereas Mississippi's average poverty rate is notably higher than the rest. 
-#
+# 
 # To inspect and compare the poverty percentage of each state over the year, we plot an interactive line chart:
 
 # %%
@@ -203,7 +202,7 @@ fig.show()
 
 # %% [markdown]
 # We can oberserve that New Hampshire always had the lowest poverty percentage, whereas Mississippi had the highest till 2009, then it was surpassed by New Mexico and Louisiana.
-#
+# 
 # To imputate the missing data from 2012, we calculate the average of the `povertyPercentage` values for the preceding and succeeding year.
 
 # %%
@@ -305,9 +304,9 @@ elections_df.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about the winner of the congressional elections in the USA, for each year, state and congressional district.
-#
+# 
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas `dtype` for later analysis.
-#
+# 
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :------------: |
 # | 0 | year | Numeric (Interval) | Year | int64 |
@@ -363,7 +362,7 @@ print(f'Number of states: {states.size}')
 
 # %% [markdown]
 # All the states (District of Columbia included) are present.
-#
+# 
 # We now display the states and the years for which there are missing rows:
 
 # %%
@@ -382,7 +381,7 @@ elections_df[elections_df['state']=='DISTRICT OF COLUMBIA']
 
 # %% [markdown]
 # Missing values are probably due to the fact that District of Columbia is a non voting delegate district. Anyway, we gathered the missing values from Wikipedia. We noticed that as for the 2020 elecetions, the number of votes received by the winning party coincides, but the number of totalvotes is different (see [here](https://en.wikipedia.org/wiki/2020_United_States_House_of_Representatives_election_in_the_District_of_Columbia)). To be consistent with the other data, we replace the totalvotes value from 2020 with the one from Wikipedia.
-#
+# 
 # Now we import those data:
 
 # %%
@@ -397,7 +396,7 @@ dc_elections_df.info()
 
 # %% [markdown]
 # The inferred types are correct.
-#
+# 
 # We now merge the two dataframes:
 
 # %%
@@ -438,7 +437,7 @@ plt.tight_layout()
 
 # %% [markdown]
 # We can observe that for both total and candidate votes Florida, Louisian and Oklahoma have lower outliers, while Maine has an upper outlier. 
-#
+# 
 # We display the rows relative to Maine:
 
 # %%
@@ -494,7 +493,7 @@ plt.tight_layout()
 
 # %% [markdown]
 # It is evident that in some states the number of votes fluctuates significantly from year to year.
-#
+# 
 # We get the unique names of the parties for the years of interest:
 
 # %%
@@ -527,7 +526,7 @@ elections_df[(elections_df['candidateperc']==100) & (elections_df['year']>2012)]
 
 # %% [markdown]
 # Wikipedia reports the same data, in those cases there was not an opponent party.
-#
+# 
 # The histogram above also shows that in some disticts the winner party obtained less than 50% of the votes. We display some of those districts:
 
 # %%
@@ -591,9 +590,9 @@ incidents_df.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about gun incidents in the USA.
-#
+# 
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas dtype for later analysis.
-#
+# 
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :-----------: |
 # | 0 | date | Numeric (Interval) | Date of incident occurrence| datetime |
@@ -636,7 +635,7 @@ incidents_df.info()
 # - `congressional_district`, `state_house_district`, `state_senate_district`, `participant_age1`, `n_males`, `n_females`, `n_arrested`, `n_unharmed`, `n_participants` are stored as `float64` while should be `int64`
 # - `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` are stored as `object` while should be `int64`, this probably indicates the presence of out of syntactic errors (not in the domain)
 # - the presence of missing values within many attributes; the only attributes without missing values are the following: `date`, `state`, `city_or_county`, `n_killed`, `n_injured`, `n_participants`
-#
+# 
 # We display descriptive statistics of the DataFrame so to better understand how to cast the data:
 
 # %%
@@ -688,7 +687,7 @@ incidents_df.info()
 
 # %% [markdown]
 # We observe that the downcasting of many attributes has not succeeded. This is due to the presence of missing or out of range values.
-#
+# 
 # We drop duplicates:
 
 # %%
@@ -736,9 +735,9 @@ incidents_df.describe(include='all', datetime_is_numeric=True)
 # - there are many inconsistencies and/or erros, for example:
 #     - the maximum value for the attribute `date` is 2030-11-28
 #     - the range of the attributes `age`, `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` is outside the domain of the attributes (e.g. the maximum value for the attribute age is 311)
-#
+# 
 # In the following sections of this notebook we will analyze each attribute in detail.
-#
+# 
 # To avoid re-running some cells, we save checkpoints of the dataframe at different stages of the analysis and load the dataframe from the last checkpoint using the following functions:
 
 # %%
@@ -757,7 +756,6 @@ def load_checkpoint(checkpoint_name, casting=None, date_cols=None):
         dtype=casting
         )
     return df
-
 
 # %% [markdown]
 # ### Date attribute: exploration and preparation
@@ -802,7 +800,7 @@ print(f'Number of rows with out of range value for the attribute date: {num_oor}
 # - check if those records have duplicates with a correct date
 # - suppose dates were entered manually using a numeric keypad and that the errors are typos (e.g. 2030 is actually 2020)
 # - replace the errors with the mean or median value
-#
+# 
 # Let's check if there are duplicates with a correct date:
 
 # %%
@@ -911,7 +909,7 @@ incidents_df.groupby(['latitude', 'longitude'])['address'].unique()[lambda x: x.
 
 # %% [markdown]
 # Still this attribute may be written in different ways (e.g. "Avenue" may also be written as "Ave", or "Highway" as "Hwy"). There could also be some errors (e.g. the same point corresponds to the address "33rd Avenue", "Kamehameha Highway" and "Kilauea Avenue extension").
-#
+# 
 # We plot on a map the location of the incidents:
 
 # %%
@@ -948,9 +946,9 @@ geopy_df.head(n=2)
 
 # %% [markdown]
 # The rows in this dataframe correspond to the rows in the original dataset. Its column *coord_presence* is false if the corresponding row in the original dataset did not have latitude and longitude values.
-#
+# 
 # Among all the attributes returned by GeoPy, we selected and used the following:
-#
+# 
 # - *lat* and *lon*: Latitude and longitude of the location
 # - *importance*: Numerical value $\in [0,1]$, indicates the importance of the location (in comparison to other locations)
 # - *addresstype*: Address type (e.g., "house," "street," "postcode")
@@ -975,9 +973,9 @@ print(f"\nNumber of rows in which addresstype is null: {geopy_df[geopy_df['addre
 
 # %% [markdown]
 # We also downloaded from [Wikipedia](https://en.wikipedia.org/wiki/County_(United_States)) the list of the counties (or their equivalent) in each state. 
-#
+# 
 # This data was used in cases where no consistency was found with GeoPy data. FIXME: come?
-#
+# 
 # When latitude and longitude where not available we used this information to check whether the county actually belonged to the state. FIXME: è questo che volevi dire con "This dataset made it possible to verify the data consistency for the *state* and *county* fields without the need for *latitude* and *longitude* values"?
 
 # %%
@@ -1002,24 +1000,24 @@ else:
 
 # %% [markdown]
 # The function called above performs the following operations:
-#
+# 
 # - Converts to lowercase the values for *state*, *county*, and *city* in all the dataframes
 # - If *city_or_county* contains values for both city and county, splits them into two different fields
 # - Removes from *city_or_county* the words 'city of' and 'county' to avoid potential inconsistencies during distance calculations (this precaution is taken to identify if two strings are the same but contain typos, ensuring more accurate and consistent comparisons)
 # - Removes from *city_or_county* punctuation and numerical values
 # - Removes frequent words from *address* and *display_name* (e.g., "Street," "Avenue," "Boulevard") to avoid potential inconsistencies during distance calculations
-#
+# 
 # When latitude and longitude are available and therefore Geopy provided information for the corresponding location:
 # - checks for equality between *state* and *state_geopy*
 # - checks for equality between *county* and *county_geopy* or between *county* and *suburb_geopy*
 # - checks for equality between *city* and *city_geopy*, or between *city* and *town_geopy*, or between *city* and *village_geopy*
-#
+# 
 # If these comparison fails, it checks for potential typos in the string. This is done using the Damerau-Levenshtein distance (see the definition below), with a threshold to decide the maximum distance for two strings to be considered equal. The thresholds were set after several preliminary tests. We decided to use different thresholds for state and city/county.
-#
+# 
 # If the comparison still fails, it compares the *address* field from our dataset with GeoPy's *display_name*. Again, the Damerau-Levenshtein distance with an appropriate threshold is used to verify address consistency.
-#
+# 
 # In cases where we were able to evaluate data consistency through these comparisons, we set the values for the fields *state*, *county*, *city*, *latitude*, *longitude*, *importance*, *address_type* using GeoPy values. Additionally, we also saved values reflecting the consistency with the fields evaluated earlier in: *state_consistency*, *county_consistency*, *address_consistency* (0 if not consistent, 1 if consistent, -1 if null values are presents)
-#
+# 
 # If the fields in our dataset were not consistent through the previously described checks or could not be verified due to the absence of latitude and longitude values, we attempted to assess consistency using Wikipedia data, with similar checks as before. In this case, we could only retrieve the *state* and *county* fields.
 
 # %% [markdown]
@@ -1031,13 +1029,13 @@ else:
 # D(i-1, j-1) + \delta \\
 # D(i-2, j-2) + \delta & \text{if } s[i] = t[j] \text{ and } s[i-1] = t[j-1]
 # \end{cases}$
-#
+# 
 # where:
 # - $D(i, j)$ is the Damerau-Levenshtein distance between the first $i$ letters of a string $s$ and the first $j$ letters of a string $t$.
 # - $\delta$ is 0 if the current letters $s[i]$ and $t[j]$ are equal, otherwise, it is 1.
 # - $D(i-2, j-2) + \delta$ represents transposition (swapping two adjacent letters) if the current letters $s[i]$ and $t[j]$ are equal, and the preceding letters $s[i-1]$ and $t[j-1]$ are also equal.
-#
-#
+# 
+# 
 
 # %% [markdown]
 # #### Visualize Consistent Geographical Data
@@ -1128,19 +1126,19 @@ plot_scattermap_plotly(dummy_df, 'state', zoom=2, title='Missing city')
 # %% [markdown]
 # **Final evaluation**:
 # We segmented the dataset into distinct groups based on the consistency we could establish among the latitude, longitude, state, county, and city fields. We also considered the address field in our analysis, but its variability and limited identifiability led us to set it aside for further use. In the end, we formulated strategies to address the missing data in these groups, considering the quality of available information.
-#
+# 
 # Below, we provide a breakdown of these groups, along with their sizes:
-#
+# 
 # ---------- GOOD GROUPS ----------
 # * 174,796 entries: These are the fully consistent and finalized rows in the dataset.
 # * 26,635 entries: Rows where only the city is missing, but it can be easily inferred from the location (k-nn).
 # * 15,000 entries: Rows where only the county is missing, but it can be easily inferred from the location (k-nn).
 # * 33 entries: Rows where both the city and county are missing. Even in this group, the missing information can be inferred from the location, as they are all closely clustered around Baltimore.
-#
+# 
 # ---------- BAD GROUPS ----------
 # * 3,116 entries: Rows where latitude, longitude, and city are missing. They can be inferred (though not perfectly) from the county-state pair.
 # * 19,844 entries: Rows where only the state field is present, making it challenging to retrieve missing information.
-#
+# 
 # The dataset does not contain any missing combinations beyond those mentioned.
 # Out of the total of 216,464 lines, either the information is definitive or can be derived with a high degree of accuracy.
 
@@ -1177,11 +1175,11 @@ info_city.head(2)
 
 # %% [markdown]
 # The code below generates descriptive statistics related to geographical distances and updates the 'info_city' DataFrame for different city, county, and state combinations with the aim of using this data to infer missing city values.
-#
+# 
 # For each tuple (state, county, city) in 'centroids', it extracts all values for latitude and longitude corresponding coordinates from the 'clean_geo_data' DataFrame, if present. 
-#
+# 
 # It then calculates the distance between these coordinates and the centroid using the geodesic distance (in kilometers) and saves this distance in a sorted list. 
-#
+# 
 # After calculating percentiles (at 0.05 intervals), maximum, minimum, and average distances, all of these values are saved in the new DataFrame along with latitude and longitude coordinates.
 
 # %%
@@ -1434,7 +1432,7 @@ house_districts
 
 # %% [markdown]
 # Also this attribute has some errors because the maximum number of state house districts should be 204 (for New Hampshire, see [here](https://ballotpedia.org/State_Legislative_Districts)). For now we won't correct this error beacuse this attribute is not useful for our analysis.
-#
+# 
 # We check if given a certain value for the attributes `latitude` and a `longitude`, the attribute `state_house_district` has always the same value:
 
 # %%
@@ -1463,7 +1461,7 @@ senate_districts
 
 # %% [markdown]
 # And again we notice some errors because the maximum number of state senate districts should be 67 (for Minnesota, see [here](https://ballotpedia.org/State_Legislative_Districts)). For now we won't correct this error beacuse this attribute is not useful for our analysis.
-#
+# 
 # We correct other possible errors as above:
 
 # %%
@@ -1491,7 +1489,7 @@ incidents_df[incidents_df['congressional_district'].notnull()].groupby(
 
 # %% [markdown]
 # We cannot recover the missing values for the attribute `congressional_district` from the values of `state_house_district` either.
-#
+# 
 # We could, instead, recover the missing values from the entries with "similar" `latitude` and `longitude`. To explore this possibility we first plot on a map the dislocation of the incidents, coloring them according to the value of the attribute `congressional_district`:
 
 # %%
@@ -1507,7 +1505,7 @@ plot_scattermap_plotly(
 
 # %% [markdown]
 # Many points with missing `congressional_district` are often "surrounded" by points belonging to the same congressional district. We could, therefore, use KNN classifier to recover those values.
-#
+# 
 # We'll do this first for the state of Alabama, showing the results with some plots. Later we will do the same for all the other states. We plot the distribution of the values of the attribute `congressional_district` for the state of Alabama:
 
 # %%
@@ -1636,7 +1634,7 @@ plot_clf_decision_boundary(knn_eu_clf, X_train_converted, y_train, alabama_color
 
 # %% [markdown]
 # We can now compare the boundaries built by the classifier with the actual boundaries (this map was taken [here](https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif/lossless-page1-1256px-United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif.png)):
-#
+# 
 # <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif/lossless-page1-1256px-United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif.png" alt="Alt Text" width="600"/>
 
 # %% [markdown]
@@ -1799,23 +1797,23 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 
 # %% [markdown]
 # Checks done to evaluate the consistency of data related to the minimum, maximum, and average ages of participants, as well as the composition of the age groups:
-#
+# 
 # - min_age_participants $<$ avg_age_participants $<$ max_age_participants
 # - n_participants_child $+$ n_participants_teen $+$ n_participants_adult $>$ 0
-#
+# 
 # - $if$ min_age_participants $<$ 12 $then$ n_participants_child $>$ 0
 # - $if$ 12 $\leq$ min_age_participants $<$ 18 $then$ n_participants_teen $>$ 0
 # - $if$ min_age_participants $\geq$ 18 $then$ n_participants_adult $>$ 0
-#
+# 
 # - $if$ max_age_participants $<$ 12 $then$ n_participants_child $>$ 0 and n_participants_teen $=$ 0 and n_participants_adult $=$ 0
 # - $if$ max_age_participants $<$ 18 $then$ n_participants_teen $>$ 0 or n_participants_child $>$ 0 and n_participants_adult $=$ 0
 # - $if$ max_age_participants $\geq$ 18 $then$ n_participants_adult $>$ 0
-#
+# 
 # Note that: child = 0-11, teen = 12-17, adult = 18+
 
 # %% [markdown]
 # Checks done to evaluate the consistency of data related to number of participants per gender and other participants class:
-#
+# 
 # - n_participants $\geq$ 0
 # - n_participants $==$ n_males $+$ n_females
 # - n_killed $+$ n_injured $\leq$ n_participants
@@ -1824,41 +1822,41 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 
 # %% [markdown]
 # We also considered data of participants1, a randomly chosen participant whose data related to gender and age are reported in the dataset. For participants, we have the following features: *participant_age1*, *participant_age_group1*, *participant_gender1*.
-#
+# 
 # Values related to participant_age_group1 and participant_gender1 have been binarized using one-hot encoding, thus creating the boolean features *participant1_child*, *participant1_teen*, *participant1_adult*, *participant1_male*, *participant1_female*.
-#
+# 
 # The following checks are done in order to verify the consistency of the data among them and with respect to the other features of the incident:
-#
+# 
 # - $if$ participant_age1 $<$ 12 $then$ participant_age_group1 $=$ *Child*
 # - $if$ 12 $\leq$ participant_age1 $<$ 18 $then$ participant_age_group1 $=$ *Teen*
 # - $if$ participant_age1 $\geq$ 18 $then$ participant_age_group1 $==$ *Adult*
-#
+# 
 # - $if$ participant_age_group1 $==$ *Child* $then$ n_participants_child $>$ 0
 # - $if$ participant_age_group1 $==$ *Teen* $then$ n_participants_teen $>$ 0
 # - $if$ participant_age_group1 $==$ *Adult* $then$ n_participants_adult $>$ 0
-#
+# 
 # - $if$ participant_gender1 $==$ *Male* $then$ n_males $>$ 0
 # - $if$ participant_gender1 $==$ *Female* $then$ n_females $>$ 0
 
 # %% [markdown]
 # In the initial phase, only the values that were not permissible were set to *NaN*. 
-#
+# 
 # We kept track of the consistency of admissible values by using variables (which could take on the boolean value *True* if they were consistent, *False* if they were not, or *NaN* in cases where data was not present). 
-#
+# 
 # These variables were temporarily included in the dataframe so that we could later replace them with consistent values, if possible, or remove them if they were outside the acceptable range.
-#
+# 
 # Variables:
 # - *consistency_age*: Values related to the minimum, maximum, and average ages consistent with the number of participants by age groups.
 # - *consistency_n_participant*: The number of participants for different categories consistent with each other.
 # - *consistency_gender*: The number of participants by gender consistent with the total number of participants.
 # - *consistency_participant1*: Values of features related to participant1 consistent with each other.
-#
+# 
 # - *consistency_participants1_wrt_n_participants*: If *consistency_participants1_wrt_n_participants*, *participant1_age_range_consistency_wrt_all_data*, and *participant1_gender_consistency_wrt_all_data* are all *True*.
-#
+# 
 # - *participant1_age_consistency_wrt_all_data*: Age of participant1 consistent with the minimum and maximum age values of the participants.
 # - *participant1_age_range_consistency_wrt_all_data*: Value of the age range (*Child*, *Teen*, or *Adult*) consistent with the age groups of the participants.
 # - *participant1_gender_consistency_wrt_all_data*: Gender value of participant1 consistent with the gender breakdown values of the group.
-#
+# 
 # - *nan_values*: Presence of "NaN" values in the row.
 
 # %%
@@ -1994,7 +1992,7 @@ display(age_temporary_df['n_participants'].describe())
 
 # %% [markdown]
 # From the data above, it is evident that the third quartile is equal to two participants, and the maximum number of participants per incident reaches the value of 103.
-#
+# 
 # Below, we have presented the distribution of the number of participants for each incident.
 
 # %%
@@ -2040,7 +2038,7 @@ age_temporary_df.iloc[42353]
 
 # %% [markdown]
 # This data visualization has been helpful in understanding the exceptions in the dataset and correcting them when possible, using other data from the same entry.
-#
+# 
 # In cases where we were unable to obtain consistent data for a certain value, we have set the corresponding field to *NaN*.
 
 # %% [markdown]
@@ -2048,9 +2046,9 @@ age_temporary_df.iloc[42353]
 
 # %% [markdown]
 # We have created a new DataFrame in which we have recorded the corrected and consistent data. Note that all these checks are performed based on the assumptions made in previous stages of the analysis.
-#
+# 
 # For entries with missing or inconsistent data, when possible, we have inferred or derived the missing values from other available data. Specifically:
-#
+# 
 # - In cases where we had the number of males (n_males) and number of females (n_females), we calculated the total number of participants as n_participants = n_males + n_females.
 # - In instances with a single participant and consistent data for *participants1*, we used that data to derive values related to age (max, min, average) and gender.
 
@@ -2093,7 +2091,7 @@ print('Total rows with null value for n_females: ', incidents_df['n_females'].is
 
 # %% [markdown]
 # We can observe that for any entries in the dataset, all data related to age and gender are *NaN*, while for 98973 entries, almost one value is *NaN*. From the plot below, we can visualize the null values (highlighted).
-#
+# 
 # It's important to note that we have complete data for *n_killed* and *n_injured* entries, and the majority of missing data are related to age-related features.
 
 # %%
@@ -2149,7 +2147,7 @@ plt.show()
 
 # %% [markdown]
 # We observe that in incidents involving children and teenagers under the age of 18, the total number of participants was less than 7 and 27, respectively. In general, incidents involving a single person are much more frequent than other incidents, and most often, they involve teenagers and children, with a smaller percentage involving adults. On the other hand, incidents with multiple participants mostly consist of adults, and as the number of participants increases, the frequency of such incidents decreases. 
-#
+# 
 # Note that the y-axis of the histograms are in logaritmic scale.
 
 # %% [markdown]
@@ -2211,9 +2209,15 @@ plt.imshow(word_cloud_all_train)
 plt.axis('off')
 plt.title('Word cloud of notes')
 
+# %% [markdown]
+# We check if given the first characteristic of a record, the second one is different. This to ensure that the info we have are not redundant.
+
 # %%
 # check if ch1 and ch2 are always different
 incidents_df[incidents_df['incident_characteristics1']==incidents_df['incident_characteristics2']].shape[0]==0
+
+# %% [markdown]
+# We check the frequency of each characteristic in the whole dataset, then we plot it.
 
 # %%
 # merge characteristics list
@@ -2249,6 +2253,9 @@ ax.set_ylabel('incident_characteristics2')
 ax.set_title('Counts of incident characteristics')
 plt.tight_layout()
 
+# %% [markdown]
+# We plot, for a specific characteristic, the most common characteristic that is paired to it.
+
 # %%
 fig, ax = plt.subplots(figsize=(20, 15)) # FIX: questo plot possiamo toglierlo? dovrebbe contenere la stessa informazione di quello sotto
 sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(by="Shot - Dead (murder, accidental, suicide)", inplace=False, ascending=False).tail(-1),
@@ -2262,6 +2269,38 @@ characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort
         kind='bar',
         figsize=(20,10)
     )
+
+# %% [markdown]
+# We can see that the most of the other characteristics are not paired to the one we're analyzing, in particular there are very few ones which are paired to it for a significant number of times.
+
+# %% [markdown]
+# ### Tags
+# We create some binary tags to standardize the characteristics of each incident, in this way we can easyly get detailed information on the type of all the incidents.<br>
+# We based the tags creation only on the info we could get from the characteristics. The logic behind the conversion is that the tag is true if and only if we could get the semantic information of the tag with 100% certainty; if the tag is false, it means that or the tag represent info wich are false for the specific record, or that we don't have enough data to assume something for that particular incident.<br>
+# The tags we cretaed are the following:
+# - <b>firearm</b>: it tells if a firearm is involved in the incident
+# - <b>air_gun</b>: it tells if an air gun is involved in the incident
+# - <b>shots</b>: it tells if it was an incident involving one or more shootings
+# - <b>aggression</b>: it tells if there was an aggression (both using a gun or not) in the incident
+# - <b>suicide</b>: it tells if the incident involve a suicide (attempts are included)
+# - <b>injuries</b>: it tells if there was one ore more injuried subjects in the incident
+# - <b>death</b>: it tells if there was one ore more deaths in the incident
+# - <b>road</b>: it tells if the incident involves a bad street behavior
+# - <b>illegal_holding</b>: it tells if the incident involve a stealing act or an illegaly possessed gun
+# - <b>house</b>: it tells if the incident is happened in a house
+# - <b>school</b>: it tells if the incident is happened next to a school
+# - <b>children</b>: it tells if the incident involves one or more children
+# - <b>drugs</b>: it tells if the incident involves drug interests
+# - <b>officers</b>: it tells if one or more officiers are involved in the incident
+# - <b>organized</b>: it tells if the incident was planned by an organization or a group
+# - <b>social_reasons</b>: it tells if the incident involves social discriminations or terrorism
+# - <b>defensive</b>: it tells if there was a defensive use of a gun during the incident
+# - <b>workplace</b>: it tells if the incident happened in a workplace
+# - <b>abduction</b>: it tells if the incident involves any form of abduction
+# - <b>unintentional</b>: it tells if the incident was unintentional
+
+# %% [markdown]
+# We set all the tags and check their consistency w.r.t. the other data of the record.
 
 # %%
 from data_preparation_utils import add_tags, check_tag_consistency, check_characteristics_consistency, IncidentTag
@@ -2283,6 +2322,9 @@ else:
 # %%
 incidents_df['tag_consistency'].value_counts()
 
+# %% [markdown]
+# We correct the inconsistencies and we save again the dataset. Then we check again to see if there are any improvement.
+
 # %%
 from data_preparation_utils import set_tags_consistent_data
 
@@ -2298,6 +2340,9 @@ else:
 
 # %%
 incidents_df['tag_consistency'].value_counts()
+
+# %% [markdown]
+# We create 5 partitions: Murder, Suicide, Defensive, Accidental and Others. Then we show grafically, in percentage, how many incidents belong to each class.
 
 # %%
 tags_counts = {}
@@ -2328,15 +2373,30 @@ plt.legend(legend_labels)
 plt.title("Gun incidents")
 plt.show()
 
+# %% [markdown]
+# We can see that the biggest part of the incidents involves Murder, while even if Suicide, Defensive and Accidental are the most common, they're very few compare to murders. The other big slice of the pie belongs to Others, showing that there are a lot of different incidents that are less common.
+
+# %% [markdown]
+# We show which are the most common tags. In particular we display, for each tag, in how many records it's set to True w.r.t. all the records.
+
 # %%
 ax = (incidents_df[tags_columns].apply(lambda col: col.value_counts()).T.sort_values(by=True)/incidents_df.shape[0]*100).plot(kind='barh', stacked=True, alpha=0.8, edgecolor='black')
 for container in ax.containers:
     ax.bar_label(container, fmt='%.1f%%', label_type='center', fontsize=8)
 plt.title("Incidents characteristic (%)")
 
+# %% [markdown]
+# We can see that the most common tags are firearm, shots, aggression and injuries (above 50% of the records), in particular firearm is True for almost every record (97.8 %). On the other hand there are tags that are very rare (less than 1% of the records): air_gun, school, social_reasons and abduction.
+
+# %% [markdown]
+# We try to see if there are correlations between accidental incidents and the presence of children.
+
 # %%
 # compute correlation between accidental incidents and presence of children
 incidents_df['unintentional'].corr(incidents_df['n_participants_child']>0) # not correlated
+
+# %% [markdown]
+# We can see that the two events are not correlated
 
 # %%
 incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
@@ -2344,6 +2404,21 @@ incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
     figsize=(10,6),
     title='Counts of the addresses with the 50 highest number of incidents'
 ) # many airports!!
+
+# %% [markdown]
+# We display the most common characteristics for incidents involving women.
+
+# %%
+ch1_females_counts = incidents_df[incidents_df['n_females']>1]['incident_characteristics1'].value_counts()
+ch2_females_counts = incidents_df[incidents_df['n_females']>1]['incident_characteristics2'].value_counts()
+ch_females_counts = ch1_females_counts.add(ch2_females_counts, fill_value=0).sort_values(ascending=False).plot(
+    kind='bar',
+    title='Characteristics counts of incidents with females involved',
+    figsize=(20,10)
+)
+
+# %% [markdown]
+# We can see that the distribution is very similar to the one involving both men and women. Some of the main differences are that, for women, the frequency of suicides is higher than normal, while the officiers involving incidents have the opposite behavior.
 
 # %% [markdown]
 # We are aware of the fact that we could use classifier to inferr missing values. We chose not to do it because we think such method do not align with the nature of gun incidents. Citando il libro "Classification is the task of learning a target function f that maps each attribute set x to one of the predefined class labels y", il problema è che non può esistere una tale funzione (possono esserci (e immagino siano anche molti comuni) record uguali su tutti gli attributi tranne uno, per cui l'inferenza è impossibile).
@@ -2529,7 +2604,6 @@ plt.tight_layout()
 # pyo.plot(fig, filename='../html/scatter_poverty.html', auto_open=False)
 # fig.show()
 
-
 # %% [markdown]
 # We re-order the columns and we save the cleaned dataset:
 
@@ -2575,3 +2649,5 @@ numerical_columns = incidents_df.select_dtypes(include=['float64', 'int64']).col
 plt.figure(figsize=(15, 12))
 corr_matrix = incidents_df[numerical_columns].corr()
 sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
+
+
