@@ -2453,6 +2453,7 @@ xticks = []
 for label in ax.get_xticklabels():
     txt_label = label.get_text()
     year = txt_label[:txt_label.find('-')]
+    month = txt_label[txt_label.find('-')+1:]
     xticks.append(year+' - '+calendar.month_name[int(month)]) #TODO: NON VA
 
 ax.set_xticklabels(xticks);
@@ -2545,55 +2546,29 @@ plt.xticks(rotation=90)
 plt.tight_layout()
 
 # %%
-incidents_per_year_per_state = incidents_df.groupby(['state', 'year']).size()
-incidents_per_year_per_state = incidents_per_year_per_state.to_frame(name='incidents').reset_index()
-incidents_per_year_per_state['incidents_per_100k_inhabitants'] = incidents_per_year_per_state.apply(
-    lambda row: (row['incidents'] / usa_population_df[usa_population_df['state']==row['state']]['population_state_2010'].iloc[0])*100000,
-    axis=1
-)
-fig = px.line(
-    incidents_per_year_per_state[incidents_per_year_per_state.year<=2020].pivot(
-        index='year',
-        columns='state',
-        values='incidents_per_100k_inhabitants'
-    ),
-    title='Number of incidents in the US over the years')
-fig.show()
+# # merge data about the winning party # TODO: prendere dati giusti...
+# winning_party_per_state_copy = winning_party_per_state.copy()
+# winning_party_per_state_copy['year'] = winning_party_per_state['year'] + 1
+# winning_party_per_state = pd.concat([winning_party_per_state, winning_party_per_state_copy], ignore_index=True)
+# incidents_df = incidents_df[incidents_df['year'].notna()].merge(winning_party_per_state[['state', 'year', 'majority_state_party']], on=['state', 'year'], how='left')
 
 # %%
-fig = px.line(
-    incidents_per_year_per_state[(incidents_per_year_per_state.year<=2020) & (incidents_per_year_per_state['state']!='DISTRICT OF COLUMBIA')].pivot(
-        index='year',
-        columns='state',
-        values='incidents_per_100k_inhabitants'
-    ),
-    title='Number of incidents in the US over the years')
-fig.show()
-
-# %%
-# merge data about the winning party
-winning_party_per_state_copy = winning_party_per_state.copy()
-winning_party_per_state_copy['year'] = winning_party_per_state['year'] + 1
-winning_party_per_state = pd.concat([winning_party_per_state, winning_party_per_state_copy], ignore_index=True)
-incidents_df = incidents_df[incidents_df['year'].notna()].merge(winning_party_per_state[['state', 'year', 'majority_state_party']], on=['state', 'year'], how='left')
-
-# %%
-incidents_per_state_2016 = incidents_df[(incidents_df['n_killed']>0)].groupby(['state', 'year', 'population_state_2010', 'povertyPercentage', 'majority_state_party']).size()
-incidents_per_state_2016 = incidents_per_state_2016.to_frame(name='incidents').reset_index()
-incidents_per_state_2016['incidents_per_100k_inhabitants'] = (incidents_per_state_2016['incidents'] / incidents_per_state_2016['population_state_2010'])*100000
-fig = px.scatter(
-    incidents_per_state_2016,
-    x='povertyPercentage',
-    y='incidents_per_100k_inhabitants',
-    color='majority_state_party',
-    hover_name='state',
-    hover_data={'povertyPercentage': True, 'incidents_per_100k_inhabitants': True},
-    title='Mortal gun incidents in the USA',
-    facet_col="year",
-    facet_col_wrap=3
-)
-pyo.plot(fig, filename='../html/scatter_poverty.html', auto_open=False)
-fig.show()
+# incidents_per_state_2016 = incidents_df[(incidents_df['n_killed']>0)].groupby(['state', 'year', 'population_state_2010', 'povertyPercentage', 'majority_state_party']).size()
+# incidents_per_state_2016 = incidents_per_state_2016.to_frame(name='incidents').reset_index()
+# incidents_per_state_2016['incidents_per_100k_inhabitants'] = (incidents_per_state_2016['incidents'] / incidents_per_state_2016['population_state_2010'])*100000
+# fig = px.scatter(
+#     incidents_per_state_2016,
+#     x='povertyPercentage',
+#     y='incidents_per_100k_inhabitants',
+#     color='majority_state_party',
+#     hover_name='state',
+#     hover_data={'povertyPercentage': True, 'incidents_per_100k_inhabitants': True},
+#     title='Mortal gun incidents in the USA',
+#     facet_col="year",
+#     facet_col_wrap=3
+# )
+# pyo.plot(fig, filename='../html/scatter_poverty.html', auto_open=False)
+# fig.show()
 
 
 # %% [markdown]
