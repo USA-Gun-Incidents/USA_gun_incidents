@@ -165,7 +165,6 @@ def delete_numbers(string):
     '''
     return re.sub(r'[0-9]', '', string)
 
-# TODO: scrivere commenti come sopra
 def clean_data_incidents(data):
     """
     clean state or county_or_city from incidents dataset
@@ -190,7 +189,13 @@ def clean_data_incidents(data):
         return [data]
     
 def clean_data_geopy(data):
-    """clean data from geopy dataset"""
+    """
+    clean data from geopy dataset
+
+    :param data: data to clean
+    :return: cleaned data
+    """
+
     if pd.isnull(data): return data
 
     data = lower_case(data)
@@ -202,8 +207,16 @@ def clean_data_geopy(data):
     return data
     
 def check_string_typo(string1, string2, len_typo_ratio = 10):
-    """check if two strings are the same with at most a typo
-    according to the Damerau-Levenshtein distance"""
+    """
+    check if two strings are the same with at most a typo
+    according to the Damerau-Levenshtein distance
+    
+    :param string1: first string to compare
+    :param string2: second string to compare
+    :param len_typo_ratio: ratio between the length of the two strings
+    :return: 1 if the strings are the same, -1 otherwise
+    """
+
     if pd.isnull(string1): return 0
     if pd.isnull(string2): return 0
 
@@ -214,7 +227,15 @@ def check_string_typo(string1, string2, len_typo_ratio = 10):
     else: return  -1
 
 def check_address(address1, address2_geopy):
-    """check if the first address have "some" words in commond with the second address"""
+    """
+    check if the first address have "some" words in commond with the second address
+    according to the Damerau-Levenshtein distance
+    
+    :param address1: first address to compare
+    :param address2_geopy: second address to compare
+    :return: 1 if the addresses are the same, -1 otherwise
+    """
+    
     if pd.isnull(address1): return 0
     if pd.isnull(address2_geopy): return 0
 
@@ -234,8 +255,14 @@ def check_address(address1, address2_geopy):
     else: return  -1
 
 def check_consistency_geopy(row):
-    """check consistency between address in incidents dataset and geopy dataset
-    return 0 if not consistent, 1 if consistent, -1 if null values in one of the two addresses"""
+    """
+    check consistency between address in incidents dataset and geopy dataset
+    return 0 if not consistent, 1 if consistent, -1 if null values in one of the two addresses
+    
+    :param row: row of the dataset to check
+    :return: state_consistency, county_city_consistency, county_city_match, address_consistency
+    """
+    
     state_consistency = -1
     county_city_consistency = -1
     county_city_match = '-1'
@@ -274,15 +301,35 @@ def check_consistency_geopy(row):
     return state_consistency, county_city_consistency, county_city_match, address_consistency
 
 def check_consistency_geopy_display_name(row):
-    """check consistency between address in incidents dataset and geopy dataset,
-    return 0 if not consistent, 1 if consistent, -1 if null values in one of the two addresses"""
+    """
+    check consistency between address in incidents dataset and geopy dataset,
+    return 0 if not consistent, 1 if consistent, -1 if null values in one of the two addresses
+    
+    :param row: row of the dataset to check
+    :return: state_consistency, county_city_consistency, address_consistency
+    """
 
     def contains(word, g_address):
-        """check if word is in g_address"""
+        """
+        check if word is in g_address
+
+        :param word: word to check
+        :param g_address: address to check
+        :return: 1 if word is in g_address, -1 otherwise
+        """
+
         def cointains_word(a, b):
+            """check if a is in b
+            
+            :param a: word to check
+            :param b: address to check
+            :return: 1 if a is in b, -1 otherwise
+            """
+            
             if pd.isnull(a) or pd.isnull(b): return 0
             if a in b: return 1
             else: return -1
+        
         ret = -1
         g_list = g_address.split(',')
         for el in g_list:
@@ -318,7 +365,15 @@ def check_consistency_geopy_display_name(row):
     return state_consistency, county_city_consistency, address_consistency
 
 def check_consistency_additional_data(state, county, additional_data):
-    """check consistency between address in incidents dataset and additional data"""
+    """
+    check consistency between address in incidents dataset and additional data
+    
+    :param state: state to check
+    :param county: county to check
+    :param additional_data: additional data to check
+    :return: state_consistency, county_consistency
+    """
+    
     state_consistency = False
     state_current = np.nan
 
@@ -350,13 +405,28 @@ def check_consistency_additional_data(state, county, additional_data):
                             return state_current, c.split(',')[0]
                         else: return state_map[state_current], c + ' County'
     
-    return state_current, np.nan
+    return state_map[state_current], np.nan
 
 def check_geographical_data_consistency(row, additional_data):
-    """check consistency between our data, geopty data and additional data
-    return consistent data if consistent, else return nan values"""
+    """
+    check consistency between our data, geopty data and additional data
+    return consistent data if consistent, else return nan values
+    
+    :param row: row of the dataset to check
+    :param additional_data: additional data to check
+    :return: clean_geo_data_row
+    """
 
     def first_not_null(row, col):
+        """
+        return the first not null value in row[col]
+        if all values are null return row[col[0]]
+        
+        :param row: row of the dataset to check
+        :param col: list of columns to check
+        :return: first not null value in row[col]
+        """
+        
         for c in col:
             if not pd.isnull(row[c]):
                 return row[c]
@@ -400,34 +470,64 @@ def check_geographical_data_consistency(row, additional_data):
 ####################### Age-gender and categorical data cleaning #######################
 
 def convert_age_to_int(data):
-    """return age as a int if it is numeric and between 0 and 101,
-    else return nan"""
+    """
+    return age as a int if it is numeric and between 0 and MAX_AGES_FOR_INCIDENTS,
+    else return nan
+    
+    :param data: age to convert
+    :return: age as a int if it is numeric and between 0 and MAX_AGES_FOR_INCIDENTS, else return nan
+    """
+    
     data = convert_data_to_int(data)
     if data not in [np.nan]:
         return exclude_inconsistent_age(data)
     else: return np.nan
 
 def exclude_inconsistent_age(data):
-    """return nan if age is negative or greater than 101"""
+    """
+    return nan if age is negative or greater than MAX_AGES_FOR_INCIDENTS
+    
+    :param data: age to check
+    :return: nan if age is negative or greater than MAX_AGES_FOR_INCIDENTS
+    """
+    
     if (data >= 0 and data <= MAX_AGES_FOR_INCIDENTS):
         return data
     else: return np.nan
 
 def convert_group_cardinality_to_int(data):
-    """return group cardinality as a int if it is numeric and greater than 0"""
+    """
+    return group cardinality as a int if it is numeric and greater than 0
+    
+    :param data: group cardinality to convert
+    :return: group cardinality as a int if it is numeric and greater than 0
+    """
+    
     data = convert_data_to_int(data)
     if data not in [np.nan]:
         return exclude_negative_value(data)
     else: return np.nan
 
 def exclude_negative_value(data):
-    """return nan if group cardinality is negative"""
+    """
+    return nan if group cardinality is negative
+    
+    :param data: group cardinality to check
+    :return: nan if group cardinality is negative
+    """
+    
     if data < 0:
         return np.nan
     else: return data
 
 def convert_data_to_int(data):
-    """convert data to int if it is numeric"""
+    """
+    convert data to int if it is numeric
+    
+    :param data: data to convert
+    :return: data as a int if it is numeric
+    """
+    
     try:
         data = int(float(data))
         return data
@@ -435,7 +535,18 @@ def convert_data_to_int(data):
         return np.nan
 
 def age_groups_consistency(min_age, max_age, avg_age, n_child, n_teen, n_adult):
-    """check consistency between age groups attributes"""
+    """
+    check consistency between age groups attributes
+    
+    :param min_age: minimum age
+    :param max_age: maximum age
+    :param avg_age: average age
+    :param n_child: number of children
+    :param n_teen: number of teens
+    :param n_adult: number of adults
+    :return: True if there is consistence, False else
+    """
+    
     if min_age not in [np.nan]:
         if min_age > max_age or min_age > avg_age:
             return False
@@ -467,13 +578,31 @@ def age_groups_consistency(min_age, max_age, avg_age, n_child, n_teen, n_adult):
     return True
 
 def gender_consistency(n_males, n_females, n_participants):
-    """check consistency between number of participants divided by gender"""
+    """
+    check consistency between number of participants divided by gender
+
+    :param n_males: number of males
+    :param n_females: number of females
+    :param n_participants: number of participants
+    :return: True if there is consistence, False else
+    """
+
     if n_males not in [np.nan] and n_females not in [np.nan] and n_participants not in [np.nan]:
         return (n_males + n_females == n_participants)
     return np.nan
 
 def category_consistency(n_killed, n_injured, n_arrested, n_unharmed, n_participants):
-    """check consistency between number of participants and number of killed, injured, arrested and unharmed"""
+    """
+    check consistency between number of participants and number of killed, injured, arrested and unharmed
+    
+    :param n_killed: number of killed
+    :param n_injured: number of injured
+    :param n_arrested: number of arrested
+    :param n_unharmed: number of unharmed
+    :param n_participants: number of participants
+    :return: True if there is consistence, False else
+    """
+    
     if (n_killed not in [np.nan] and n_injured not in [np.nan] and n_arrested not in [np.nan] and n_unharmed not in [np.nan] and 
         n_participants not in [np.nan]):
         return ((n_killed + n_injured <= n_participants) and
@@ -482,7 +611,14 @@ def category_consistency(n_killed, n_injured, n_arrested, n_unharmed, n_particip
     return np.nan
 
 def ages_groups_participant1(participant_age_group1, participant_age1):
-    """Binarize participant1 age groups attribute"""
+    """
+    Binarize participant1 age groups attribute
+    
+    :param participant_age_group1: participant1 age groups attribute
+    :param participant_age1: participant1 age attribute
+    :return: one-hot encoding of participant1 age groups attribute
+    """
+    
     if participant_age_group1 in [np.nan] and participant_age1 not in [np.nan]:
         if participant_age1 < 12:
             return [True, False, False]
@@ -500,7 +636,13 @@ def ages_groups_participant1(participant_age_group1, participant_age1):
         return [np.nan, np.nan, np.nan]
     
 def gender_participant1(participant_gender1):
-    """Binarize participant1 gender attribute"""
+    """
+    Binarize participant1 gender attribute
+    
+    :param participant_gender1: participant1 gender attribute
+    :return: one-hot encoding of participant1 gender attribute
+    """
+    
     if participant_gender1 == 'Male':
         return [True, False]
     elif participant_gender1 == 'Female':
@@ -509,7 +651,16 @@ def gender_participant1(participant_gender1):
         return [np.nan, np.nan]
 
 def participant1_age_data_consistency(participant_age1, participant1_child, participant1_teen, participant1_adult):
-    """check consistency between participant1 age groups attributes"""
+    """
+    check consistency between participant1 age groups attributes
+    
+    :param participant_age1: participant1 age attribute
+    :param participant1_child: participant1 child attribute
+    :param participant1_teen: participant1 teen attribute
+    :param participant1_adult: participant1 adult attribute
+    :return: True if there is consistence, False else
+    """
+    
     if participant_age1 in [np.nan]:
         return np.nan
     else:
@@ -525,14 +676,33 @@ def participant1_age_data_consistency(participant_age1, participant1_child, part
         return True
 
 def participant1_age_consistency_wrt_all_data(participant_age1, min_age, max_age):
-    """check consistency between participant1 age and age groups attributes"""
+    """
+    check consistency between participant1 age and age groups attributes
+    
+    :param participant_age1: participant1 age attribute
+    :param min_age: minimum age
+    :param max_age: maximum age
+    :return: True if there is consistence, False else
+    """
+    
     if participant_age1 not in [np.nan] and min_age not in [np.nan] and max_age not in [np.nan]:
         return (participant_age1 >= min_age and participant_age1 <= max_age)
     return np.nan
 
 def participant1_age_range_consistency_wrt_all_data(participant1_child, participant1_teen, participant1_adult,
     n_participants_child, n_participants_teen, n_participants_adult):
-    """check consistency between participant1 age groups and age groups attributes"""
+    """
+    check consistency between participant1 age groups and age groups attributes
+    
+    :param participant1_child: participant1 child attribute
+    :param participant1_teen: participant1 teen attribute
+    :param participant1_adult: participant1 adult attribute
+    :param n_participants_child: number of children
+    :param n_participants_teen: number of teens
+    :param n_participants_adult: number of adults
+    :return: True if there is consistence, False else
+    """
+    
     if participant1_child is True:
         return (n_participants_child > 0)
     elif participant1_teen is True:
@@ -542,7 +712,16 @@ def participant1_age_range_consistency_wrt_all_data(participant1_child, particip
     return np.nan
 
 def participant1_gender_consistency_wrt_all_data(participant1_male, participant1_female, n_males, n_female):
-    """check consistency between participant1 gender groups and gender groups attributes"""
+    """
+    check consistency between participant1 gender groups and gender groups attributes
+    
+    :param participant1_male: boolean attribute male gender of participant1
+    :param participant1_female: boolean attribute female gender of participant1
+    :param n_males: number of males
+    :param n_females: number of females
+    :return: True if there is consistence, False else
+    """
+
     if participant1_male is True:
         return (n_males > 0)
     elif participant1_female is True:
@@ -550,9 +729,15 @@ def participant1_gender_consistency_wrt_all_data(participant1_male, participant1
     return np.nan
 
 def check_age_gender_data_consistency(row):
-    """clean data and check consistency between age, gender and cardinality of groups attributes
+    """
+    clean data and check consistency between age, gender and cardinality of groups attributes
     return clean as integer or nan and
-    consistency as boolean (True if there is consistence, False else) or nan if there are not values to check"""
+    consistency as boolean (True if there is consistence, False else) or nan if there are not values to check
+
+    :param row: row of the dataset to check
+    :return: clean_data_row
+    """
+
     # initialize clean_data_row
     clean_data_row = pd.Series(index=['participant_age1', 
         'participant1_child', 'participant1_teen', 'participant1_adult',
@@ -643,7 +828,13 @@ def check_age_gender_data_consistency(row):
     return clean_data_row
 
 def set_gender_age_consistent_data(row):
-    """return a row with consistent data"""
+    """
+    return a row with consistent data
+
+    :param row: row of the dataset to check
+    :return: new_data_row
+    """
+    
     # initialize new_data_row
     new_data_row = pd.Series(index=['participant_age1', 
         'participant1_child', 'participant1_teen', 'participant1_adult',

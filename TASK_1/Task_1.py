@@ -681,7 +681,7 @@ incidents_df['participant_age_group1'] = incidents_df['participant_age_group1'].
 incidents_df.info()
 
 # %% [markdown]
-# We observe that the downcasting of many attributes has not succeeded. This is due to the presence of missing or out of range values. TODO: to handle
+# We observe that the downcasting of many attributes has not succeeded. This is due to the presence of missing or out of range values.
 #
 # We drop duplicates:
 
@@ -1006,9 +1006,9 @@ else:
 #
 # - Converts to lowercase the values for *state*, *county*, and *city* in all the dataframes
 # - If *city_or_county* contains values for both city and county, splits them into two different fields
-# - Removes from *city_or_county* the words 'city of' and 'county' FIXME: dire perchè
+# - Removes from *city_or_county* the words 'city of' and 'county' to avoid potential inconsistencies during distance calculations (this precaution is taken to identify if two strings are the same but contain typos, ensuring more accurate and consistent comparisons)
 # - Removes from *city_or_county* punctuation and numerical values
-# - Removes frequent words from *address* and *display_name* (e.g., "Street," "Avenue," "Boulevard") FIXME: da entrambi? dire perchè
+# - Removes frequent words from *address* and *display_name* (e.g., "Street," "Avenue," "Boulevard") to avoid potential inconsistencies during distance calculations
 #
 # When latitude and longitude are available and therefore Geopy provided information for the corresponding location:
 # - checks for equality between *state* and *state_geopy*
@@ -1222,7 +1222,8 @@ info_city.loc[info_city['tot_points'] > 1].info()
 
 # %%
 plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat', 
-    y_column='centroid_lon', hover_name=False, zoom=2, title='Number of points per city') # FIXME: discretizzare e.g. <x, between(x, y), ...
+    y_column='centroid_lon', hover_name=False, zoom=2, title='Number of points per city') 
+# FIXME: discretizzare e.g. <x, between(x, y), ...
 
 # %% [markdown]
 # We utilize the previously calculated data to infer missing values for the *city* field in entries of the dataset where latitude and longitude are available. The *city* field is assigned if the distance of the entry from the centroid falls within the third quartile of all points assigned to that centroid.
@@ -1245,17 +1246,17 @@ def substitute_city(row, info_city):
 
 # %%
 if LOAD_DATA_FROM_CHECKPOINT:
-    final_final_incidents_df = load_checkpoint('checkpoint_4')
+    final_incidents_df = load_checkpoint('checkpoint_4')
 else:
-    final_final_incidents_df = final_incidents_df.apply(lambda row: substitute_city(row, info_city), axis=1)
-    save_checkpoint(final_final_incidents_df, 'checkpoint_4')
+    final_incidents_df = final_incidents_df.apply(lambda row: substitute_city(row, info_city), axis=1)
+    save_checkpoint(final_incidents_df, 'checkpoint_4')
 
 # %%
-final_final_incidents_df.head(2)
+final_incidents_df.head(2)
 
 # %%
 print('Number of rows with null values for city before: ', final_incidents_df['city'].isnull().sum())
-print('Number of rows with null values for city: ', final_final_incidents_df['city'].isnull().sum())
+print('Number of rows with null values for city: ', final_incidents_df['city'].isnull().sum())
 
 # %% [markdown]
 # From this process, we infer 2248 *city* values.
@@ -1265,14 +1266,14 @@ print('Number of rows with null values for city: ', final_final_incidents_df['ci
 
 # %%
 geo_null_counts = [] # FIXME: mettere in dataframe come sopra
-geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].notna()) & (final_final_incidents_df['county'].notna()) & (final_final_incidents_df['city'].notna())]))
-geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].notna()) & (final_final_incidents_df['county'].notna()) & (final_final_incidents_df['city'].isna())]))
-geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].notna()) & (final_final_incidents_df['county'].isna()) & (final_final_incidents_df['city'].notna())]))
-geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].notna()) & (final_final_incidents_df['county'].isna()) & (final_final_incidents_df['city'].isna())]))
-geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].isna()) & (final_final_incidents_df['county'].notna()) & (final_final_incidents_df['city'].notna())]))
-geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].isna()) & (final_final_incidents_df['county'].notna()) & (final_final_incidents_df['city'].isna())]))
-geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].isna()) & (final_final_incidents_df['county'].isna()) & (final_final_incidents_df['city'].notna())]))
-geo_null_counts.append(len(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].isna()) & (final_final_incidents_df['county'].isna()) & (final_final_incidents_df['city'].isna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].notna()) & (final_incidents_df['county'].notna()) & (final_incidents_df['city'].notna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].notna()) & (final_incidents_df['county'].notna()) & (final_incidents_df['city'].isna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].notna()) & (final_incidents_df['county'].isna()) & (final_incidents_df['city'].notna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].notna()) & (final_incidents_df['county'].isna()) & (final_incidents_df['city'].isna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].isna()) & (final_incidents_df['county'].notna()) & (final_incidents_df['city'].notna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].isna()) & (final_incidents_df['county'].notna()) & (final_incidents_df['city'].isna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].isna()) & (final_incidents_df['county'].isna()) & (final_incidents_df['city'].notna())]))
+geo_null_counts.append(len(final_incidents_df.loc[(final_incidents_df['latitude'].isna()) & (final_incidents_df['county'].isna()) & (final_incidents_df['city'].isna())]))
 
 print('LAT/LONG     COUNTY     CITY             \t#samples')
 print( 'not null    not null   not null         \t', geo_null_counts[0])
@@ -1289,20 +1290,20 @@ print( 'Samples with not null values for lat/lon\t', geo_null_counts[0]+geo_null
 print( 'Samples with null values for lat/lon    \t', geo_null_counts[4]+geo_null_counts[5]+geo_null_counts[6]+geo_null_counts[7])
 
 # %%
-plot_scattermap_plotly(final_final_incidents_df.loc[(final_final_incidents_df['latitude'].notna()) & 
-    (final_final_incidents_df['county'].notna()) & (final_final_incidents_df['city'].isna())], 'state', zoom=2, title='Missing city')
+plot_scattermap_plotly(final_incidents_df.loc[(final_incidents_df['latitude'].notna()) & 
+    (final_incidents_df['county'].notna()) & (final_incidents_df['city'].isna())], 'state', zoom=2, title='Missing city')
 
 # %%
 #TODO: plottare le città inferite e i centroidi dello stesso colore e quelle che rimangono nan di nero
 
 # %%
-final_final_incidents_df[final_final_incidents_df['state']=='Hawaiʻi']
+final_incidents_df[final_incidents_df['state']=='Hawaiʻi'] #TODO: togliere, è aggiustato
 
 # %%
-final_final_incidents_df['state'] = final_final_incidents_df['state'].apply(lambda x: 'Hawaii' if x=='Hawaiʻi' else x) # TODO: togliere (dovrebbe essere fixato altrove)
-incidents_df.drop(columns=['state', 'latitude', 'longitude'], inplace=True)
-incidents_df = pd.concat([incidents_df.reset_index(drop=True), final_final_incidents_df.reset_index(drop=True)], axis=1)
-incidents_df['state'] = incidents_df['state'].apply(lambda x: x.upper()) # FIXME: da spostare?
+#TODO: questo forse non serve
+incidents_df.drop(columns=['state', 'latitude', 'longitude'], inplace=True) 
+incidents_df = pd.concat([incidents_df.reset_index(drop=True), final_incidents_df.reset_index(drop=True)], axis=1)
+incidents_df['state'] = incidents_df['state'].apply(lambda x: x.upper())
 
 # %% [markdown]
 # We check if the attribute `congressional_district` is numbered consistently (with '0' for states with only one congressional district). To do so we use the data from the dataset containing the data about elections in the period of interest (congressional districts are redrawn when (year%10)==0):
@@ -1575,6 +1576,9 @@ incidents_df.loc[
     'KNN_congressional_district'
     ] = knn_pred
 
+# %%
+y_train
+
 # %% [markdown]
 # We plot the results:
 
@@ -1614,7 +1618,7 @@ knn_eu_clf.fit(X_train_converted, y_train)
 # We plot the boundaries of the classifier:
 
 # %%
-alabama_color_map = {
+alabama_color_map = { #TODO: NON SO DOVE SI ROMPE, adesso in y_train ha più di 7 valori
     1:'red',
     2:'orange',
     3:'yellow',
@@ -2190,7 +2194,7 @@ incidents_df = pd.concat([incidents_df.reset_index(drop=True), final_incidents_d
 # ## Incident characteristics features: exploration and preparation
 
 # %%
-# FIXME: aggiungere commenti
+# FIXME: aggiungere commenti + ricontrollare quando si usa incedeints_df e quando final_incidents_df
 
 # %%
 # check if ch1 and ch2 are always different
@@ -2255,7 +2259,7 @@ else:
 incidents_df['tag_consistency'].value_counts()
 
 # %%
-from data_preparation_utils import set_tags_consistent_data
+"""from data_preparation_utils import set_tags_consistent_data
 incidents_df = incidents_df.apply(lambda row: set_tags_consistent_data(row), axis=1) # correct inconcistencies
 
 # check inconsistencies left on new data 
@@ -2263,7 +2267,8 @@ incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1
 incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
 save_checkpoint(incidents_df[tags_columns], 'tags')
 
-incidents_df['tag_consistency'].value_counts()
+incidents_df['tag_consistency'].value_counts()"""
+# FIXME: NON FA LA STESSA COSA DI SOPRA?
 
 # %%
 tags_partitions_counts = {}
@@ -2325,11 +2330,15 @@ incidents_df[incidents_df['n_females']>1]['incident_characteristics1'].value_cou
 incidents_df[incidents_df['n_females']>1]['incident_characteristics2'].value_counts().plot(kind='bar',  title='Characteristic 2 counts of incidents with females involved', ax=axs[1])
 
 # %%
-incidents_df.groupby(['latitude', 'longitude']).size().sort_values(ascending=False)[:50].plot(
+final_incidents_df.groupby(['latitude', 'longitude']).size().sort_values(ascending=False)[:50].plot(
     kind='bar',
     figsize=(10,6),
     title='Counts of the locations with the 50 highest number of incidents'
 )
+plt.show()
+
+# %%
+final_incidents_df.head(2)
 
 # %%
 incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
@@ -2363,7 +2372,7 @@ final_incidents_df = final_incidents_df.merge(elections_df, on=['state', 'year',
 final_incidents_df.head()
 
 # %%
-incidents_df.groupby('month').size().plot(
+final_incidents_df.groupby('month').size().plot(
     kind='bar',
     figsize=(10, 5),
     title='Number of incidents per month',
@@ -2468,7 +2477,7 @@ for label in ax.get_xticklabels():
     txt_label = label.get_text()
     month = txt_label[txt_label.find('-')+1:]
     year = txt_label[:txt_label.find('-')]
-    xticks.append(year+' - '+calendar.month_name[int(month)])
+    xticks.append(year+' - '+calendar.month_name[month]) #TODO: NON VA
 
 ax.set_xticklabels(xticks);
 
@@ -2476,7 +2485,8 @@ plt.xticks(rotation=90)
 plt.tight_layout() # 601,723 / 672,602
 
 # %%
-final_incidents_df[final_incidents_df['state']=='DISTRICT OF COLUMBIA']['incident_characteristics1'].value_counts().plot(kind='barh', figsize=(20, 10))
+# TODO: Non ci sono le caratteristiche
+#final_incidents_df[final_incidents_df['state']=='DISTRICT OF COLUMBIA']['incident_characteristics1'].value_counts().plot(kind='barh', figsize=(20, 10))
 
 # %%
 incidents_per_month_per_state = final_incidents_df[final_incidents_df['incident_characteristics1']!='Non-Shooting Incident'].groupby(['state', 'month', 'year']).size()
@@ -2624,6 +2634,12 @@ final_incidents_df.to_csv('final_incidents.csv', index=False)
 # %%
 final_incidents_df.shape[0]
 
+# %%
+final_incidents_df.columns
+
+# %%
+#TODO: da qui cancellare
+
 # %% [markdown]
 # ## Cose da rivedere per merge
 
@@ -2632,7 +2648,7 @@ final_incidents_df.shape[0]
 #
 # date, colonna pulita, il check point è stato cancellato
 #
-# final_final_incidents_df \
+# final_incidents_df \
 # colonne: ['state', 'county', 'city', 'latitude', 'longitude', 'state_consistency',
 #        'county_consistency', 'address_consistency', 'importance',
 #        'address_type']
