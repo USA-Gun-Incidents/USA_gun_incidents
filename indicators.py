@@ -2,10 +2,10 @@
 import pandas as pd
 import numpy as np
 from plot_utils import hist_box_plot
-%matplotlib inline
+# %matplotlib inline
 
 # %%
-incidents_df = pd.read_csv('./data/final.csv', index_col=0)
+incidents_df = pd.read_csv('./TASK_1/final_incidents.csv')
 incidents_df['date'] = pd.to_datetime(incidents_df['date'], format='%Y-%m-%d')
 
 # %%
@@ -89,18 +89,8 @@ incidents_df.boxplot(
 )
 
 # %%
-incidents_df[incidents_df['n_participants_adult']>1000]
-
-# %%
-incidents_df.boxplot(
-    column=ratios_wrt_tot[:-1],
-    rot=90,
-    figsize=(20, 10)
-) # city has the higher box (that's why they suggested to do it for cities only)
-
-# %%
 log_ratio_wrt_tot = ['log_'+col for col in ratios_wrt_tot]
-for col in ratios_wrt_tot: # TODO: -1!
+for col in ratios_wrt_tot:
     c = (incidents_df[incidents_df[col]!=0][col].min())/100
     incidents_df['log_'+col] = np.log(incidents_df[col] + c) # 1% of the minimum value
 incidents_df.boxplot(
@@ -161,12 +151,6 @@ incidents_df['days_from_last_incident_in_congdist'].describe()
 
 # %%
 incidents_df.boxplot(by='state', column='days_from_last_incident_in_congdist', figsize=(20, 10), rot=90)
-
-# %%
-incidents_df[incidents_df['date'].dt.year<=2020].boxplot(by='state', column='days_from_last_incident_in_congdist', figsize=(20, 10), rot=90)
-
-# %%
-incidents_df[incidents_df['date'].dt.year<=2020].boxplot(column='days_from_last_incident_in_congdist', rot=90)
 
 # %%
 x = pd.DataFrame(data={'a': [0, np.nan,], 'b':[0, np.nan]})
