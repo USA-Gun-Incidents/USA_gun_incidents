@@ -7,3 +7,4 @@ This repository hosts also interactive data visualizations. You can access and i
 - [Poverty percentage trends over the years](html/lines_poverty.html)
 - [Animation of the results of the House of Representatives elections over the years](html/animation_elections.html)
 - [Correlation between poverty and number of mortal incidents](html/scatter_poverty.html)
+- [Number of incidents per day](html/incidents_per_day.html)
