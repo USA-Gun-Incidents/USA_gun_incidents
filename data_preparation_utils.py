@@ -41,68 +41,16 @@ FREQUENT_WORDS = ['of',
     'Boulevard']
 
 state_map = { 
-    'Alabama': 'Alabama',
-    'Alaska': 'Alaska',
-    'American Samoa': 'American Samoa', # not in geopy
-    'Arizona': 'Arizona',
-    'Arkansas': 'Arkansas',
-    'California': 'California',
-    'Colorado': 'Colorado',
-    'Connecticut': 'Connecticut',
-    'Delaware': 'Delaware',
-    'District of Columbia': 'District of Columbia',
-    'Florida': 'Florida', 
-    'Georgia': 'Georgia',
-    'Guam': np.nan,
     'Hawaiʻi': 'Hawaii',
-    'Idaho': 'Idaho',
-    'Illinois': 'Illinois',
-    'Indiana':'Indiana',
-    'Iowa': 'Iowa', 
-    'Kansas': 'Kansas', 
-    'Kentucky': 'Kentucky',
-    'Louisiana': 'Louisiana', 
-    'Maine': 'Maine',
-    'Maryland': 'Maryland', 
-    'Massachusetts': 'Massachusetts',
-    'Michigan': 'Michigan',
-    'Minnesota': 'Minnesota', 
-    'Mississippi': 'Mississippi', 
-    'Missouri': 'Missouri',
-    'Montana': 'Montana', 
-    'Nebraska': 'Nebraska',
-    'Nevada': 'Nevada',
-    'New Hampshire': 'New Hampshire', 
-    'New Jersey': 'New Jersey', 
-    'New Mexico': 'New Mexico', 
-    'New York': 'New York',
-    'North Carolina': 'North Carolina',
-    'North Dakota': 'North Dakota',
-    'Northern Mariana Islands': 'Northern Mariana Islands', # not in geopy
-    'Ohio': 'Ohio',
-    'Oklahoma': 'Oklahoma', 
-    'Oregon': 'Oregon', 
-    'Pennsylvania': 'Pennsylvania',
-    'Puerto Rico': 'Puerto Rico', # not in geopy
-    'Rhode Island': 'Rhode Island',
-    'South Carolina': 'South Carolina', 
-    'South Dakota': 'South Dakota', 
-    'Tennessee': 'Tennessee',
-    'Texas': 'Texas', 
-    'U.S. Minor Outlying Islands': np.nan,
-    'Utah': 'Utah',
-    'Vermont': 'Vermont',
-    'Virgin Islands (U.S.)': np.nan,
-    'Virginia': 'Virginia',
-    'Washington': 'Washington',
-    'West Virginia': 'West Virginia',
-    'Wisconsin': 'Wisconsin', 
-    'Wyoming': 'Wyoming'
 }
-
+county_map = { 
+    'Hawaiʻi County': 'Hawaii County',
+    'Kauaʻi County': 'Kauai County'
+}
 city_map = {
     'Garden Lakes, City of Rome': 'City of Rome',
-    'Cairo, Georgia': 'Cairo'
+    'Cairo, Georgia': 'Cairo',
+    'Hockessin, Delaware': 'Hockessin'
 }
 
 def lower_case(string):
@@ -392,7 +340,8 @@ def check_consistency_additional_data(state, county, additional_data):
     if state_consistency:
         if county in additional_data[additional_data['State or equivalent'] == state_current
                                      ]['County or equivalent'].unique():
-            return state_map[state_current], county
+            return (state_map[state_current] if state_current in state_map.keys() else state_current, 
+                    county_map[county] if county in county_map.keys() else county)
         else: # check typo
             county_list = clean_data_incidents(county)
             for c in additional_data[additional_data['State or equivalent'] == state_current
@@ -403,9 +352,10 @@ def check_consistency_additional_data(state, county, additional_data):
                     if check_string_typo(county_incidents, c_clean) == 1:
                         if 'City of' in c:
                             return state_current, c.split(',')[0]
-                        else: return state_map[state_current], c + ' County'
+                        else: return (state_map[state_current] if state_current in state_map.keys() else state_current,
+                            county_map[c + ' County'] if c + ' County' in county_map.keys() else c + ' County')
     
-    return state_map[state_current], np.nan
+    return state_map[state_current] if state_current in state_map.keys() else state_current, np.nan
 
 def check_geographical_data_consistency(row, additional_data):
     """
