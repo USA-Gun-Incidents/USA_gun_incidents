@@ -12,6 +12,7 @@ from plot_utils import *
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
+from yellowbrick.cluster import KElbowVisualizer
 
 # %%
 incidents_df = pd.read_csv(
@@ -72,8 +73,16 @@ incidents_df.replace([np.inf, -np.inf], 0, inplace=True)
 
 # %%
 plt.figure(figsize=(15, 12))
-corr_matrix = incidents_df[numeric_features].corr()
+corr_matrix = incidents_df[numeric_features].corr() # TODO: provare altri coef di corr?
 sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
+
+# %%
+# highlight attributes with high correlation
+threshold = 0.5
+plt.figure(figsize=(15, 12))
+masked_corr_matrix = corr_matrix[((corr_matrix >= threshold)| (corr_matrix <= -threshold)) & (corr_matrix != 1.000)]
+sns.heatmap(masked_corr_matrix, mask=np.triu(masked_corr_matrix), vmin=corr_matrix.values.min(), vmax=corr_matrix.values.max())
+plt.show()
 
 # %%
 std_scaler = StandardScaler() # TODO: fare pipelines?
@@ -114,12 +123,27 @@ plt.scatter(
     c=kmeans_std.labels_,
     s=20,
     cmap='tab10');
+# draw white circle on centroids
 plt.scatter(
     centroids[:, incidents_df[numeric_features].columns.get_loc('n_males_n_males_tot_year_city_ratio')],
     centroids[:, incidents_df[numeric_features].columns.get_loc('location_importance')],
+    marker='o',
+    c="white",
+    alpha=1,
     s=200,
-    marker='*',
-    c='k'); # TODO: scatter matrix of a subset colored by cluster?
+    edgecolor='k'
+)
+# write cluster number on white circles
+for i, centroid in enumerate(centroids):
+    plt.scatter(
+        centroids[i, incidents_df[numeric_features].columns.get_loc('n_males_n_males_tot_year_city_ratio')],
+        centroids[i, incidents_df[numeric_features].columns.get_loc('location_importance')],
+        s=50,
+        marker='$%d$' % i,
+        alpha=1,
+        edgecolor='k'
+    );
+# TODO: scatter matrix of a subset colored by cluster?
 
 # %%
 plot_scattermap_plotly(incidents_df, 'kmeans_std_labels', zoom=2, title='Kmeans clustering (with standardized data)')
@@ -157,6 +181,19 @@ with warnings.catch_warnings():
 fig.show()
 
 # %%
+for i, center in enumerate(centroids_std):
+    tmp_df = pd.DataFrame(dict(r=center, theta=numeric_features))
+    tmp_df['Centroid'] = f'Centroid {i}'
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        fig = px.line_polar(tmp_df, r='r', theta='theta', line_close=True)
+        fig.update_layout(
+            title_text=f'Centroid {i}'
+        )
+        fig.update_traces(line_color=px.colors.qualitative.Plotly[i])
+    fig.show()
+
+# %%
 print('SSE %s' % kmeans_std.inertia_)
 # print('Silhouette %s' % silhouette_score(X_std, kmeans_std.labels_))
 # print('Separation %s' % metrics.davies_bouldin_score(X_std, kmeans_std.labels_))
@@ -172,6 +209,20 @@ party_xt.plot(
 plt.xlabel('Cluster')
 plt.ylabel('Party')
 plt.show()
+
+# %%
+# TODO: provare su subsample
+# from scipy.spatial.distance import pdist, squareform
+# distance_matrix = squareform(pdist(X_std, metric='euclidean'))
+
+# sorted_indices = np.argsort(kmeans_std.labels_)
+# sorted_distance_matrix = distance_matrix[sorted_indices][:, sorted_indices]
+
+# plt.figure(figsize=(8, 8))
+# plt.imshow(sorted_distance_matrix)
+# plt.colorbar()
+# plt.title("Similarity Matrix Sorted by K-means Clusters")
+# plt.show()
 
 # %%
 sse_list = list()
@@ -191,3 +242,24 @@ plt.tick_params(axis='both', which='major')
 plt.show()
 
 
+
+# %%
+kmeans = KMeans(n_init=10, max_iter=100)
+max_k = [10, 20, 30]
+best_k = []
+
+f, axs = plt.subplots(nrows=1, ncols=len(max_k), figsize=(30,5))
+
+for i in range(len(max_k)):
+    vis = KElbowVisualizer(kmeans, k=(2, max_k[i]), metric='distortion', timings=False, ax=axs[i])
+    vis.fit(X_std)  
+    axs[i].set_title(f'SSE elbow for K-Means clustering (K = [{str(2)}, {str(max_k[i])}])')
+    axs[i].set_ylabel('SSE')
+    axs[i].set_xlabel('K')
+    axs[i].legend([
+        'SSE for K',
+        f'elbow at K = {str(vis.elbow_value_)}, SSE = {vis.elbow_score_:0.2f}'
+    ])
+    if vis.elbow_value_ != None and vis.elbow_value_ not in best_k:
+        best_k.append(vis.elbow_value_)
+plt.show()
