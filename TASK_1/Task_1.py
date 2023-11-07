@@ -875,7 +875,7 @@ def group_by_day(df, date_col):
     counts_by_day = df[date_col].groupby([df[date_col].dt.year, df[date_col].dt.month, df[date_col].dt.day]).size().rename_axis(['year', 'month', 'day']).to_frame('Number of incidents').reset_index()
     counts_by_day[['year', 'month', 'day']] = counts_by_day[['year', 'month', 'day']].astype('int64')
     # add missing days
-    for day in pd.date_range(start='2016-01-01', end='2016-12-31'): # 2016%4==0, has 29 days in February
+    for day in pd.date_range(start='2017-01-01', end='2017-12-31'): # 2017%4!=0, has not 29 days in February
         for year in counts_by_day['year'].unique():
             row_exists = (
                 (counts_by_day['year']==year) &
@@ -893,7 +893,10 @@ def group_by_day(df, date_col):
 
 
 # %%
-incidents_counts_by_day = group_by_day(incidents_df, 'date_original')
+incidents_counts_by_day = group_by_day(
+    incidents_df[~((incidents_df['date'].dt.day==29) & (incidents_df['date'].dt.month==2))], # exclude 29 february
+    'date_original'
+)
 fig = px.line(
     incidents_counts_by_day,
     x='Day',
@@ -912,7 +915,10 @@ pyo.plot(fig, filename='../html/incidents_per_day.html', auto_open=False)
 # %%
 incidents_df['date_changed'] = incidents_df['date_original']
 incidents_df['date_changed'] = incidents_df['date_changed'].apply(lambda x : x.replace(year=2018) if ((x.year==2028) | (x.year==2029) | (x.year==2030)) else x)
-incidents_counts_by_day = group_by_day(incidents_df, 'date_changed')
+incidents_counts_by_day = group_by_day(
+    incidents_df[~((incidents_df['date'].dt.day==29) & (incidents_df['date'].dt.month==2))],
+    'date_changed'
+)
 fig = px.line(
     incidents_counts_by_day,
     x='Day',
@@ -2483,6 +2489,32 @@ ch_females_counts = ch1_females_counts.add(ch2_females_counts, fill_value=0).sor
     kind='bar',
     title='Characteristics counts of incidents with females involved',
     figsize=(20,10)
+)
+
+# %%
+plot_scattermap_plotly( # in 1 o 2, cambia il plot in modo che non sia necessario specificare un colore
+    incidents_df[
+        (incidents_df['incident_characteristics1']=='Mass Murder (4+ deceased victims excluding the subject/suspect/perpetrator , one location)') |
+        (incidents_df[incidents_df['incident_characteristics2']=='Mass Shooting (4+ victims injured or killed excluding the subject/suspect/perpetrator, one location)'])],
+        'state',
+        zoom=2,
+        title='Mass shootings'
+)
+
+# %%
+plot_scattermap_plotly(
+    incidents_df[incidents_df['children']==True],
+    'state',
+    zoom=2,
+    title='Incidents involving children'
+)
+
+# %%
+plot_scattermap_plotly(
+    incidents_df[incidents_df['suicide']==True],
+    'state',
+    zoom=2,
+    title='Suicides'
 )
 
 # %% [markdown]
