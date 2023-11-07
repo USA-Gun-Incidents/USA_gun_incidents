@@ -148,7 +148,7 @@ def plot_usa_map(
 
 def plot_scattermap_plotly(
     data,
-    attribute,
+    attribute=None,
     zoom=6,
     height=800,
     width=800,
@@ -175,7 +175,7 @@ def plot_scattermap_plotly(
     :param black_nan: if True, the nan values are colored in black
     '''
     color_map = None
-    if black_nan:
+    if black_nan and attribute is not None:
         color_map = {}
         n_colors = len(px.colors.qualitative.Plotly)
         for i, category in enumerate(data[attribute].unique()):
@@ -184,7 +184,7 @@ def plot_scattermap_plotly(
 
     fig = px.scatter_mapbox(
         hover_name=data.index if hover_name else None,
-        color=data[attribute].astype(str),
+        color=data[attribute].astype(str) if attribute is not None else None,
         color_discrete_map=color_map,
         lat=data[x_column], 
         lon=data[y_column],
@@ -192,8 +192,8 @@ def plot_scattermap_plotly(
         height=height,
         width=width,
         title=title,
-        text=data[attribute].astype(str),
-        category_orders={'color': sorted(data[attribute].astype(str).unique())}
+        text=data[attribute].astype(str) if attribute is not None else None,
+        category_orders={'color': sorted(data[attribute].astype(str).unique())} if attribute is not None else None
     )
     fig.update_layout(
         mapbox_style="open-street-map",

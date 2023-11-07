@@ -935,6 +935,24 @@ fig.show()
 
 
 # %%
+first_qtl_2016 = incidents_counts_by_day[incidents_counts_by_day['year']==2016]['Number of incidents'].quantile(q=0.05)
+last_qtl_2016 = incidents_counts_by_day[incidents_counts_by_day['year']==2016]['Number of incidents'].quantile(q=0.95)
+first_qtl_2017 = incidents_counts_by_day[incidents_counts_by_day['year']==2017]['Number of incidents'].quantile(q=0.05)
+last_qtl_2017 = incidents_counts_by_day[incidents_counts_by_day['year']==2017]['Number of incidents'].quantile(q=0.95)
+
+# %%
+incidents_counts_by_day[(incidents_counts_by_day['year']==2016) & (incidents_counts_by_day['Number of incidents']<first_qtl_2016)].sort_values(by='Number of incidents', ascending=True)
+
+# %%
+incidents_counts_by_day[(incidents_counts_by_day['year']==2017) & (incidents_counts_by_day['Number of incidents']<first_qtl_2017)].sort_values(by='Number of incidents', ascending=True)
+
+# %%
+incidents_counts_by_day[(incidents_counts_by_day['year']==2016) & (incidents_counts_by_day['Number of incidents']>last_qtl_2016)].sort_values(by='Number of incidents', ascending=False)
+
+# %%
+incidents_counts_by_day[(incidents_counts_by_day['year']==2017) & (incidents_counts_by_day['Number of incidents']>last_qtl_2017)].sort_values(by='Number of incidents', ascending=False)
+
+# %%
 # TODO:
 # commentare 1 gennaio, 29 febbraio, 4 luglio, 31 ottobre, 25 dicembre, ringraziamento
 # aggiungere linea orizzontale per media (e quartili?)
@@ -2491,12 +2509,12 @@ ch_females_counts = ch1_females_counts.add(ch2_females_counts, fill_value=0).sor
     figsize=(20,10)
 )
 
+# %% [markdown]
+# We can see that the distribution is very similar to the one involving both men and women. Some of the main differences are that, for women, the frequency of suicides is higher than normal, while the officiers involving incidents have the opposite behavior.
+
 # %%
-plot_scattermap_plotly( # in 1 o 2, cambia il plot in modo che non sia necessario specificare un colore
-    incidents_df[
-        (incidents_df['incident_characteristics1']=='Mass Murder (4+ deceased victims excluding the subject/suspect/perpetrator , one location)') |
-        (incidents_df[incidents_df['incident_characteristics2']=='Mass Shooting (4+ victims injured or killed excluding the subject/suspect/perpetrator, one location)'])],
-        'state',
+plot_scattermap_plotly(
+    incidents_df[incidents_df['n_killed']>=4],
         zoom=2,
         title='Mass shootings'
 )
@@ -2504,7 +2522,6 @@ plot_scattermap_plotly( # in 1 o 2, cambia il plot in modo che non sia necessari
 # %%
 plot_scattermap_plotly(
     incidents_df[incidents_df['children']==True],
-    'state',
     zoom=2,
     title='Incidents involving children'
 )
@@ -2512,13 +2529,9 @@ plot_scattermap_plotly(
 # %%
 plot_scattermap_plotly(
     incidents_df[incidents_df['suicide']==True],
-    'state',
     zoom=2,
     title='Suicides'
 )
-
-# %% [markdown]
-# We can see that the distribution is very similar to the one involving both men and women. Some of the main differences are that, for women, the frequency of suicides is higher than normal, while the officiers involving incidents have the opposite behavior.
 
 # %% [markdown]
 # We are aware of the fact that we could use classifier to inferr missing values. We chose not to do it because we think such method do not align with the nature of gun incidents. Citando il libro "Classification is the task of learning a target function f that maps each attribute set x to one of the predefined class labels y", il problema è che non può esistere una tale funzione (possono esserci (e immagino siano anche molti comuni) record uguali su tutti gli attributi tranne uno, per cui l'inferenza è impossibile).
