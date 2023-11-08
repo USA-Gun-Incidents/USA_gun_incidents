@@ -1,0 +1,885 @@
+state,year,povertyPercentage,px_code
+Alabama,2004,16.0,AL
+Alabama,2005,15.2,AL
+Alabama,2006,14.4,AL
+Alabama,2007,15.1,AL
+Alabama,2008,16.0,AL
+Alabama,2009,16.4,AL
+Alabama,2010,16.2,AL
+Alabama,2011,16.1,AL
+Alabama,2012,16.8,AL
+Alabama,2013,17.5,AL
+Alabama,2014,16.8,AL
+Alabama,2015,15.8,AL
+Alabama,2016,16.0,AL
+Alabama,2017,14.7,AL
+Alabama,2018,14.6,AL
+Alabama,2019,14.5,AL
+Alabama,2020,14.8,AL
+Alaska,2004,9.3,AK
+Alaska,2005,8.8,AK
+Alaska,2006,8.2,AK
+Alaska,2007,9.2,AK
+Alaska,2008,10.8,AK
+Alaska,2009,12.0,AK
+Alaska,2010,11.4,AK
+Alaska,2011,10.9,AK
+Alaska,2012,10.55,AK
+Alaska,2013,10.2,AK
+Alaska,2014,11.2,AK
+Alaska,2015,12.1,AK
+Alaska,2016,12.2,AK
+Alaska,2017,11.8,AK
+Alaska,2018,12.3,AK
+Alaska,2019,11.7,AK
+Alaska,2020,11.5,AK
+Arizona,2004,14.7,AZ
+Arizona,2005,14.6,AZ
+Arizona,2006,15.6,AZ
+Arizona,2007,17.9,AZ
+Arizona,2008,19.3,AZ
+Arizona,2009,19.1,AZ
+Arizona,2010,18.3,AZ
+Arizona,2011,18.8,AZ
+Arizona,2012,18.75,AZ
+Arizona,2013,18.7,AZ
+Arizona,2014,18.1,AZ
+Arizona,2015,15.5,AZ
+Arizona,2016,14.4,AZ
+Arizona,2017,12.1,AZ
+Arizona,2018,11.2,AZ
+Arizona,2019,11.2,AZ
+Arizona,2020,12.1,AZ
+Arkansas,2004,15.6,AR
+Arkansas,2005,15.1,AR
+Arkansas,2006,15.6,AR
+Arkansas,2007,16.0,AR
+Arkansas,2008,16.5,AR
+Arkansas,2009,17.6,AR
+Arkansas,2010,18.0,AR
+Arkansas,2011,18.6,AR
+Arkansas,2012,17.35,AR
+Arkansas,2013,16.1,AR
+Arkansas,2014,16.8,AR
+Arkansas,2015,15.6,AR
+Arkansas,2016,15.5,AR
+Arkansas,2017,15.0,AR
+Arkansas,2018,14.7,AR
+Arkansas,2019,15.1,AR
+Arkansas,2020,15.8,AR
+California,2004,12.9,CA
+California,2005,12.7,CA
+California,2006,13.2,CA
+California,2007,14.2,CA
+California,2008,15.4,CA
+California,2009,16.2,CA
+California,2010,16.4,CA
+California,2011,15.9,CA
+California,2012,15.4,CA
+California,2013,14.9,CA
+California,2014,14.5,CA
+California,2015,13.4,CA
+California,2016,12.5,CA
+California,2017,11.4,CA
+California,2018,11.0,CA
+California,2019,11.0,CA
+California,2020,11.4,CA
+Colorado,2004,10.4,CO
+Colorado,2005,10.3,CO
+Colorado,2006,10.2,CO
+Colorado,2007,11.1,CO
+Colorado,2008,11.9,CO
+Colorado,2009,12.6,CO
+Colorado,2010,12.5,CO
+Colorado,2011,11.9,CO
+Colorado,2012,11.45,CO
+Colorado,2013,11.0,CO
+Colorado,2014,10.2,CO
+Colorado,2015,8.7,CO
+Colorado,2016,8.9,CO
+Colorado,2017,9.1,CO
+Colorado,2018,9.3,CO
+Colorado,2019,8.9,CO
+Colorado,2020,8.5,CO
+Connecticut,2004,9.1,CT
+Connecticut,2005,8.7,CT
+Connecticut,2006,8.3,CT
+Connecticut,2007,8.5,CT
+Connecticut,2008,8.3,CT
+Connecticut,2009,9.0,CT
+Connecticut,2010,9.7,CT
+Connecticut,2011,10.6,CT
+Connecticut,2012,10.05,CT
+Connecticut,2013,9.5,CT
+Connecticut,2014,9.2,CT
+Connecticut,2015,9.9,CT
+Connecticut,2016,9.9,CT
+Connecticut,2017,9.7,CT
+Connecticut,2018,9.9,CT
+Connecticut,2019,9.2,CT
+Connecticut,2020,9.8,CT
+Delaware,2004,9.2,DE
+Delaware,2005,9.3,DE
+Delaware,2006,9.4,DE
+Delaware,2007,10.4,DE
+Delaware,2008,11.4,DE
+Delaware,2009,12.7,DE
+Delaware,2010,13.1,DE
+Delaware,2011,13.7,DE
+Delaware,2012,12.399999999999999,DE
+Delaware,2013,11.1,DE
+Delaware,2014,11.2,DE
+Delaware,2015,10.6,DE
+Delaware,2016,9.6,DE
+Delaware,2017,7.6,DE
+Delaware,2018,8.1,DE
+Delaware,2019,9.6,DE
+Delaware,2020,10.5,DE
+District of Columbia,2004,18.8,DC
+District of Columbia,2005,19.1,DC
+District of Columbia,2006,17.6,DC
+District of Columbia,2007,17.5,DC
+District of Columbia,2008,18.0,DC
+District of Columbia,2009,19.1,DC
+District of Columbia,2010,19.3,DC
+District of Columbia,2011,19.9,DC
+District of Columbia,2012,19.75,DC
+District of Columbia,2013,19.6,DC
+District of Columbia,2014,17.3,DC
+District of Columbia,2015,15.5,DC
+District of Columbia,2016,14.9,DC
+District of Columbia,2017,13.7,DC
+District of Columbia,2018,14.7,DC
+District of Columbia,2019,14.4,DC
+District of Columbia,2020,14.7,DC
+Florida,2004,11.4,FL
+Florida,2005,11.7,FL
+Florida,2006,12.4,FL
+Florida,2007,13.4,FL
+Florida,2008,14.6,FL
+Florida,2009,15.2,FL
+Florida,2010,15.4,FL
+Florida,2011,15.0,FL
+Florida,2012,15.45,FL
+Florida,2013,15.9,FL
+Florida,2014,15.2,FL
+Florida,2015,14.3,FL
+Florida,2016,13.6,FL
+Florida,2017,12.8,FL
+Florida,2018,12.8,FL
+Florida,2019,12.5,FL
+Florida,2020,13.1,FL
+Georgia,2004,13.3,GA
+Georgia,2005,13.5,GA
+Georgia,2006,13.9,GA
+Georgia,2007,15.8,GA
+Georgia,2008,17.6,GA
+Georgia,2009,18.5,GA
+Georgia,2010,18.4,GA
+Georgia,2011,17.6,GA
+Georgia,2012,17.700000000000003,GA
+Georgia,2013,17.8,GA
+Georgia,2014,16.8,GA
+Georgia,2015,15.6,GA
+Georgia,2016,14.7,GA
+Georgia,2017,13.3,GA
+Georgia,2018,13.4,GA
+Georgia,2019,13.1,GA
+Georgia,2020,13.0,GA
+Hawaii,2004,8.8,HI
+Hawaii,2005,8.4,HI
+Hawaii,2006,8.9,HI
+Hawaii,2007,9.9,HI
+Hawaii,2008,11.6,HI
+Hawaii,2009,12.3,HI
+Hawaii,2010,12.8,HI
+Hawaii,2011,12.3,HI
+Hawaii,2012,11.55,HI
+Hawaii,2013,10.8,HI
+Hawaii,2014,10.3,HI
+Hawaii,2015,10.2,HI
+Hawaii,2016,9.5,HI
+Hawaii,2017,9.4,HI
+Hawaii,2018,9.5,HI
+Hawaii,2019,10.1,HI
+Hawaii,2020,10.2,HI
+Idaho,2004,9.8,ID
+Idaho,2005,9.8,ID
+Idaho,2006,10.6,ID
+Idaho,2007,12.0,ID
+Idaho,2008,13.2,ID
+Idaho,2009,14.4,ID
+Idaho,2010,14.7,ID
+Idaho,2011,14.4,ID
+Idaho,2012,13.4,ID
+Idaho,2013,12.4,ID
+Idaho,2014,11.9,ID
+Idaho,2015,11.7,ID
+Idaho,2016,11.3,ID
+Idaho,2017,10.0,ID
+Idaho,2018,9.2,ID
+Idaho,2019,8.5,ID
+Idaho,2020,8.9,ID
+Illinois,2004,11.4,IL
+Illinois,2005,10.7,IL
+Illinois,2006,11.0,IL
+Illinois,2007,11.8,IL
+Illinois,2008,13.2,IL
+Illinois,2009,13.8,IL
+Illinois,2010,13.6,IL
+Illinois,2011,13.4,IL
+Illinois,2012,13.05,IL
+Illinois,2013,12.7,IL
+Illinois,2014,12.2,IL
+Illinois,2015,11.3,IL
+Illinois,2016,10.9,IL
+Illinois,2017,10.4,IL
+Illinois,2018,9.2,IL
+Illinois,2019,9.3,IL
+Illinois,2020,9.4,IL
+Indiana,2004,11.6,IN
+Indiana,2005,11.7,IN
+Indiana,2006,12.3,IN
+Indiana,2007,14.1,IN
+Indiana,2008,15.6,IN
+Indiana,2009,16.0,IN
+Indiana,2010,15.7,IN
+Indiana,2011,14.1,IN
+Indiana,2012,14.5,IN
+Indiana,2013,14.9,IN
+Indiana,2014,13.3,IN
+Indiana,2015,12.3,IN
+Indiana,2016,11.8,IN
+Indiana,2017,11.1,IN
+Indiana,2018,11.2,IN
+Indiana,2019,10.8,IN
+Indiana,2020,10.9,IN
+Iowa,2004,10.8,IA
+Iowa,2005,10.2,IA
+Iowa,2006,9.6,IA
+Iowa,2007,9.7,IA
+Iowa,2008,10.2,IA
+Iowa,2009,10.5,IA
+Iowa,2010,10.3,IA
+Iowa,2011,10.5,IA
+Iowa,2012,10.9,IA
+Iowa,2013,11.3,IA
+Iowa,2014,10.1,IA
+Iowa,2015,9.7,IA
+Iowa,2016,9.2,IA
+Iowa,2017,8.7,IA
+Iowa,2018,9.2,IA
+Iowa,2019,9.5,IA
+Iowa,2020,9.4,IA
+Kansas,2004,12.2,KS
+Kansas,2005,12.3,KS
+Kansas,2006,12.4,KS
+Kansas,2007,12.7,KS
+Kansas,2008,13.6,KS
+Kansas,2009,14.2,KS
+Kansas,2010,14.3,KS
+Kansas,2011,13.8,KS
+Kansas,2012,13.2,KS
+Kansas,2013,12.6,KS
+Kansas,2014,12.5,KS
+Kansas,2015,13.4,KS
+Kansas,2016,10.8,KS
+Kansas,2017,10.4,KS
+Kansas,2018,8.7,KS
+Kansas,2019,8.6,KS
+Kansas,2020,8.9,KS
+Kentucky,2004,16.5,KY
+Kentucky,2005,15.7,KY
+Kentucky,2006,16.5,KY
+Kentucky,2007,16.5,KY
+Kentucky,2008,17.2,KY
+Kentucky,2009,16.9,KY
+Kentucky,2010,17.2,KY
+Kentucky,2011,18.0,KY
+Kentucky,2012,19.25,KY
+Kentucky,2013,20.5,KY
+Kentucky,2014,18.2,KY
+Kentucky,2015,16.4,KY
+Kentucky,2016,15.3,KY
+Kentucky,2017,14.2,KY
+Kentucky,2018,14.4,KY
+Kentucky,2019,14.6,KY
+Kentucky,2020,15.8,KY
+Louisiana,2004,17.4,LA
+Louisiana,2005,17.1,LA
+Louisiana,2006,17.1,LA
+Louisiana,2007,16.2,LA
+Louisiana,2008,18.0,LA
+Louisiana,2009,18.9,LA
+Louisiana,2010,21.2,LA
+Louisiana,2011,20.5,LA
+Louisiana,2012,20.75,LA
+Louisiana,2013,21.0,LA
+Louisiana,2014,20.6,LA
+Louisiana,2015,20.0,LA
+Louisiana,2016,19.8,LA
+Louisiana,2017,19.1,LA
+Louisiana,2018,17.5,LA
+Louisiana,2019,17.3,LA
+Louisiana,2020,16.9,LA
+Maine,2004,11.5,ME
+Maine,2005,11.2,ME
+Maine,2006,11.0,ME
+Maine,2007,11.4,ME
+Maine,2008,12.0,ME
+Maine,2009,12.5,ME
+Maine,2010,13.0,ME
+Maine,2011,12.8,ME
+Maine,2012,12.8,ME
+Maine,2013,12.8,ME
+Maine,2014,13.2,ME
+Maine,2015,12.3,ME
+Maine,2016,12.6,ME
+Maine,2017,11.5,ME
+Maine,2018,10.0,ME
+Maine,2019,9.2,ME
+Maine,2020,8.9,ME
+Maryland,2004,9.3,MD
+Maryland,2005,9.0,MD
+Maryland,2006,8.6,MD
+Maryland,2007,9.0,MD
+Maryland,2008,9.7,MD
+Maryland,2009,9.9,MD
+Maryland,2010,10.0,MD
+Maryland,2011,9.8,MD
+Maryland,2012,9.9,MD
+Maryland,2013,10.0,MD
+Maryland,2014,8.9,MD
+Maryland,2015,8.2,MD
+Maryland,2016,7.1,MD
+Maryland,2017,7.5,MD
+Maryland,2018,8.1,MD
+Maryland,2019,8.0,MD
+Maryland,2020,8.6,MD
+Massachusetts,2004,10.5,MA
+Massachusetts,2005,11.1,MA
+Massachusetts,2006,11.5,MA
+Massachusetts,2007,11.1,MA
+Massachusetts,2008,11.0,MA
+Massachusetts,2009,10.8,MA
+Massachusetts,2010,10.9,MA
+Massachusetts,2011,11.3,MA
+Massachusetts,2012,11.850000000000001,MA
+Massachusetts,2013,12.4,MA
+Massachusetts,2014,11.5,MA
+Massachusetts,2015,10.6,MA
+Massachusetts,2016,9.8,MA
+Massachusetts,2017,9.2,MA
+Massachusetts,2018,8.2,MA
+Massachusetts,2019,7.9,MA
+Massachusetts,2020,8.6,MA
+Michigan,2004,12.9,MI
+Michigan,2005,12.0,MI
+Michigan,2006,12.4,MI
+Michigan,2007,12.6,MI
+Michigan,2008,14.2,MI
+Michigan,2009,14.9,MI
+Michigan,2010,14.8,MI
+Michigan,2011,14.4,MI
+Michigan,2012,13.9,MI
+Michigan,2013,13.4,MI
+Michigan,2014,12.9,MI
+Michigan,2015,12.2,MI
+Michigan,2016,11.0,MI
+Michigan,2017,10.7,MI
+Michigan,2018,10.6,MI
+Michigan,2019,11.0,MI
+Michigan,2020,11.7,MI
+Minnesota,2004,7.7,MN
+Minnesota,2005,8.5,MN
+Minnesota,2006,9.1,MN
+Minnesota,2007,10.1,MN
+Minnesota,2008,10.6,MN
+Minnesota,2009,10.6,MN
+Minnesota,2010,10.3,MN
+Minnesota,2011,10.7,MN
+Minnesota,2012,9.85,MN
+Minnesota,2013,9.0,MN
+Minnesota,2014,8.3,MN
+Minnesota,2015,8.6,MN
+Minnesota,2016,8.7,MN
+Minnesota,2017,7.4,MN
+Minnesota,2018,7.4,MN
+Minnesota,2019,7.0,MN
+Minnesota,2020,7.7,MN
+Mississippi,2004,19.8,MS
+Mississippi,2005,21.1,MS
+Mississippi,2006,20.5,MS
+Mississippi,2007,21.3,MS
+Mississippi,2008,21.2,MS
+Mississippi,2009,21.0,MS
+Mississippi,2010,20.6,MS
+Mississippi,2011,20.6,MS
+Mississippi,2012,20.35,MS
+Mississippi,2013,20.1,MS
+Mississippi,2014,20.8,MS
+Mississippi,2015,19.5,MS
+Mississippi,2016,19.8,MS
+Mississippi,2017,19.1,MS
+Mississippi,2018,18.8,MS
+Mississippi,2019,18.1,MS
+Mississippi,2020,17.8,MS
+Missouri,2004,11.7,MO
+Missouri,2005,11.9,MO
+Missouri,2006,12.5,MO
+Missouri,2007,13.9,MO
+Missouri,2008,14.6,MO
+Missouri,2009,15.3,MO
+Missouri,2010,15.2,MO
+Missouri,2011,14.8,MO
+Missouri,2012,13.7,MO
+Missouri,2013,12.6,MO
+Missouri,2014,11.0,MO
+Missouri,2015,11.3,MO
+Missouri,2016,11.9,MO
+Missouri,2017,11.0,MO
+Missouri,2018,10.8,MO
+Missouri,2019,10.8,MO
+Missouri,2020,11.5,MO
+Montana,2004,13.8,MT
+Montana,2005,13.4,MT
+Montana,2006,13.1,MT
+Montana,2007,13.1,MT
+Montana,2008,13.6,MT
+Montana,2009,14.8,MT
+Montana,2010,14.8,MT
+Montana,2011,14.8,MT
+Montana,2012,13.15,MT
+Montana,2013,11.5,MT
+Montana,2014,11.9,MT
+Montana,2015,11.1,MT
+Montana,2016,10.4,MT
+Montana,2017,10.1,MT
+Montana,2018,10.3,MT
+Montana,2019,10.4,MT
+Montana,2020,10.7,MT
+Nebraska,2004,9.7,NE
+Nebraska,2005,9.9,NE
+Nebraska,2006,10.2,NE
+Nebraska,2007,10.1,NE
+Nebraska,2008,10.2,NE
+Nebraska,2009,10.1,NE
+Nebraska,2010,10.9,NE
+Nebraska,2011,11.2,NE
+Nebraska,2012,11.05,NE
+Nebraska,2013,10.9,NE
+Nebraska,2014,10.6,NE
+Nebraska,2015,10.1,NE
+Nebraska,2016,10.4,NE
+Nebraska,2017,10.3,NE
+Nebraska,2018,9.2,NE
+Nebraska,2019,8.4,NE
+Nebraska,2020,8.1,NE
+Nevada,2004,10.3,NV
+Nevada,2005,10.0,NV
+Nevada,2006,10.0,NV
+Nevada,2007,11.2,NV
+Nevada,2008,13.5,NV
+Nevada,2009,15.0,NV
+Nevada,2010,15.9,NV
+Nevada,2011,16.2,NV
+Nevada,2012,15.5,NV
+Nevada,2013,14.8,NV
+Nevada,2014,13.3,NV
+Nevada,2015,12.3,NV
+Nevada,2016,12.2,NV
+Nevada,2017,12.2,NV
+Nevada,2018,12.1,NV
+Nevada,2019,12.1,NV
+Nevada,2020,12.6,NV
+New Hampshire,2004,5.5,NH
+New Hampshire,2005,5.6,NH
+New Hampshire,2006,6.1,NH
+New Hampshire,2007,6.9,NH
+New Hampshire,2008,7.1,NH
+New Hampshire,2009,7.3,NH
+New Hampshire,2010,7.4,NH
+New Hampshire,2011,8.3,NH
+New Hampshire,2012,7.45,NH
+New Hampshire,2013,6.6,NH
+New Hampshire,2014,6.9,NH
+New Hampshire,2015,6.7,NH
+New Hampshire,2016,6.4,NH
+New Hampshire,2017,5.6,NH
+New Hampshire,2018,5.4,NH
+New Hampshire,2019,5.6,NH
+New Hampshire,2020,7.1,NH
+New Jersey,2004,7.9,NJ
+New Jersey,2005,8.1,NJ
+New Jersey,2006,8.9,NJ
+New Jersey,2007,9.1,NJ
+New Jersey,2008,9.9,NJ
+New Jersey,2009,10.6,NJ
+New Jersey,2010,10.6,NJ
+New Jersey,2011,10.6,NJ
+New Jersey,2012,10.7,NJ
+New Jersey,2013,10.8,NJ
+New Jersey,2014,10.7,NJ
+New Jersey,2015,9.7,NJ
+New Jersey,2016,9.1,NJ
+New Jersey,2017,8.2,NJ
+New Jersey,2018,7.6,NJ
+New Jersey,2019,7.3,NJ
+New Jersey,2020,8.2,NJ
+New Mexico,2004,17.1,NM
+New Mexico,2005,16.3,NM
+New Mexico,2006,16.7,NM
+New Mexico,2007,17.6,NM
+New Mexico,2008,19.0,NM
+New Mexico,2009,19.9,NM
+New Mexico,2010,20.3,NM
+New Mexico,2011,21.4,NM
+New Mexico,2012,21.6,NM
+New Mexico,2013,21.8,NM
+New Mexico,2014,19.1,NM
+New Mexico,2015,18.7,NM
+New Mexico,2016,18.7,NM
+New Mexico,2017,17.2,NM
+New Mexico,2018,16.2,NM
+New Mexico,2019,16.7,NM
+New Mexico,2020,18.3,NM
+New York,2004,14.5,NY
+New York,2005,14.4,NY
+New York,2006,14.2,NY
+New York,2007,14.8,NY
+New York,2008,15.3,NY
+New York,2009,15.9,NY
+New York,2010,16.4,NY
+New York,2011,15.9,NY
+New York,2012,15.5,NY
+New York,2013,15.1,NY
+New York,2014,13.4,NY
+New York,2015,13.2,NY
+New York,2016,11.8,NY
+New York,2017,12.1,NY
+New York,2018,11.8,NY
+New York,2019,12.3,NY
+New York,2020,12.4,NY
+North Carolina,2004,13.8,NC
+North Carolina,2005,14.2,NC
+North Carolina,2006,14.4,NC
+North Carolina,2007,15.4,NC
+North Carolina,2008,16.1,NC
+North Carolina,2009,16.6,NC
+North Carolina,2010,16.7,NC
+North Carolina,2011,17.1,NC
+North Carolina,2012,16.4,NC
+North Carolina,2013,15.7,NC
+North Carolina,2014,15.3,NC
+North Carolina,2015,14.4,NC
+North Carolina,2016,14.1,NC
+North Carolina,2017,13.6,NC
+North Carolina,2018,13.2,NC
+North Carolina,2019,12.8,NC
+North Carolina,2020,13.3,NC
+North Dakota,2004,10.7,ND
+North Dakota,2005,10.6,ND
+North Dakota,2006,10.8,ND
+North Dakota,2007,10.7,ND
+North Dakota,2008,11.8,ND
+North Dakota,2009,11.2,ND
+North Dakota,2010,11.3,ND
+North Dakota,2011,10.4,ND
+North Dakota,2012,10.8,ND
+North Dakota,2013,11.2,ND
+North Dakota,2014,10.5,ND
+North Dakota,2015,11.0,ND
+North Dakota,2016,10.9,ND
+North Dakota,2017,10.1,ND
+North Dakota,2018,9.5,ND
+North Dakota,2019,9.1,ND
+North Dakota,2020,9.6,ND
+Ohio,2004,12.0,OH
+Ohio,2005,12.4,OH
+Ohio,2006,12.9,OH
+Ohio,2007,13.3,OH
+Ohio,2008,14.1,OH
+Ohio,2009,14.6,OH
+Ohio,2010,15.3,OH
+Ohio,2011,14.7,OH
+Ohio,2012,14.7,OH
+Ohio,2013,14.7,OH
+Ohio,2014,14.3,OH
+Ohio,2015,13.3,OH
+Ohio,2016,12.8,OH
+Ohio,2017,12.4,OH
+Ohio,2018,12.3,OH
+Ohio,2019,12.2,OH
+Ohio,2020,11.4,OH
+Oklahoma,2004,13.9,OK
+Oklahoma,2005,14.7,OK
+Oklahoma,2006,14.1,OK
+Oklahoma,2007,13.3,OK
+Oklahoma,2008,14.3,OK
+Oklahoma,2009,14.4,OK
+Oklahoma,2010,16.1,OK
+Oklahoma,2011,15.3,OK
+Oklahoma,2012,16.4,OK
+Oklahoma,2013,17.5,OK
+Oklahoma,2014,15.3,OK
+Oklahoma,2015,13.8,OK
+Oklahoma,2016,14.0,OK
+Oklahoma,2017,12.4,OK
+Oklahoma,2018,13.3,OK
+Oklahoma,2019,13.8,OK
+Oklahoma,2020,15.8,OK
+Oregon,2004,11.9,OR
+Oregon,2005,12.2,OR
+Oregon,2006,11.7,OR
+Oregon,2007,12.2,OR
+Oregon,2008,12.7,OR
+Oregon,2009,14.0,OR
+Oregon,2010,14.1,OR
+Oregon,2011,14.3,OR
+Oregon,2012,13.850000000000001,OR
+Oregon,2013,13.4,OR
+Oregon,2014,12.7,OR
+Oregon,2015,11.3,OR
+Oregon,2016,10.6,OR
+Oregon,2017,9.8,OR
+Oregon,2018,9.1,OR
+Oregon,2019,8.9,OR
+Oregon,2020,9.5,OR
+Pennsylvania,2004,11.3,PA
+Pennsylvania,2005,11.0,PA
+Pennsylvania,2006,10.9,PA
+Pennsylvania,2007,10.8,PA
+Pennsylvania,2008,11.4,PA
+Pennsylvania,2009,12.0,PA
+Pennsylvania,2010,12.9,PA
+Pennsylvania,2011,13.0,PA
+Pennsylvania,2012,12.5,PA
+Pennsylvania,2013,12.0,PA
+Pennsylvania,2014,12.0,PA
+Pennsylvania,2015,11.5,PA
+Pennsylvania,2016,11.5,PA
+Pennsylvania,2017,10.5,PA
+Pennsylvania,2018,10.4,PA
+Pennsylvania,2019,10.0,PA
+Pennsylvania,2020,10.8,PA
+Rhode Island,2004,11.3,RI
+Rhode Island,2005,10.7,RI
+Rhode Island,2006,10.9,RI
+Rhode Island,2007,11.7,RI
+Rhode Island,2008,13.2,RI
+Rhode Island,2009,13.5,RI
+Rhode Island,2010,13.7,RI
+Rhode Island,2011,13.5,RI
+Rhode Island,2012,12.15,RI
+Rhode Island,2013,10.8,RI
+Rhode Island,2014,11.5,RI
+Rhode Island,2015,11.8,RI
+Rhode Island,2016,10.3,RI
+Rhode Island,2017,9.8,RI
+Rhode Island,2018,8.9,RI
+Rhode Island,2019,9.0,RI
+Rhode Island,2020,8.8,RI
+South Carolina,2004,13.7,SC
+South Carolina,2005,13.4,SC
+South Carolina,2006,13.1,SC
+South Carolina,2007,13.9,SC
+South Carolina,2008,14.9,SC
+South Carolina,2009,16.6,SC
+South Carolina,2010,17.5,SC
+South Carolina,2011,17.2,SC
+South Carolina,2012,16.95,SC
+South Carolina,2013,16.7,SC
+South Carolina,2014,14.9,SC
+South Carolina,2015,14.6,SC
+South Carolina,2016,14.1,SC
+South Carolina,2017,14.4,SC
+South Carolina,2018,13.7,SC
+South Carolina,2019,14.0,SC
+South Carolina,2020,13.3,SC
+South Dakota,2004,12.0,SD
+South Dakota,2005,10.6,SD
+South Dakota,2006,11.1,SD
+South Dakota,2007,12.2,SD
+South Dakota,2008,13.6,SD
+South Dakota,2009,14.1,SD
+South Dakota,2010,13.6,SD
+South Dakota,2011,12.5,SD
+South Dakota,2012,12.9,SD
+South Dakota,2013,13.3,SD
+South Dakota,2014,13.7,SD
+South Dakota,2015,12.9,SD
+South Dakota,2016,11.8,SD
+South Dakota,2017,10.6,SD
+South Dakota,2018,11.0,SD
+South Dakota,2019,10.2,SD
+South Dakota,2020,9.7,SD
+Tennessee,2004,15.2,TN
+Tennessee,2005,14.8,TN
+Tennessee,2006,14.9,TN
+Tennessee,2007,15.4,TN
+Tennessee,2008,16.1,TN
+Tennessee,2009,16.5,TN
+Tennessee,2010,17.2,TN
+Tennessee,2011,17.7,TN
+Tennessee,2012,16.75,TN
+Tennessee,2013,15.8,TN
+Tennessee,2014,15.6,TN
+Tennessee,2015,13.7,TN
+Tennessee,2016,12.6,TN
+Tennessee,2017,12.1,TN
+Tennessee,2018,12.7,TN
+Tennessee,2019,12.3,TN
+Tennessee,2020,11.4,TN
+Texas,2004,16.4,TX
+Texas,2005,16.4,TX
+Texas,2006,16.3,TX
+Texas,2007,16.6,TX
+Texas,2008,17.2,TX
+Texas,2009,17.7,TX
+Texas,2010,17.6,TX
+Texas,2011,17.1,TX
+Texas,2012,16.55,TX
+Texas,2013,16.0,TX
+Texas,2014,14.9,TX
+Texas,2015,14.0,TX
+Texas,2016,13.7,TX
+Texas,2017,12.6,TX
+Texas,2018,12.9,TX
+Texas,2019,12.9,TX
+Texas,2020,13.7,TX
+United States,2004,12.5,
+United States,2005,12.5,
+United States,2006,12.7,
+United States,2007,13.4,
+United States,2008,14.2,
+United States,2009,14.8,
+United States,2010,15.0,
+United States,2011,14.8,
+United States,2012,14.600000000000001,
+United States,2013,14.4,
+United States,2014,13.7,
+United States,2015,12.8,
+United States,2016,12.3,
+United States,2017,11.5,
+United States,2018,11.2,
+United States,2019,11.2,
+United States,2020,11.5,
+Utah,2004,9.5,UT
+Utah,2005,9.4,UT
+Utah,2006,8.8,UT
+Utah,2007,9.0,UT
+Utah,2008,9.1,UT
+Utah,2009,10.2,UT
+Utah,2010,10.7,UT
+Utah,2011,10.1,UT
+Utah,2012,10.3,UT
+Utah,2013,10.5,UT
+Utah,2014,9.3,UT
+Utah,2015,8.8,UT
+Utah,2016,7.9,UT
+Utah,2017,7.6,UT
+Utah,2018,7.2,UT
+Utah,2019,7.5,UT
+Utah,2020,7.1,UT
+Vermont,2004,7.7,VT
+Vermont,2005,8.4,VT
+Vermont,2006,8.9,VT
+Vermont,2007,9.4,VT
+Vermont,2008,9.7,VT
+Vermont,2009,10.6,VT
+Vermont,2010,11.2,VT
+Vermont,2011,10.5,VT
+Vermont,2012,9.7,VT
+Vermont,2013,8.9,VT
+Vermont,2014,9.9,VT
+Vermont,2015,10.2,VT
+Vermont,2016,9.6,VT
+Vermont,2017,9.0,VT
+Vermont,2018,9.0,VT
+Vermont,2019,8.3,VT
+Vermont,2020,8.4,VT
+Virginia,2004,9.1,VA
+Virginia,2005,8.8,VA
+Virginia,2006,9.2,VA
+Virginia,2007,9.9,VA
+Virginia,2008,10.6,VA
+Virginia,2009,10.9,VA
+Virginia,2010,10.9,VA
+Virginia,2011,10.8,VA
+Virginia,2012,10.55,VA
+Virginia,2013,10.3,VA
+Virginia,2014,10.8,VA
+Virginia,2015,10.8,VA
+Virginia,2016,10.7,VA
+Virginia,2017,9.7,VA
+Virginia,2018,8.8,VA
+Virginia,2019,8.8,VA
+Virginia,2020,8.6,VA
+Washington,2004,9.8,WA
+Washington,2005,9.4,WA
+Washington,2006,9.5,WA
+Washington,2007,10.8,WA
+Washington,2008,11.2,WA
+Washington,2009,11.9,WA
+Washington,2010,11.9,WA
+Washington,2011,12.0,WA
+Washington,2012,11.95,WA
+Washington,2013,11.9,WA
+Washington,2014,11.5,WA
+Washington,2015,10.7,WA
+Washington,2016,10.3,WA
+Washington,2017,8.8,WA
+Washington,2018,7.9,WA
+Washington,2019,7.6,WA
+Washington,2020,8.3,WA
+West Virginia,2004,15.0,WV
+West Virginia,2005,15.2,WV
+West Virginia,2006,14.9,WV
+West Virginia,2007,15.0,WV
+West Virginia,2008,15.7,WV
+West Virginia,2009,16.7,WV
+West Virginia,2010,17.0,WV
+West Virginia,2011,17.2,WV
+West Virginia,2012,17.75,WV
+West Virginia,2013,18.3,WV
+West Virginia,2014,17.7,WV
+West Virginia,2015,16.6,WV
+West Virginia,2016,17.2,WV
+West Virginia,2017,15.6,WV
+West Virginia,2018,14.6,WV
+West Virginia,2019,15.0,WV
+West Virginia,2020,15.5,WV
+Wisconsin,2004,10.9,WI
+Wisconsin,2005,10.4,WI
+Wisconsin,2006,10.3,WI
+Wisconsin,2007,10.5,WI
+Wisconsin,2008,10.2,WI
+Wisconsin,2009,11.3,WI
+Wisconsin,2010,11.5,WI
+Wisconsin,2011,11.8,WI
+Wisconsin,2012,11.850000000000001,WI
+Wisconsin,2013,11.9,WI
+Wisconsin,2014,11.0,WI
+Wisconsin,2015,10.5,WI
+Wisconsin,2016,9.5,WI
+Wisconsin,2017,8.7,WI
+Wisconsin,2018,8.3,WI
+Wisconsin,2019,8.6,WI
+Wisconsin,2020,8.0,WI
+Wyoming,2004,10.2,WY
+Wyoming,2005,10.5,WY
+Wyoming,2006,10.3,WY
+Wyoming,2007,10.1,WY
+Wyoming,2008,9.6,WY
+Wyoming,2009,9.8,WY
+Wyoming,2010,10.0,WY
+Wyoming,2011,10.7,WY
+Wyoming,2012,10.5,WY
+Wyoming,2013,10.3,WY
+Wyoming,2014,10.1,WY
+Wyoming,2015,11.0,WY
+Wyoming,2016,11.4,WY
+Wyoming,2017,10.5,WY
+Wyoming,2018,9.4,WY
+Wyoming,2019,9.4,WY
+Wyoming,2020,8.7,WY

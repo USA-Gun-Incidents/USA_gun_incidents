@@ -1,3 +1,5 @@
+TODO: Descrivere la struttura della repo
+
 ## Data visualization
 This repository hosts also interactive data visualizations. You can access and interact with the plots by clicking the links below.
 

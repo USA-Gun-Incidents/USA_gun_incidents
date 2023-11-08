@@ -217,6 +217,6 @@ population_df.info()
 # We save the data to a CSV file:
 
 # %%
-population_df.to_csv('./data/population.csv', index=False)
+population_df.to_csv('../data/population.csv', index=False)
 
 

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from plot_utils import hist_box_plot
 
 # %%
-incidents_df = pd.read_csv('./data/incidents_cleaned.csv')
+incidents_df = pd.read_csv('../data/incidents_cleaned.csv')
 incidents_df['date'] = pd.to_datetime(incidents_df['date'], format='%Y-%m-%d')
 
 # %%

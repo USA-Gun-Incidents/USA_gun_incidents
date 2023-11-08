@@ -15,11 +15,11 @@ pd.set_option('display.max_colwidth', -1)
 
 # %%
 # display metadata
-males_metadata = pd.read_fwf('data/deaths_males_metadata.txt', header=None)
+males_metadata = pd.read_fwf('../data/deaths_males_metadata.txt', header=None)
 males_metadata
 
 # %%
-males_deaths = pd.read_csv('data/deaths_males.txt', sep='\t')
+males_deaths = pd.read_csv('../data/deaths_males.txt', sep='\t')
 males_deaths.head(n=5)
 
 # %%
@@ -94,11 +94,11 @@ males_deaths_grouped
 
 # %%
 # display metadata
-females_metadata = pd.read_fwf('data/deaths_females_metadata.txt', header=None)
+females_metadata = pd.read_fwf('../data/deaths_females_metadata.txt', header=None)
 females_metadata
 
 # %%
-females_deaths = pd.read_csv('data/deaths_females.txt', sep='\t')
+females_deaths = pd.read_csv('../data/deaths_females.txt', sep='\t')
 females_deaths.head(n=5)
 
 # %%
@@ -153,4 +153,4 @@ deaths
 # We save the result:
 
 # %%
-deaths.to_csv('data/deaths.csv', index=False)
+deaths.to_csv('../data/deaths.csv', index=False)

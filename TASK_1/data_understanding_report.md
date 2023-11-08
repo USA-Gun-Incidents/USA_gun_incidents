@@ -1,5 +1,4 @@
 TODO
-
 - Importare tabelle markdown con il tipo degli attributi e aggiungere il numero di nan
 - Stampare alla fine df.info() e riportare in una tabella markdown qui
 - Mettere in elenco puntato le inconsistenze trovate e come le abbiamo risolte

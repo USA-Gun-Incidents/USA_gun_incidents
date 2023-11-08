@@ -5,7 +5,7 @@ from plot_utils import hist_box_plot
 # %matplotlib inline
 
 # %%
-incidents_df = pd.read_csv('./TASK_1/final_incidents.csv')
+incidents_df = pd.read_csv('../data/incidents_cleaned.csv')
 incidents_df['date'] = pd.to_datetime(incidents_df['date'], format='%Y-%m-%d')
 
 # %%
@@ -124,7 +124,7 @@ hist_box_plot(
 )
 
 # %%
-population_df = pd.read_csv('./data/population.csv')
+population_df = pd.read_csv('../data/external_data/population.csv')
 population_df['n_males'] = population_df['male_child'] + population_df['male_teen'] + population_df['male_adult']
 population_df['n_females'] = population_df['female_child'] + population_df['female_teen'] + population_df['female_adult']
 population_df
