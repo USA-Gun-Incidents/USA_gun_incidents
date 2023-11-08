@@ -2337,25 +2337,6 @@ plt.title('Word cloud of notes')
 # We check if given the first characteristic of a record, the second one is different. This to ensure that the info we have are not redundant.
 
 # %%
-nltk.download('stopwords')
-stopwords = set(stopwords.words('english'))
-
-word_cloud_all_train = WordCloud(
-    width=1500,
-    height=1200,
-    stopwords=stopwords,
-    collocations=False,
-    background_color='white'
-    ).generate(' '.join(incidents_df[incidents_df['notes'].notna()]['notes'].tolist()));
-
-plt.imshow(word_cloud_all_train)
-plt.axis('off')
-plt.title('Word cloud of notes')
-
-# %% [markdown]
-# We check if given the first characteristic of a record, the second one is different. This to ensure that the info we have are not redundant.
-
-# %%
 # check if ch1 and ch2 are always different
 incidents_df[incidents_df['incident_characteristics1']==incidents_df['incident_characteristics2']].shape[0]==0
 
@@ -2817,4 +2798,4 @@ corr_matrix = incidents_df[numerical_columns].corr()
 sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
 
 # %%
-incidents_df.to_csv('incidents_cleaned.csv', index=False)
+incidents_df.to_csv('../data/incidents_cleaned.csv', index=False)
