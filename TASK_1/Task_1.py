@@ -2337,25 +2337,6 @@ plt.title('Word cloud of notes')
 # We check if given the first characteristic of a record, the second one is different. This to ensure that the info we have are not redundant.
 
 # %%
-nltk.download('stopwords')
-stopwords = set(stopwords.words('english'))
-
-word_cloud_all_train = WordCloud(
-    width=1500,
-    height=1200,
-    stopwords=stopwords,
-    collocations=False,
-    background_color='white'
-    ).generate(' '.join(incidents_df[incidents_df['notes'].notna()]['notes'].tolist()));
-
-plt.imshow(word_cloud_all_train)
-plt.axis('off')
-plt.title('Word cloud of notes')
-
-# %% [markdown]
-# We check if given the first characteristic of a record, the second one is different. This to ensure that the info we have are not redundant.
-
-# %%
 # check if ch1 and ch2 are always different
 incidents_df[incidents_df['incident_characteristics1']==incidents_df['incident_characteristics2']].shape[0]==0
 
@@ -2770,7 +2751,7 @@ plt.tight_layout()
 # We re-order the columns and we save the cleaned dataset:
 
 # %%
-time_columns = ['date', 'year', 'month', 'day', 'day_of_week']
+time_columns = ['date', 'date_original', 'year', 'month', 'day', 'day_of_week']
 
 geo_columns = ['state', 'address', 'latitude', 'longitude',
                'county', 'city', 'location_importance', 'address_type',
