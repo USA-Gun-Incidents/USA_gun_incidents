@@ -7,6 +7,7 @@
 # %% [markdown]
 # # Task 1 - Data Understanding and Preparation
 
+
 # %% [markdown]
 # We import the libraries:
 
@@ -958,6 +959,28 @@ incidents_counts_by_day[(incidents_counts_by_day['year']==2017) & (incidents_cou
 # aggiungere linea orizzontale per media (e quartili?)
 # stampare le giornate con numero inncidenti <25qrt e >75qrt di ogni anno e mapparli su festività (ragionare al contrario)
 
+# %%
+incidents_df['month'] = incidents_df['date'].dt.month
+incidents_df.groupby('month').size().plot(
+    kind='bar',
+    figsize=(10, 5),
+    title='Number of incidents per month',
+    xlabel='Month',
+    ylabel='Number of incidents'
+)
+plt.xticks(range(12), calendar.month_name[1:13], rotation=45);
+
+# %%
+incidents_df['day_of_week'] = incidents_df['date'].dt.dayofweek
+incidents_df.groupby('day_of_week').size().plot(
+    kind='bar',
+    figsize=(10, 5),
+    title='Number of incidents per day of the week',
+    xlabel='Day of the week',
+    ylabel='Number of incidents'
+)
+plt.xticks(range(7), calendar.day_name[0:7], rotation=45);
+
 # %% [markdown]
 # ### Geospatial features: exploration and preparation
 
@@ -1462,6 +1485,7 @@ incidents_df[
 # %% [markdown]
 # Searching online we found that Oregon has 5 congressional districts, so we'll set to nan the congressional district for the rows above:
 
+
 # %%
 incidents_df.loc[
     (incidents_df['state']=='OREGON') &
@@ -1802,6 +1826,14 @@ plot_scattermap_plotly(
 
 # %% [markdown]
 # #### Features
+# %%
+incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot( #TODO: TOGLIERE(?)
+    kind='bar',
+    figsize=(10,6),
+    title='Counts of the addresses with the 50 highest number of incidents'
+)
+
+
 
 # %% [markdown]
 # Columns of the dataset are considered in order to verify the correctness and consistency of data related to age, gender, and the number of participants for each incident:
@@ -2305,6 +2337,25 @@ plt.title('Word cloud of notes')
 # We check if given the first characteristic of a record, the second one is different. This to ensure that the info we have are not redundant.
 
 # %%
+nltk.download('stopwords')
+stopwords = set(stopwords.words('english'))
+
+word_cloud_all_train = WordCloud(
+    width=1500,
+    height=1200,
+    stopwords=stopwords,
+    collocations=False,
+    background_color='white'
+    ).generate(' '.join(incidents_df[incidents_df['notes'].notna()]['notes'].tolist()));
+
+plt.imshow(word_cloud_all_train)
+plt.axis('off')
+plt.title('Word cloud of notes')
+
+# %% [markdown]
+# We check if given the first characteristic of a record, the second one is different. This to ensure that the info we have are not redundant.
+
+# %%
 # check if ch1 and ch2 are always different
 incidents_df[incidents_df['incident_characteristics1']==incidents_df['incident_characteristics2']].shape[0]==0
 
@@ -2313,7 +2364,6 @@ incidents_df[incidents_df['incident_characteristics1']==incidents_df['incident_c
 
 # %%
 # merge characteristics list
-
 ch1_counts = incidents_df['incident_characteristics1'].value_counts()
 ch2_counts = incidents_df['incident_characteristics2'].value_counts()
 ch_counts = ch1_counts.add(ch2_counts, fill_value=0).sort_values(ascending=True)
@@ -2489,7 +2539,6 @@ incidents_df['unintentional'].corr(incidents_df['n_participants_child']>0) # not
 
 # %% [markdown]
 # We can see that the two events are not correlated
-
 # %%
 incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
     kind='bar',
@@ -2739,11 +2788,15 @@ characteristic_columns = ['notes', 'incident_characteristics1', 'incident_charac
     'firearm', 'air_gun', 'shots', 'aggression', 'suicide', 'injuries',
     'death', 'road', 'illegal_holding', 'house', 'school', 'children',
     'drugs', 'officers', 'organized', 'social_reasons', 'defensive',
-    'workplace', 'abduction', 'unintentional']
+    'workplace', 'abduction', 'unintentional'] #TODO: add tag_consistency
 
 external_columns = ['povertyPercentage', 'party', 'candidatevotes', 'totalvotes', 'candidateperc', 'population_state_2010']
-# majority state party?
+#TODO:  majority state party?
 
+# %% [markdown]
+# We re-order the columns and we save the cleaned dataset:
+
+# %%
 incidents_df = incidents_df[time_columns + geo_columns + participants_columns + characteristic_columns + external_columns]
 incidents_df = incidents_df.rename(
     columns={
@@ -2755,7 +2808,7 @@ incidents_df = incidents_df.rename(
 )
 
 # %%
-incidents_df.to_csv('../data/incidents_cleaned.csv', index=False)
+incidents_df.shape[0]
 
 # %%
 numerical_columns = incidents_df.select_dtypes(include=['float64', 'int64']).columns
@@ -2763,4 +2816,5 @@ plt.figure(figsize=(15, 12))
 corr_matrix = incidents_df[numerical_columns].corr()
 sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
 
-
+# %%
+incidents_df.to_csv('../data/incidents_cleaned.csv', index=False)
