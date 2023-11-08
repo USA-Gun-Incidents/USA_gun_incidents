@@ -25,7 +25,7 @@ import math
 import os
 import calendar
 import sys
-sys.path.append(os.path.abspath('..'))
+sys.path.append(os.path.abspath('..')) # TODO: ???
 from plot_utils import *
 from sklearn.neighbors import KNeighborsClassifier
 from geopy import distance as geopy_distance
@@ -1102,7 +1102,7 @@ counties_df.head()
 # We now check and correct the consistency of the geographic data:
 
 # %%
-from data_preparation_utils import check_geographical_data_consistency
+from TASK_1.data_preparation_utils import check_geographical_data_consistency
 
 if LOAD_DATA_FROM_CHECKPOINT:
     incidents_df = load_checkpoint('checkpoint_1', date_cols=['date', 'date_original'])
@@ -1984,7 +1984,7 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 # - *nan_values*: Presence of "NaN" values in the row.
 
 # %%
-from data_preparation_utils import check_age_gender_data_consistency
+from TASK_1.data_preparation_utils import check_age_gender_data_consistency
 
 if True:#LOAD_DATA_FROM_CHECKPOINT: # load data
     age_temporary_df = load_checkpoint('checkpoint_tmp')#, ['date', 'date_original']) # TODO: questa cosa è temporanea
@@ -2177,7 +2177,7 @@ age_temporary_df.iloc[42353]
 # - In instances with a single participant and consistent data for *participants1*, we used that data to derive values related to age (max, min, average) and gender.
 
 # %%
-from data_preparation_utils import set_gender_age_consistent_data
+from TASK_1.data_preparation_utils import set_gender_age_consistent_data
 
 if LOAD_DATA_FROM_CHECKPOINT:
     with zipfile.ZipFile('checkpoints/checkpoint_4.csv.zip', 'r') as zip_ref:
@@ -2426,7 +2426,7 @@ characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort
 # We set all the tags and check their consistency w.r.t. the other data of the record.
 
 # %%
-from data_preparation_utils import add_tags, check_tag_consistency, check_characteristics_consistency, IncidentTag
+from TASK_1.data_preparation_utils import add_tags, check_tag_consistency, check_characteristics_consistency, IncidentTag
 
 tags_columns = [tag.name for tag in IncidentTag]
 tags_columns.append('tag_consistency')
@@ -2449,7 +2449,7 @@ incidents_df['tag_consistency'].value_counts()
 # We correct the inconsistencies and we save again the dataset. Then we check again to see if there are any improvement.
 
 # %%
-from data_preparation_utils import set_tags_consistent_data
+from TASK_1.data_preparation_utils import set_tags_consistent_data
 
 if LOAD_DATA_FROM_CHECKPOINT:
     with zipfile.ZipFile('checkpoints/checkpoint_6.csv.zip', 'r') as zip_ref:
@@ -2798,4 +2798,4 @@ corr_matrix = incidents_df[numerical_columns].corr()
 sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
 
 # %%
-incidents_df.to_csv('incidents_cleaned.csv', index=False)
+incidents_df.to_csv('../data/incidents_cleaned.csv', index=False)
