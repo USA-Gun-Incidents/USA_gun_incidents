@@ -2817,4 +2817,4 @@ corr_matrix = incidents_df[numerical_columns].corr()
 sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
 
 # %%
-incidents_df.to_csv('../data/incidents_cleaned.csv', index=False)
+incidents_df.to_csv('incidents_cleaned.csv', index=False)
