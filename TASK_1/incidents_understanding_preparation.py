@@ -278,7 +278,7 @@ def plot_dates(df_column, title=None, color=None):
     axs[2].set_xlabel('date')
 
     for i in range(2):
-        axs[i].axvline(x = relevant_positions[0], color = 'black', linestyle = '-', alpha=0.75)
+        axs[i].axvline(x = relevant_positions[0], color = 'black', linestyle = '--', alpha=0.75)
         axs[i].axvline(x = relevant_positions[1], color = 'black', linestyle = '-.', alpha=0.75)
         axs[i].axvline(x = relevant_positions[2], color = 'black', linestyle = '-.', alpha=0.75)
         axs[i].axvline(x = relevant_positions[3], color = 'black', linestyle = '-.', alpha=0.75)
