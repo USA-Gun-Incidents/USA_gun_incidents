@@ -251,9 +251,11 @@ def plot_dates(df_column, title=None, color=None):
         IQR = q3 - q1
         u = x.max()
         l = x.min()
-        Lower_Fence = builtins.max((q1 - (1.5 * IQR)), l)
-        Upper_Fence = builtins.min((q3 + (1.5 * IQR)), u)
-        return [l, Lower_Fence, q1, med, q3, Upper_Fence, u]
+        Lower_Fence = builtins.max(builtins.min(x[x > q1 - (1.5 * IQR)], default=pd.Timestamp.min), l)
+        #Lower_Fence = builtins.max(q1 - (1.5 * IQR), l)
+        Upper_Fence = builtins.min(builtins.max(x[x < q3 + (1.5 * IQR)], default=pd.Timestamp.max), u)
+        #Upper_Fence = builtins.min(q3 + (1.5 * IQR), u)
+        return [Lower_Fence, q1, med, q3, Upper_Fence]
     relevant_positions = iqr_fence(df_column)
     n_items = len(df_column.index)
     min = df_column.min()
@@ -282,9 +284,7 @@ def plot_dates(df_column, title=None, color=None):
         axs[i].axvline(x = relevant_positions[1], color = 'black', linestyle = '-.', alpha=0.75)
         axs[i].axvline(x = relevant_positions[2], color = 'black', linestyle = '-.', alpha=0.75)
         axs[i].axvline(x = relevant_positions[3], color = 'black', linestyle = '-.', alpha=0.75)
-        axs[i].axvline(x = relevant_positions[4], color = 'black', linestyle = '-.', alpha=0.75)
-        axs[i].axvline(x = relevant_positions[5], color = 'black', linestyle = '-.', alpha=0.75)
-        axs[i].axvline(x = relevant_positions[6], color = 'black', linestyle = '--', alpha=0.75)
+        axs[i].axvline(x = relevant_positions[4], color = 'black', linestyle = '--', alpha=0.75)
 
 
 
