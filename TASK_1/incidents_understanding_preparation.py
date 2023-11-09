@@ -62,7 +62,7 @@ poverty_df = pd.read_csv(poverty_path, low_memory=False)
 # We assess the correct loading of the dataset printing the first 2 rows:
 
 # %%
-incidents_df.head(n=2)
+incidents_df.sample(n=2, random_state=1)
 
 # %% [markdown]
 # This dataset contains information about gun incidents in the USA.
@@ -177,6 +177,8 @@ print(f"# of rows after dropping duplicates: {incidents_df.shape[0]}")
 # %%
 fig, ax = plt.subplots(figsize=(12,8)) 
 sns.heatmap(incidents_df.isnull(), cbar=False, xticklabels=True, ax=ax)
+ax.set_title('Null values Heatmap')
+ax.set_ylabel('row index')
 
 # %% [markdown]
 # We observe that:
@@ -197,7 +199,7 @@ sns.heatmap(incidents_df.isnull(), cbar=False, xticklabels=True, ax=ax)
 # We display descriptive statistics:
 
 # %%
-incidents_df.describe(include='all', datetime_is_numeric=True)
+incidents_df.describe(include='all')
 
 # %% [markdown]
 # We can already make some considerations about the dataset:
@@ -240,7 +242,19 @@ def load_checkpoint(checkpoint_name, casting=None, date_cols=None):
 # We plot the distribution of the dates using different binning strategies:
 
 # %%
+import builtins
 def plot_dates(df_column, title=None, color=None):
+    def iqr_fence(x):
+        q1 = x.quantile(0.25)
+        med = x.quantile(0.5)
+        q3 = x.quantile(0.75)
+        IQR = q3 - q1
+        u = x.max()
+        l = x.min()
+        Lower_Fence = builtins.max((q1 - (1.5 * IQR)), l)
+        Upper_Fence = builtins.min((q3 + (1.5 * IQR)), u)
+        return [l, Lower_Fence, q1, med, q3, Upper_Fence, u]
+    relevant_positions = iqr_fence(df_column)
     n_items = len(df_column.index)
     min = df_column.min()
     max = df_column.max()
@@ -262,6 +276,17 @@ def plot_dates(df_column, title=None, color=None):
 
     axs[2].boxplot(x=mdates.date2num(df_column), labels=[''], vert=False)
     axs[2].set_xlabel('date')
+
+    for i in range(2):
+        axs[i].axvline(x = relevant_positions[0], color = 'black', linestyle = '-', alpha=0.75)
+        axs[i].axvline(x = relevant_positions[1], color = 'black', linestyle = '-.', alpha=0.75)
+        axs[i].axvline(x = relevant_positions[2], color = 'black', linestyle = '-.', alpha=0.75)
+        axs[i].axvline(x = relevant_positions[3], color = 'black', linestyle = '-.', alpha=0.75)
+        axs[i].axvline(x = relevant_positions[4], color = 'black', linestyle = '-.', alpha=0.75)
+        axs[i].axvline(x = relevant_positions[5], color = 'black', linestyle = '-.', alpha=0.75)
+        axs[i].axvline(x = relevant_positions[6], color = 'black', linestyle = '--', alpha=0.75)
+
+
 
 plot_dates(incidents_df['date'], title='Dates distribution')
 print('Range data: ', incidents_df['date'].min(), ' - ', incidents_df['date'].max())
