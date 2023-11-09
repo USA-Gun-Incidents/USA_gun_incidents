@@ -25,8 +25,6 @@ import math
 import os
 import calendar
 import sys
-sys.path.append(os.path.abspath('..')) # TODO: ???
-from plot_utils import *
 from sklearn.neighbors import KNeighborsClassifier
 from geopy import distance as geopy_distance
 import nltk
@@ -34,6 +32,9 @@ from nltk.corpus import stopwords
 from wordcloud import WordCloud
 from pyproj import Transformer
 import zipfile
+sys.path.append(os.path.abspath('..')) # TODO: ???
+from plot_utils import *
+
 
 # %% [markdown]
 # We define constants and settings for the notebook:
