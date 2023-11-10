@@ -1,7 +1,10 @@
 # %%
 import pandas as pd
 import numpy as np
-from plot_utils import hist_box_plot
+import sys
+import os
+sys.path.append(os.path.abspath('..'))
+from plot_utils import *
 # %matplotlib inline
 
 # %%
@@ -110,6 +113,25 @@ hist_box_plot(
     incidents_df,
     'n_males_n_males_tot_year_city_ratio',
     title='n_males_n_males_tot_year_city_ratio',
+    bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
+hist_box_plot(
+    incidents_df,
+    'n_killed_n_participants_ratio',
+    title='n_killed_n_partecipants_ratio',
+    bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
+
+hist_box_plot(
+    incidents_df,
+    'n_injured_n_participants_ratio',
+    title='n_killed_n_partecipants_ratio',
     bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
     figsize=(10, 5)
 )
