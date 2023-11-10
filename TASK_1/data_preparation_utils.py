@@ -995,7 +995,7 @@ tags_map = {
     'LOCKDOWN/ALERT ONLY: No GV Incident Occurred Onsite': [],
     'Mass Murder (4+ deceased victims excluding the subject/suspect/perpetrator , one location)': [IncidentTag.aggression.name, IncidentTag.death.name],
     'Mass Shooting (4+ victims injured or killed excluding the subject/suspect/perpetrator, one location)': [IncidentTag.firearm.name, IncidentTag.shots.name, IncidentTag.aggression.name, IncidentTag.injuries.name],
-    'Murder/Suicide': [IncidentTag.death.name],
+    'Murder/Suicide': [IncidentTag.suicide.name, IncidentTag.death.name],
     'Non-Aggression Incident': [],
     'Non-Shooting Incident': [IncidentTag.firearm.name],
     'Officer Involved Incident': [IncidentTag.officers.name],
@@ -1122,23 +1122,22 @@ def set_tags_consistent_data(row):
     :param row: row of the incidents dataframe
     :return new_row: row of the dataframe with tags set in a consistent way
     '''
-    new_row = row
     if(not(row[IncidentTag.death.name]) and row['n_killed'] > 0):
-        new_row[IncidentTag.death.name] = True
+        row[IncidentTag.death.name] = True
     if(not(row[IncidentTag.injuries.name]) and row['n_injured'] > 0):
-        new_row[IncidentTag.injuries.name] = True
+        row[IncidentTag.injuries.name] = True
     if(not(row[IncidentTag.children.name]) and row['n_participants_child'] > 0):
-        new_row[IncidentTag.children.name] = True
+        row[IncidentTag.children.name] = True
     if(row[IncidentTag.death.name] and row['n_killed'] == 0):
-        new_row[IncidentTag.death.name] = False
+        row[IncidentTag.death.name] = False
     if(row[IncidentTag.injuries.name] and row['n_injured'] == 0):
-        new_row[IncidentTag.injuries.name] = False
+        row[IncidentTag.injuries.name] = False
     if(row[IncidentTag.children.name] and row['n_participants_child'] == 0):
-        new_row[IncidentTag.children.name] = False
+        row[IncidentTag.children.name] = False
     if((row["incident_characteristics1"] == "Non-Shooting Incident" or row["incident_characteristics2"] ==
         "Non-Shooting Incident") and row[IncidentTag.shots.name]):
-        new_row[IncidentTag.shots.name] = False
+        row[IncidentTag.shots.name] = False
     if((row["incident_characteristics1"] == "Non-Aggression Incident" or row["incident_characteristics2"] ==
         "Non-Aggression Incident") and row[IncidentTag.aggression.name]):
-        new_row[IncidentTag.aggression.name] = False
-    return new_row
+        row[IncidentTag.aggression.name] = False
+    return row

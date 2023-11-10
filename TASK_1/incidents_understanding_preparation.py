@@ -1919,13 +1919,22 @@ if LOAD_DATA_FROM_CHECKPOINT:
         zip_ref.extractall('checkpoints/')
     incidents_df = load_checkpoint('checkpoint_6', date_cols=['date', 'date_original'])
 else:
-    incidents_df = incidents_df.apply(lambda row: set_tags_consistent_data(row), axis=1)
+    for index, record in incidents_df.iterrows():
+        if record['tag_consistency'] == False:
+            incidents_df.loc[index] = set_tags_consistent_data(record)
+            incidents_df.loc[index, 'tag_consistency'] = True # set to true and then check again if it's still not consistent
     incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
     incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
     save_checkpoint(incidents_df, 'checkpoint_6')
 
 # %%
 incidents_df['tag_consistency'].value_counts()
+
+# %%
+incidents_df.loc[incidents_df['tag_consistency'] == False]
+
+# %% [markdown]
+# We notice that the inconsistency is given by the fact that the `n_injured` attribute always tells that there is one person injured in the accident, but at the same time we have the characteristic "<b>Home Invasion - No death or injury</b>". In this case we prefer to be consistent with the numerical attribute, since it's a more precise and reliable information on the incident.
 
 # %% [markdown]
 # We create 5 partitions: Murder, Suicide, Defensive, Accidental and Others. Then we show grafically, in percentage, how many incidents belong to each class.
