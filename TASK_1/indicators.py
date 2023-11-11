@@ -298,13 +298,16 @@ compute_entropy_indicator(incidents_df, entropies, ['state', 'year'], ['firearm'
 compute_entropy_indicator(incidents_df, entropies, ['state', 'year'], ['firearm','air_gun','shots','aggression','suicide','injuries','death','road','illegal_holding','house','school','children','drugs','officers','organized','social_reasons','defensive','workplace','abduction','unintentional'], 'mix_col_2')
 
 # %%
+compute_entropy_indicator(incidents_df, entropies, ['state', 'year'], ['school','children','drugs'], 'mix_col_3')
+
+# %%
 entropies
 
 # %%
 hist_box_plot(
     entropies,
-    'mix_col_1',
-    title='mix_col_1',
+    'mix_col_3',
+    title='mix_col_3',
     bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
     figsize=(10, 5)
 )
@@ -313,6 +316,18 @@ hist_box_plot(
 fig, ax = plt.subplots(figsize=(30, 10))
 sns.violinplot(data=entropies,ax=ax)
 plt.xticks(rotation=90, ha='right');
+
+# %% [markdown]
+# INCREDIBLE notare che il mix 3 ha poca entropia!!! (roba grossa?)
+
+# %%
+hist_box_plot(
+    entropies,
+    'mix_col_2',
+    title='mix_col_2',
+    bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
 
 # %%
 population_df = pd.read_csv('../data/external_data/population.csv')
@@ -357,6 +372,7 @@ incidents_df.sample(5, random_state=1)
 # # Quali sono, circa, i migliori indici individuati:
 # - uccisi, feriti ecc.. rispetto alla media, con norm. logaritmica
 # - rapporto degli uccisi/totali o feriti/totali dell'incidente (magari sostituiti)
+# - entropie pazzerelle (su tutti i tag o combinazioni di tag)
 #
 
 # %%
