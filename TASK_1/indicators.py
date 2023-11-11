@@ -30,7 +30,6 @@ def compute_ratio_indicator(df, new_df, ext_df, gby, num, den, suffix, agg_fun):
 
 ratios = pd.DataFrame(index=incidents_df.index)
 
-
 # %%
 compute_ratio_indicator(incidents_df, ratios, incidents_df, ['year', 'state'], 'n_males', 'n_males', '_tot_year_state', 'sum')
 compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state'], 'n_females', 'n_females', '_tot_year_state', 'sum')
@@ -212,6 +211,110 @@ hist_box_plot(
 )
 
 # %%
+hist_box_plot(
+    log_ratios,
+    'log_n_males_n_males_mean_year_city_ratio',
+    title='log_n_males_n_males_mean_year_city_ratio',
+    bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+
+# %%
+def compute_square_distance_indicator(df, new_df, ext_df, gby, minuend, subtrahend, suffix, agg_fun):
+    grouped_df = ext_df.groupby(gby)[subtrahend].agg(agg_fun)
+    df = df.merge(grouped_df, on=gby, how='left', suffixes=[None, suffix])
+    new_df[minuend+'_'+subtrahend+suffix+'_SD'] = np.square((df[minuend]- df[subtrahend+suffix]))#, out=np.zeros_like(df[num]), where=(df[den+suffix] != 0)
+    #df.drop(columns=[den+suffix], inplace=True)
+    #return df
+
+def log_normalization(df, new_df, columns):
+    for col in columns:
+        c = (df[df[col]!=0][col].min())/100
+        new_df['log_'+col] = np.log(df[col] + c) # 1% of the minimum value
+
+square_distances = pd.DataFrame(index=incidents_df.index)
+
+# %%
+
+c_list = ['n_participants_child','n_participants_teen','n_participants_adult','n_males','n_females','n_killed','n_injured','n_arrested','n_unharmed', 'n_participants']
+for l in c_list:
+    compute_square_distance_indicator(incidents_df, square_distances, incidents_df, ['year', 'state'], l, l, '_mean_year_state', 'mean')
+    compute_square_distance_indicator(incidents_df, square_distances, incidents_df, ['year', 'state', 'congressional_district'], l, l, '_mean_year_congdist', 'mean')
+
+
+# %%
+square_distances.sample(5)
+
+# %%
+log_square_distances = pd.DataFrame(index=square_distances.index)
+log_normalization(square_distances, log_square_distances, square_distances.columns)
+
+# %%
+hist_box_plot(
+    square_distances,
+    'n_killed_n_killed_mean_year_state_SD',
+    title='n_killed_n_killed_mean_year_state_SD',
+    bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+square_distances.sample(10, random_state=1)
+
+# %%
+fig, ax = plt.subplots(figsize=(25, 10))
+sns.violinplot(data=square_distances,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+fig, ax = plt.subplots(figsize=(25, 10))
+sns.violinplot(data=log_square_distances,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+def compute_entropy_indicator(df, new_df, col_aggr, col_group, lab=''):
+    a = incidents_df.groupby(col_aggr)[col_group].value_counts().reset_index()
+    b = incidents_df.groupby(col_aggr[:-1])[col_aggr[-1]].value_counts().reset_index()
+    a_b = a.merge(b, how='left', on=col_aggr, suffixes=['_occ', '_tot'])
+    a_b['prob_occ'] = a_b['count_occ']/a_b['count_tot']
+    a_b['entropy'] = np.log2(a_b['prob_occ'])*([-1]*len(a_b['prob_occ']))
+
+    if lab == '':
+        lab = 'entropy'
+        for s in col_group:
+            lab += '_' + s
+        lab += '_fixed'
+        for s in col_aggr:
+            lab += '_' + s
+
+    new_df[lab] = df.merge(a_b, how='left', on=(col_aggr+col_group))['entropy']
+
+# %%
+entropies = pd.DataFrame(index=ratios.index)
+dummy_col = ['date','month','day','day_of_week','county','city','address_type','congressional_district','avg_age_participants','n_killed', 'party']
+for col in dummy_col:
+    if not col in ['state', 'year']:
+        compute_entropy_indicator(incidents_df, entropies, ['state', 'year'], [col])
+compute_entropy_indicator(incidents_df, entropies, ['state', 'year'], ['firearm','suicide','death','house'], 'mix_col_1')
+compute_entropy_indicator(incidents_df, entropies, ['state', 'year'], ['firearm','air_gun','shots','aggression','suicide','injuries','death','road','illegal_holding','house','school','children','drugs','officers','organized','social_reasons','defensive','workplace','abduction','unintentional'], 'mix_col_2')
+
+# %%
+entropies
+
+# %%
+hist_box_plot(
+    entropies,
+    'mix_col_1',
+    title='mix_col_1',
+    bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
+fig, ax = plt.subplots(figsize=(30, 10))
+sns.violinplot(data=entropies,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
 population_df = pd.read_csv('../data/external_data/population.csv')
 population_df['n_males'] = population_df['male_child'] + population_df['male_teen'] + population_df['male_adult']
 population_df['n_females'] = population_df['female_child'] + population_df['female_teen'] + population_df['female_adult']
@@ -223,11 +326,11 @@ compute_ratio_indicator(incidents_df, ratios, population_df, ['year', 'state', '
 
 # %%
 pop_ratios = []
-for att in incidents_df.columns:
+for att in ratios.columns:
     if 'pop' in att and 'ratio' in att:
         pop_ratios.append(att)
 
-incidents_df.boxplot(
+ratios.boxplot(
     column=pop_ratios,
     rot=90
 )
@@ -238,7 +341,7 @@ incidents_df['days_from_last_incident_in_congdist'] = incidents_df.groupby(['con
 incidents_df['days_from_last_incident_in_congdist'].describe()
 
 # %%
-incidents_df.boxplot(by='state', column='days_from_last_incident_in_congdist', figsize=(20, 10), rot=90)
+ratios.boxplot(by='state', column='days_from_last_incident_in_congdist', figsize=(20, 10), rot=90)
 
 # %%
 x = pd.DataFrame(data={'a': [0, np.nan,], 'b':[0, np.nan]})
@@ -250,15 +353,13 @@ np.divide(x['a'], x['b'], out=np.zeros_like(x['a']), where=(x['b'] != 0))
 # %%
 incidents_df.sample(5, random_state=1)
 
-# %%
-incidents_df['n_killed_n_participants_ratio'].plot.kde()
+# %% [markdown]
+# # Quali sono, circa, i migliori indici individuati:
+# - uccisi, feriti ecc.. rispetto alla media, con norm. logaritmica
+# - rapporto degli uccisi/totali o feriti/totali dell'incidente (magari sostituiti)
+#
 
 # %%
-incidents_df['log_n_killed_n_participants_ratio'].plot.kde()
 
-# %%
-# TODO:
-# - entropia?
-# commentare per bene, organizzare, fare matrice correlazione
 
 
