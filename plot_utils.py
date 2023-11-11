@@ -28,11 +28,13 @@ def hist_box_plot(
     :param ylabel: label of the y axis
     :param bins: number of bins for the histogram
     :param figsize: size of the figure
-    :param kde: toggle to deactivate the overlapping kde rapresentation
+    :param kde: toggle to the overlapping kde rapresentation
+    :param bw_method: kde parameter
+    :param bw_adjust: kde parameter
     '''
     _, (ax_box, ax_hist) = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": (.15, .85)})
     df[col].plot.hist(bins=bins, figsize=figsize, ax=ax_hist)
-    if kde: df[col].plot.kde(ax=ax_hist, secondary_y=True, bw_method=bw_method, Sbw_adjust=bw_adjust)
+    if kde: df[col].plot.kde(ax=ax_hist, secondary_y=True, bw_method=bw_method, bw_adjust=bw_adjust)
     df.boxplot(ax=ax_box, column=col, vert=False, grid=False)  
     ax_box.set(yticks=[])
     plt.suptitle(title)
