@@ -13,7 +13,10 @@ def hist_box_plot(
     xlabel=None,
     ylabel=None,
     bins=50,
-    figsize=(10, 5)
+    figsize=(10, 5),
+    kde=True,
+    bw_method='scott', 
+    bw_adjust=1
     ):
     '''
     This function plots an histogram and a boxplot of the given column of the given dataframe.
@@ -25,10 +28,12 @@ def hist_box_plot(
     :param ylabel: label of the y axis
     :param bins: number of bins for the histogram
     :param figsize: size of the figure
+    :param kde: toggle to deactivate the overlapping kde rapresentation
     '''
     _, (ax_box, ax_hist) = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": (.15, .85)})
     df[col].plot.hist(bins=bins, figsize=figsize, ax=ax_hist)
-    df.boxplot(ax=ax_box, column=col, vert=False, grid=False)
+    if kde: df[col].plot.kde(ax=ax_hist, secondary_y=True, bw_method=bw_method, Sbw_adjust=bw_adjust)
+    df.boxplot(ax=ax_box, column=col, vert=False, grid=False)  
     ax_box.set(yticks=[])
     plt.suptitle(title)
     plt.xlabel(xlabel)

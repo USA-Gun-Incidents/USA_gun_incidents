@@ -144,6 +144,15 @@ ratios[ratios_wrt_tot].describe() # females quantiles are 0 (that's why they sug
 ratios[ratios_wrt_center].describe()
 
 # %%
+hist_box_plot(
+    ratios,
+    'n_males_n_males_tot_year_city_ratio',
+    title='n_males_n_males_tot_year_city_ratio',
+    bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
 ratios.boxplot(
     column=ratios_wrt_tot,
     rot=90,
@@ -190,10 +199,14 @@ sns.violinplot(data=log_ratios[log_ratio_wrt_center],ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %%
-incidents_df.boxplot(
-    column=ratios_wrt_center,
-    rot=90
-)
+
+# %%
+ax = log_ratios['log_n_unharmed_n_unharmed_mean_year_ratio'].plot.kde()
+log_ratios['log_n_unharmed_n_unharmed_median_semester_ratio'].plot.kde(ax=ax)
+plt.legend();
+
+# %% [markdown]
+# Da una prima analisi, i rapporti con la media sembrano più rappresentativi di quelli con la mediana, e in generale molto più significativi di quelli con il totale, oltre che più logicamente sensati!!
 
 # %%
 hist_box_plot(
