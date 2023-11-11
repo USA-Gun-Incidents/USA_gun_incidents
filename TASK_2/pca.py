@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import plotly.express as px
 from sklearn.decomposition import PCA
+pd.set_option('display.max_columns', None)
+pd.set_option('max_colwidth', None)
 
 # %%
 incidents_df = pd.read_csv(
@@ -67,7 +69,39 @@ pca = PCA()
 X_pca = pca.fit_transform(incidents_df[numeric_features])
 
 # %%
-plt.scatter(X_pca[:, 0], X_pca[:, 1], edgecolor='k', s=40)
+nrows=3
+ncols=6
+row=0
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 20), sharex=True, sharey=True)
+for i, col in enumerate(numeric_features):
+    if i != 0 and i % ncols == 0:
+        row += 1
+    axs[row][i % ncols].scatter(X_pca[:, 0], X_pca[:, 1], edgecolor='k', s=40, c=incidents_df[col])
+    axs[row][i % ncols].set_title(col)
+    axs[row][i % ncols].set_xlabel("1st eigenvector")
+    axs[row][i % ncols].set_ylabel("2nd eigenvector")
+
+# %%
+over80 = incidents_df['max_age_participants']>80
+under5 = incidents_df['max_age_participants']<5
+other = ~over80 & ~under5
+plt.scatter(X_pca[over80, 0], X_pca[over80, 1], edgecolor='k', s=40, c='red', label='Over 80')
+plt.scatter(X_pca[under5, 0], X_pca[under5, 1], edgecolor='k', s=40, c='green', label='Under 5')
+plt.scatter(X_pca[other, 0], X_pca[other, 1], edgecolor='k', s=40, c='blue', label='Other')
+plt.legend()
+plt.title("PCA")
+plt.xlabel("1st eigenvector")
+plt.ylabel("2nd eigenvector")
+plt.show()
+
+# %%
+alaska = incidents_df['state']=='ALASKA'
+hawaii = incidents_df['state']=='HAWAII'
+elsewhere = ~alaska & ~hawaii
+plt.scatter(X_pca[alaska, 0], X_pca[alaska, 1], edgecolor='k', s=40, c='red', label='Alaska')
+plt.scatter(X_pca[hawaii, 0], X_pca[hawaii, 1], edgecolor='k', s=40, c='green', label='Hawaii')
+plt.scatter(X_pca[elsewhere, 0], X_pca[elsewhere, 1], edgecolor='k', s=40, c='blue', label='Elsewhere')
+plt.legend()
 plt.title("PCA")
 plt.xlabel("1st eigenvector")
 plt.ylabel("2nd eigenvector")
@@ -81,24 +115,13 @@ fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 20), sharex=True,
 for i, col in enumerate(numeric_features):
     if i != 0 and i % ncols == 0:
         row += 1
-    axs[row][i % ncols].scatter(X_pca[:, 0], X_pca[:, 1], edgecolor='k', s=40, c=incidents_df[col])
+    axs[row][i % ncols].scatter(X_pca[:, 0], X_pca[:, 2], edgecolor='k', s=40, c=incidents_df[col])
     axs[row][i % ncols].set_title(col)
     axs[row][i % ncols].set_xlabel("1st eigenvector")
-    axs[row][i % ncols].set_ylabel("2nd eigenvector")
-# età lungo la prima componente principale, posizione geografica lungo la seconda
+    axs[row][i % ncols].set_ylabel("3nd eigenvector")
 
 # %%
-labels = {
-    str(i): f"PC {i+1} ({var:.1f}%)"
-    for i, var in enumerate(pca.explained_variance_ratio_ * 100)
-}
-fig = px.scatter_matrix(
-    X_pca,
-    labels=labels,
-    dimensions=range(4),
-    color=incidents_df["latitude"]
-)
-fig.update_traces(diagonal_visible=False)
+fig = px.scatter(incidents_df, x=X_pca[:, 0], y=X_pca[:, 2], hover_name='state')
 fig.show()
 
 # %%
@@ -144,6 +167,14 @@ plt.title('Explained variance by principal component')
 plt.xticks(np.arange(0,len(exp_var_pca),1.0));
 
 # %%
-# TODO: heatmap with features sorted by pca
+X_reconstructed = pca.inverse_transform(X_pca)
+square_error = np.sum(np.square(X_pca-X_reconstructed), axis=1)
+incidents_df['pca_reconstruction_error'] = square_error
+
+# %%
+plt.boxplot(incidents_df['pca_reconstruction_error'])
+
+# %%
+incidents_df[incidents_df['reconstruction_error']>60000]
 
 
