@@ -149,7 +149,8 @@ hist_box_plot(
     'n_males_n_males_tot_year_city_ratio',
     title='n_males_n_males_tot_year_city_ratio',
     bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
-    figsize=(10, 5)
+    figsize=(10, 5),
+    bw_method='scott'
 )
 
 # %%

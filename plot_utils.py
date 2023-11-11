@@ -15,8 +15,7 @@ def hist_box_plot(
     bins=50,
     figsize=(10, 5),
     kde=True,
-    bw_method='scott', 
-    bw_adjust=1
+    bw_method='scott'
     ):
     '''
     This function plots an histogram and a boxplot of the given column of the given dataframe.
@@ -34,7 +33,7 @@ def hist_box_plot(
     '''
     _, (ax_box, ax_hist) = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": (.15, .85)})
     df[col].plot.hist(bins=bins, figsize=figsize, ax=ax_hist)
-    if kde: df[col].plot.kde(ax=ax_hist, secondary_y=True, bw_method=bw_method, bw_adjust=bw_adjust)
+    if kde: df[col].plot.kde(bw_method=bw_method, ax=ax_hist, secondary_y=True)
     df.boxplot(ax=ax_box, column=col, vert=False, grid=False)  
     ax_box.set(yticks=[])
     plt.suptitle(title)
