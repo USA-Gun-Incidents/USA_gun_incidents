@@ -808,7 +808,7 @@ def plot_info_city(df, lat, lon, info_circle):
     plt.scatter(df[lon], df[lat], color="k", s=3.0, label="Data points")
     # plot circles with radius proportional to the outlier scores
     radius = (df[info_circle].max() - df[info_circle]) / (df[info_circle].max() - df[info_circle].min())
-    radius_scale = 10
+    radius_scale = 100
     scatter = plt.scatter(
         df[lon],
         df[lat],
@@ -823,12 +823,15 @@ def plot_info_city(df, lat, lon, info_circle):
     plt.legend(
         handler_map={scatter: HandlerPathCollection(update_func=update_legend_marker_size)}
     )
-    plt.title("coordinates of city centroids + \'" + info_circle +'\'')
+    plt.title("coordinates of city centroids + " + info_circle)
     plt.show()
 
 
 # %%
 plot_info_city(info_city, 'centroid_lat', 'centroid_lon', '75')
+
+# %%
+plot_info_city(info_city, 'centroid_lat', 'centroid_lon', 'tot_points')
 
 # %%
 plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat', 
@@ -853,6 +856,11 @@ def substitute_city(row, info_city):
                         break
                     
     return row
+
+# %%
+dummy_df = incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].notna()) & (incidents_df['city'].notna()) & (incidents_df['state'] == 'FLORIDA')]
+print('Number of rows with null values for city, but not for lat/lon and county: ', len(dummy_df))
+plot_scattermap_plotly(dummy_df, 'city', zoom=2, title='City')
 
 # %%
 if LOAD_DATA_FROM_CHECKPOINT:
