@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
@@ -7,7 +8,7 @@ import os
 import seaborn as sns
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-%matplotlib inline
+# %matplotlib inline
 
 # %%
 incidents_df = pd.read_csv('../data/incidents_cleaned.csv')
@@ -171,7 +172,7 @@ plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
 # La trasformazione logaritmica serve a rendere i dati meno sparsi, e in questo caso è utilizzata con il proposito opposto... 
-# 
+#
 # Non possiamo trasformare dei dati poco significanti in dati significanti in questo modo, attenzione e io consiglierei di non utilizzare il logaritmo per i valori tra [0,1]
 
 # %%
@@ -431,7 +432,7 @@ incidents_df.sample(5, random_state=1)
 # - uccisi, feriti ecc.. rispetto alla media, con norm. logaritmica
 # - rapporto degli uccisi/totali o feriti/totali dell'incidente (magari sostituiti)
 # - entropie pazzerelle (su tutti i tag o combinazioni di tag)
-# 
+#
 
 # %%
 

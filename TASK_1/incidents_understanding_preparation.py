@@ -1957,6 +1957,31 @@ incidents_df['tag_consistency'].value_counts()
 # %%
 from TASK_1.data_preparation_utils import set_tags_consistent_data
 
+CASTING = {'latitude':'Float64',
+           'longitude':'Float64',
+           'participant_age1':'Int64',
+           'min_age_participants':'Int64',
+           'avg_age_participants':'Int64',
+           'max_age_participants':'Int64',
+           'n_participants_child':'Int64',
+           'n_participants_teen':'Int64',
+           'n_participants_adult':'Int64',
+           'n_males':'Int64',
+           'n_females':'Int64',
+           'n_killed':'Int64',
+           'n_injured':'Int64',
+           'n_arrested':'Int64',
+           'n_unharmed':'Int64',
+           'n_participants':'Int64',
+           'year':'Int64',
+           'month':'Int64',
+           'day':'Int64',
+           'day_of_week':'Int64',
+           'location_importance':'Float64',
+           'state_house_district':'Int64',
+           'state_senate_district':'Int64',
+           'congressional_district':'Int64'
+           }
 if LOAD_DATA_FROM_CHECKPOINT:
     with zipfile.ZipFile('checkpoints/checkpoint_6.csv.zip', 'r') as zip_ref:
         zip_ref.extractall('checkpoints/')
@@ -1969,6 +1994,12 @@ else:
     incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
     incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
     save_checkpoint(incidents_df, 'checkpoint_6')
+
+# %%
+incidents_df.sample(10, random_state=1)
+
+# %%
+pd.DataFrame(data=incidents_df.dtypes).T
 
 # %%
 incidents_df['tag_consistency'].value_counts()
