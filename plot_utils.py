@@ -36,7 +36,7 @@ def hist_box_plot(
     if kde: df[col].plot.kde(bw_method=bw_method, ax=ax_hist, secondary_y=True)
     df.boxplot(ax=ax_box, column=col, vert=False, grid=False)  
     ax_box.set(yticks=[])
-    plt.suptitle(title)
+    plt.suptitle(title +' (#NotNanVal/#TotVal: ' + str(len(df[col].dropna())) + '/' + str(len(df[col])) + ')')
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
 

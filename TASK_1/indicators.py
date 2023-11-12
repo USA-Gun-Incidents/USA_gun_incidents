@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
@@ -8,7 +7,7 @@ import os
 import seaborn as sns
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-# %matplotlib inline
+%matplotlib inline
 
 # %%
 incidents_df = pd.read_csv('../data/incidents_cleaned.csv')
@@ -137,36 +136,28 @@ for att in ratios.columns:
         ratios_wrt_tot.append(att)
 
 # %%
+def log_normalization(df, new_df, columns):
+    for col in columns:
+        c = (df[df[col]!=0][col].min())/100
+        new_df['log_'+col] = np.log(df[col] + c) # 1% of the minimum value
+
+# %%
+log_ratios = pd.DataFrame(index=ratios.index)
+log_normalization(ratios, log_ratios, ratios.columns)
+log_ratios_wrt_tot = ['log_'+x for x in ratios_wrt_tot]
+log_ratios_wrt_center = ['log_'+x for x in ratios_wrt_center]
+
+
+# %%
 ratios[ratios_wrt_tot].describe() # females quantiles are 0 (that's why they suggested to do it for males only)
 
 # %%
 ratios[ratios_wrt_center].describe()
 
 # %%
-ratios.boxplot(
-    column=ratios_wrt_tot,
-    rot=90,
-    figsize=(20, 10)
-);
-
-# %%
-log_ratio_wrt_tot = ['log_'+col for col in ratios_wrt_tot]
-log_ratio_wrt_center = ['log_'+col for col in ratios_wrt_center]
-log_ratios = pd.DataFrame(index=ratios.index)
-for col in ratios.columns:
-    c = (ratios[ratios[col]!=0][col].min())/100
-    log_ratios['log_'+col] = np.log(ratios[col] + c) # 1% of the minimum value
-log_ratios.boxplot(
-    column=log_ratio_wrt_tot,
-    rot=90,
-    figsize=(20, 10)
-);
-
-# %%
 fig, ax = plt.subplots(figsize=(25, 10))
 sns.violinplot(data=ratios[ratios_wrt_tot],ax=ax)
 plt.xticks(rotation=90, ha='right');
-
 
 # %%
 fig, ax = plt.subplots()
@@ -175,17 +166,17 @@ plt.xticks(rotation=90, ha='right');
 
 # %%
 fig, ax = plt.subplots(figsize=(25, 10))
-sns.violinplot(data=log_ratios[log_ratio_wrt_tot],ax=ax)
+sns.violinplot(data=log_ratios[log_ratios_wrt_tot],ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
 # La trasformazione logaritmica serve a rendere i dati meno sparsi, e in questo caso è utilizzata con il proposito opposto... 
-#
+# 
 # Non possiamo trasformare dei dati poco significanti in dati significanti in questo modo, attenzione e io consiglierei di non utilizzare il logaritmo per i valori tra [0,1]
 
 # %%
 fig, ax = plt.subplots(figsize=(15, 10))
-sns.violinplot(data=log_ratios[log_ratio_wrt_center],ax=ax)
+sns.violinplot(data=log_ratios[log_ratios_wrt_center],ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %%
@@ -206,7 +197,7 @@ hist_box_plot(
     ratios,
     'n_males_n_males_tot_year_city_ratio',
     title='n_males_n_males_tot_year_city_ratio',
-    bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
+    bins=int(np.log(ratios.shape[0])), # Sturger's rule
     figsize=(10, 5)
 )
 
@@ -215,10 +206,9 @@ hist_box_plot(
     log_ratios,
     'log_n_males_n_males_mean_year_city_ratio',
     title='log_n_males_n_males_mean_year_city_ratio',
-    bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
+    bins=int(np.log(log_ratios.shape[0])), # Sturger's rule
     figsize=(10, 5)
 )
-
 
 # %%
 def compute_square_distance_indicator(df, new_df, ext_df, gby, minuend, subtrahend, suffix, agg_fun):
@@ -228,11 +218,6 @@ def compute_square_distance_indicator(df, new_df, ext_df, gby, minuend, subtrahe
     #df.drop(columns=[den+suffix], inplace=True)
     #return df
 
-def log_normalization(df, new_df, columns):
-    for col in columns:
-        c = (df[df[col]!=0][col].min())/100
-        new_df['log_'+col] = np.log(df[col] + c) # 1% of the minimum value
-
 square_distances = pd.DataFrame(index=incidents_df.index)
 
 # %%
@@ -241,7 +226,6 @@ c_list = ['n_participants_child','n_participants_teen','n_participants_adult','n
 for l in c_list:
     compute_square_distance_indicator(incidents_df, square_distances, incidents_df, ['year', 'state'], l, l, '_mean_year_state', 'mean')
     compute_square_distance_indicator(incidents_df, square_distances, incidents_df, ['year', 'state', 'congressional_district'], l, l, '_mean_year_congdist', 'mean')
-
 
 # %%
 square_distances.sample(5)
@@ -255,7 +239,7 @@ hist_box_plot(
     square_distances,
     'n_killed_n_killed_mean_year_state_SD',
     title='n_killed_n_killed_mean_year_state_SD',
-    bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
+    bins=int(np.log(square_distances.shape[0])), # Sturger's rule
     figsize=(10, 5)
 )
 square_distances.sample(10, random_state=1)
@@ -308,7 +292,7 @@ hist_box_plot(
     entropies,
     'mix_col_3',
     title='mix_col_3',
-    bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
+    bins=int(np.log(entropies.shape[0])), # Sturger's rule
     figsize=(10, 5)
 )
 
@@ -325,9 +309,83 @@ hist_box_plot(
     entropies,
     'mix_col_2',
     title='mix_col_2',
-    bins=int(np.log(incidents_df.shape[0])), # Sturger's rule
+    bins=int(np.log(entropies.shape[0])), # Sturger's rule
     figsize=(10, 5)
 )
+
+# %%
+from sklearn.neighbors import LocalOutlierFactor
+numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
+incidents_numeric = incidents_df.select_dtypes(include=numerics).dropna(axis=0)
+print(incidents_numeric.shape)
+
+ground_truth = np.ones(incidents_numeric.shape[0], dtype=int)
+#ground_truth[-n_outliers:] = -1
+
+N_NEIGHBORS = 20
+CONTAMINATION = 0.1
+clf = LocalOutlierFactor(n_neighbors=N_NEIGHBORS, contamination=CONTAMINATION)
+
+
+# %%
+y_pred = clf.fit_predict(incidents_numeric)
+n_errors = (y_pred != ground_truth).sum()
+X_scores = clf.negative_outlier_factor_
+X_scores
+
+# %%
+local_outlier_factors = pd.DataFrame(index=incidents_numeric.index, data=X_scores).rename(columns={0:'local_outlier_factor'})
+local_outlier_factors['log_inv_local_outlier_factor'] = np.log2(local_outlier_factors['local_outlier_factor']*([-1]*len(local_outlier_factors['local_outlier_factor'])))
+local_outlier_factors
+
+# %%
+hist_box_plot(
+    local_outlier_factors,
+    'local_outlier_factor',
+    title='local_outlier_factor',
+    bins=int(np.log(local_outlier_factors.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
+hist_box_plot(
+    local_outlier_factors,
+    'log_inv_local_outlier_factor',
+    title='log_inv_local_outlier_factor',
+    bins=int(np.log(local_outlier_factors.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
+#import matplotlib.pyplot as plt
+from matplotlib.legend_handler import HandlerPathCollection
+
+
+def update_legend_marker_size(handle, orig):
+    "Customize size of the legend marker"
+    handle.update_from(orig)
+    handle.set_sizes([20])
+
+plt.scatter(incidents_numeric['longitude'], incidents_numeric['latitude'], color="k", s=3.0, label="Data points")
+# plot circles with radius proportional to the outlier scores
+radius = (X_scores.max() - X_scores) / (X_scores.max() - X_scores.min())
+scatter = plt.scatter(
+    incidents_numeric['longitude'],
+    incidents_numeric['latitude'],
+    s=1000 * radius,
+    edgecolors="r",
+    facecolors="none",
+    label="Outlier scores",
+)
+plt.axis("tight")
+#plt.xlim((-5, 5))
+#plt.ylim((-5, 5))
+plt.xlabel("prediction errors: %d" % (n_errors))
+plt.legend(
+    handler_map={scatter: HandlerPathCollection(update_func=update_legend_marker_size)}
+)
+plt.title("Local Outlier Factor (LOF)")
+plt.show()
 
 # %%
 population_df = pd.read_csv('../data/external_data/population.csv')
@@ -373,9 +431,10 @@ incidents_df.sample(5, random_state=1)
 # - uccisi, feriti ecc.. rispetto alla media, con norm. logaritmica
 # - rapporto degli uccisi/totali o feriti/totali dell'incidente (magari sostituiti)
 # - entropie pazzerelle (su tutti i tag o combinazioni di tag)
-#
+# 
 
 # %%
+
 
 
 

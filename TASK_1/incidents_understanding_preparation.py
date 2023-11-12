@@ -796,6 +796,41 @@ info_city.head()
 info_city.loc[info_city['tot_points'] > 1].info()
 
 # %%
+#import matplotlib.pyplot as plt
+from matplotlib.legend_handler import HandlerPathCollection
+
+def plot_info_city(df, lat, lon, info_circle):
+    def update_legend_marker_size(handle, orig):
+        "Customize size of the legend marker"
+        handle.update_from(orig)
+        handle.set_sizes([20])
+
+    plt.scatter(df[lon], df[lat], color="k", s=3.0, label="Data points")
+    # plot circles with radius proportional to the outlier scores
+    radius = (df[info_circle].max() - df[info_circle]) / (df[info_circle].max() - df[info_circle].min())
+    radius_scale = 10
+    scatter = plt.scatter(
+        df[lon],
+        df[lat],
+        s=radius*radius_scale,
+        edgecolors="r",
+        facecolors="none",
+        label=info_circle,
+    )
+    plt.axis("tight")
+    plt.xlabel('longitude')
+    plt.ylabel('latitude')
+    plt.legend(
+        handler_map={scatter: HandlerPathCollection(update_func=update_legend_marker_size)}
+    )
+    plt.title("coordinates of city centroids + \'" + info_circle +'\'')
+    plt.show()
+
+
+# %%
+plot_info_city(info_city, 'centroid_lat', 'centroid_lon', '75')
+
+# %%
 plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat', 
     y_column='centroid_lon', hover_name=False, zoom=2, title='Number of points per city') 
 # FIXME: discretizzare e.g. <x, between(x, y), ...
