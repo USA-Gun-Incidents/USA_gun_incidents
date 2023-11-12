@@ -796,6 +796,44 @@ info_city.head()
 info_city.loc[info_city['tot_points'] > 1].info()
 
 # %%
+#import matplotlib.pyplot as plt
+from matplotlib.legend_handler import HandlerPathCollection
+
+def plot_info_city(df, lat, lon, info_circle):
+    def update_legend_marker_size(handle, orig):
+        "Customize size of the legend marker"
+        handle.update_from(orig)
+        handle.set_sizes([20])
+
+    plt.scatter(df[lon], df[lat], color="k", s=3.0, label="Data points")
+    # plot circles with radius proportional to the outlier scores
+    radius = (df[info_circle].max() - df[info_circle]) / (df[info_circle].max() - df[info_circle].min())
+    radius_scale = 100
+    scatter = plt.scatter(
+        df[lon],
+        df[lat],
+        s=radius*radius_scale,
+        edgecolors="r",
+        facecolors="none",
+        label=info_circle,
+    )
+    plt.axis("tight")
+    plt.xlabel('longitude')
+    plt.ylabel('latitude')
+    plt.legend(
+        handler_map={scatter: HandlerPathCollection(update_func=update_legend_marker_size)}
+    )
+    plt.title("coordinates of city centroids + " + info_circle)
+    plt.show()
+
+
+# %%
+plot_info_city(info_city, 'centroid_lat', 'centroid_lon', '75')
+
+# %%
+plot_info_city(info_city, 'centroid_lat', 'centroid_lon', 'tot_points')
+
+# %%
 plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat', 
     y_column='centroid_lon', hover_name=False, zoom=2, title='Number of points per city') 
 # FIXME: discretizzare e.g. <x, between(x, y), ...
@@ -818,6 +856,11 @@ def substitute_city(row, info_city):
                         break
                     
     return row
+
+# %%
+dummy_df = incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].notna()) & (incidents_df['city'].notna()) & (incidents_df['state'] == 'FLORIDA')]
+print('Number of rows with null values for city, but not for lat/lon and county: ', len(dummy_df))
+plot_scattermap_plotly(dummy_df, 'city', zoom=2, title='City')
 
 # %%
 if LOAD_DATA_FROM_CHECKPOINT:
@@ -1914,6 +1957,31 @@ incidents_df['tag_consistency'].value_counts()
 # %%
 from TASK_1.data_preparation_utils import set_tags_consistent_data
 
+CASTING = {'latitude':'Float64',
+           'longitude':'Float64',
+           'participant_age1':'Int64',
+           'min_age_participants':'Int64',
+           'avg_age_participants':'Int64',
+           'max_age_participants':'Int64',
+           'n_participants_child':'Int64',
+           'n_participants_teen':'Int64',
+           'n_participants_adult':'Int64',
+           'n_males':'Int64',
+           'n_females':'Int64',
+           'n_killed':'Int64',
+           'n_injured':'Int64',
+           'n_arrested':'Int64',
+           'n_unharmed':'Int64',
+           'n_participants':'Int64',
+           'year':'Int64',
+           'month':'Int64',
+           'day':'Int64',
+           'day_of_week':'Int64',
+           'location_importance':'Float64',
+           'state_house_district':'Int64',
+           'state_senate_district':'Int64',
+           'congressional_district':'Int64'
+           }
 if LOAD_DATA_FROM_CHECKPOINT:
     with zipfile.ZipFile('checkpoints/checkpoint_6.csv.zip', 'r') as zip_ref:
         zip_ref.extractall('checkpoints/')
@@ -1926,6 +1994,12 @@ else:
     incidents_df = incidents_df.apply(lambda row: check_tag_consistency(row), axis=1)
     incidents_df = incidents_df.apply(lambda row: check_characteristics_consistency(row), axis=1)
     save_checkpoint(incidents_df, 'checkpoint_6')
+
+# %%
+incidents_df.sample(10, random_state=1)
+
+# %%
+pd.DataFrame(data=incidents_df.dtypes).T
 
 # %%
 incidents_df['tag_consistency'].value_counts()
