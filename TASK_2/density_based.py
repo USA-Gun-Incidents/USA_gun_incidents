@@ -146,6 +146,35 @@ for attribute, label in zip(attribute_list, label_list):
     frame.update_geos(fitbounds="locations", visible=False)
     frame.show()
 
+
+# %%
+def plot_missing_values_for_state(incidents_df, attribute):
+    fig, ax = plt.subplots(figsize=(20, 3))
+    ax.bar(incidents_df.groupby('state')['state'].count().index, incidents_df.groupby('state')['state'].count().values, 
+        label='#Total', edgecolor='black', linewidth=0.8, alpha=0.5)
+    ax.bar(incidents_df[incidents_df[attribute].isna()].groupby('state')['state'].count().index, incidents_df[incidents_df[attribute].isna()
+        ].groupby('state')['state'].count().values, label=f'#Missing {attribute}', edgecolor='black', linewidth=0.8)
+    ax.set_xlabel('State')
+    ax.set_yscale('log')
+    ax.set_ylabel('Number of incidents')
+    ax.legend()
+    ax.set_title(f'Percentage of missing values for {attribute} values by state')
+    ax.xaxis.set_tick_params(rotation=90)
+    for state in incidents_df['state'].unique():
+        plt.text(
+            x=state, 
+            y=incidents_df[incidents_df[attribute].isna()].groupby('state')['state'].count()[state], 
+            s=str(round(100*incidents_df[incidents_df[attribute].isna()].groupby('state')['state'].count()[state] / 
+            incidents_df.groupby('state')['state'].count()[state]))+'%', 
+            horizontalalignment='center',
+            verticalalignment='bottom',
+            fontsize=8)
+    plt.show()
+
+attributes_list = ['city', 'county', 'n_participants', 'latitude']
+for attribute in attributes_list:
+    plot_missing_values_for_state(incidents_df=incidents_df, attribute=attribute)
+
 # %% [markdown]
 # ### Entries per state without NaN
 
