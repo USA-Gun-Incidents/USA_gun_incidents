@@ -377,8 +377,9 @@ def dbscan(X, eps=0.1, min_samples=10, plot_clusters=False):
 
     print("Estimated number of clusters: %d" % n_clusters_)
     print("Estimated number of noise points: %d" % n_noise_)
-    print("Silhouette Coefficient: %0.3f"
-        % metrics.silhouette_score(X, labels))
+    if len(np.unique(labels)) > 1:
+        print("Silhouette Coefficient: %0.3f"
+            % metrics.silhouette_score(X, labels))
 
     if plot_clusters:
         plot_dbscan(X, db)
@@ -387,12 +388,99 @@ def dbscan(X, eps=0.1, min_samples=10, plot_clusters=False):
 # %% [markdown]
 # The silhouette value is a measure of how similar an object is to its own cluster (cohesion) compared to other clusters (separation). The silhouette ranges from −1 to +1, where a high value indicates that the object is well matched to its own cluster and poorly matched to neighboring clusters. If most objects have a high value, then the clustering configuration is appropriate. If many points have a low or negative value, then the clustering configuration may have too many or too few clusters.
 
+# %% [markdown]
+# ### Find best EPS
+
+# %% [markdown]
+# Paper [Kneed alg](https://raghavan.usc.edu//papers/kneedle-simplex11.pdf)
+#
+# contro di questo metodo: è fixed neighbord
+
 # %%
-eps = [0.05, 0.02]#, 0.1]
-min_samples = [5, 10]#, 20]#,30]
+from sklearn.neighbors import NearestNeighbors
+import plotly.express as px
+from kneed import KneeLocator
+
+def kneed_algorithm(X, neighbors=3, S=1, curvature='convex', direction='decreasing'):
+    nbrs = NearestNeighbors(n_neighbors=neighbors).fit(X)
+    distances, indices = nbrs.kneighbors(X)
+    distance_desc = sorted(distances[:,-1], reverse=True)
+    px.line(x=list(range(1,len(distance_desc)+1)),y= distance_desc)
+
+    kneedle = KneeLocator(range(1,len(distance_desc)+1),
+                        distance_desc,
+                        S=1.0, # param default nel paper
+                        curve="convex", #param
+                        direction="decreasing") #param
+
+    kneedle.plot_knee_normalized()
+    print('kneed point: ', kneedle.knee)
+
+
+# %%
+from scipy.spatial.distance import pdist, squareform
+
+def find_best_eps(X, k_list=[3, 5, 9, 15]):
+    dist = pdist(X, 'euclidean') # pair wise distance
+    dist = squareform(dist) # distance matrix given the vector dist
+    
+    # Calculate sorted list of distances for points for each k in k_list
+    # and plot the graph of distance from k-th nearest neighbour
+    fig, ax = plt.subplots(int(np.ceil(len(k_list)/2)), 2, figsize=(20, 10))
+
+    for i, k in enumerate(k_list):
+        kth_distances = list()
+        for d in dist:
+            index_kth_distance = np.argsort(d)[k]
+            kth_distances.append(d[index_kth_distance])
+
+        # Plot the graph of distance from k-th nearest neighbour
+        ax[int(i%2), int((i/2))].plot(range(0, len(kth_distances)), sorted(kth_distances))
+        ax[int(i%2), int((i/2))].set_ylabel('%sth near neighbor distance' %k)
+        ax[int(i%2), int((i/2))].set_xlabel('Point Sorted according to distance of %sth near neighbor' %k)
+        ax[int(i%2), int((i/2))].tick_params(axis='both', which='major', labelsize=22)
+        ax[int(i%2), int((i/2))].grid()
+
+    plt.show()
+
 
 # %% [markdown]
 # ## Clustering: Illinois
+
+# %%
+X_std_illinois = standardization(illinois_df, columns)
+X_illinois = illinois_df[columns].values
+
+# %%
+kneed_algorithm(X_illinois, neighbors=3) # return kneed point: point where the curve has the maximum curvature
+
+# %%
+dbscan(X_illinois, eps=10, min_samples=10, plot_clusters=True)
+
+# %%
+kneed_algorithm(X_std_illinois, neighbors=3)
+
+# %%
+dbscan(X_std_illinois, eps=30, min_samples=10, plot_clusters=True) # inutile
+
+# %%
+find_best_eps(X_std_illinois, k_list=[3, 5, 9, 15]) # altro metodo per kneed point
+
+# %%
+dbscan(X_std_illinois, eps=5, min_samples=10, plot_clusters=True) #inutile, idk
+
+# %%
+dbscan(X_std_illinois, eps=2, min_samples=5, plot_clusters=True) # questo può avere senso
+
+# %%
+dbscan(X_std_illinois, eps=1.2, min_samples=5, plot_clusters=True) # eps troppo basso
+
+# %% [markdown]
+# ### plot dbscan con epsilon suggerit dalla libreria (per ricordarsi che quel range non va bene)
+
+# %%
+eps = [0.05, 0.02]#, 0.1]
+min_samples = [5, 10]#, 20]#,30]
 
 # %%
 X_std_illinois = standardization(illinois_df, columns)
@@ -412,7 +500,6 @@ dbscan(X_std_illinois, eps=0.3, min_samples=20, plot_clusters=True)
 # eps: maximum distance between two samples for one to be considered as in the neighborhood of the other.
 
 # %%
-X_illinois = illinois_df[columns].values
 dbscan(X_illinois, eps=0.3, min_samples=5, plot_clusters=True)
 
 # %% [markdown]
