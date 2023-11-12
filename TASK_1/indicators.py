@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
@@ -7,7 +8,7 @@ import os
 import seaborn as sns
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-%matplotlib inline
+# %matplotlib inline
 
 # %%
 incidents_df = pd.read_csv('../data/incidents_cleaned.csv')
@@ -75,10 +76,15 @@ compute_ratio_indicator(incidents_df, ratios, incidents_df, ['year', 'state'], '
 compute_ratio_indicator(incidents_df, ratios, incidents_df, ['year', 'state', 'congressional_district'], 'n_killed', 'n_killed', '_mean_year_congdist', 'mean')
 compute_ratio_indicator(incidents_df, ratios, incidents_df, ['year', 'state', 'congressional_district'], 'n_killed', 'n_killed', '_median_year_congdist', 'median')
 
+compute_ratio_indicator(incidents_df, ratios, incidents_df, ['year', 'state', 'congressional_district'], 'n_participants', 'n_participants', '_mean_year_congdist', 'mean')
+
 # %%
 ratios['n_killed_n_participants_ratio'] = incidents_df['n_killed'] / incidents_df['n_participants'] # 3
 ratios['n_injured_n_participants_ratio'] = incidents_df['n_injured'] / incidents_df['n_participants']
 ratios['n_unharmed_n_participants_ratio'] = incidents_df['n_unharmed'] / incidents_df['n_participants']
+
+# %%
+pd.DataFrame(incidents_df.loc[62395]).T['n_males']
 
 # %%
 ratios.sample(10, random_state=1)
@@ -171,7 +177,7 @@ plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
 # La trasformazione logaritmica serve a rendere i dati meno sparsi, e in questo caso è utilizzata con il proposito opposto... 
-# 
+#
 # Non possiamo trasformare dei dati poco significanti in dati significanti in questo modo, attenzione e io consiglierei di non utilizzare il logaritmo per i valori tra [0,1]
 
 # %%
@@ -307,6 +313,15 @@ plt.xticks(rotation=90, ha='right');
 # %%
 hist_box_plot(
     entropies,
+    'entropy_day_of_week_fixed_state_year',
+    title='entropy_day_of_week_fixed_state_year',
+    bins=int(np.log(entropies.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
+hist_box_plot(
+    entropies,
     'mix_col_2',
     title='mix_col_2',
     bins=int(np.log(entropies.shape[0])), # Sturger's rule
@@ -431,10 +446,23 @@ incidents_df.sample(5, random_state=1)
 # - uccisi, feriti ecc.. rispetto alla media, con norm. logaritmica
 # - rapporto degli uccisi/totali o feriti/totali dell'incidente (magari sostituiti)
 # - entropie pazzerelle (su tutti i tag o combinazioni di tag)
-# 
+#
 
 # %%
+final_indicators = pd.DataFrame(index=ratios.index)
+final_indicators['n_killed_n_participants__ratio'] = ratios['n_killed_n_participants__ratio']
+final_indicators['n_unharmed_n_participants_ratio'] = ratios['n_unharmed_n_participants_ratio']
 
+final_indicators['log_n_killed_n_killed_mean_year_state_ratio'] = log_ratios['log_n_killed_n_killed_mean_year_state_ratio']
+final_indicators['log_n_participants_n_participants_mean_year_congdist_ratio'] = log_ratios['log_n_participants_n_participants_mean_year_congdist_ratio']
 
+final_indicators['log_n_male_n_male_mean_year_congdist_SD'] = log_square_distances['log_n_male_n_male_mean_year_congdist_SD']
+final_indicators['log_n_female_n_female_mean_year_congdist_SD'] = log_square_distances['log_n_female_n_female_mean_year_congdist_SD']
 
+final_indicators['entropy_city_fixed_state_year'] = entropies['entropy_city_fixed_state_year']
+final_indicators['mix_col_1'] = entropies['mix_col_1']
+final_indicators['mix_col_2'] = entropies['mix_col_2']
+
+DATA_FOLDER_PATH = '../data/'
+final_indicators.to_csv(DATA_FOLDER_PATH +'incidents_cleaned_indicators.csv', index=False)
 
