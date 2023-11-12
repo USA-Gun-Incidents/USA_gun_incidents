@@ -352,7 +352,7 @@ for i, center in enumerate(centroids):
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", FutureWarning)
-    fig = px.line_polar(df, r='r', theta='theta', line_close=True, color='Centroid', color_discrete_sequence=) # TODO: usare stessi colori sopra
+    fig = px.line_polar(df, r='r', theta='theta', line_close=True, color='Centroid', color_discrete_sequence=sns.color_palette().as_hex())
 fig.show()
 
 # %%
@@ -393,7 +393,7 @@ plot_scattermap_plotly(incidents_df, 'cluster', zoom=2, title='Kmeans clustering
 def plot_distribution_categorical_attribute(df, attribute):
     attribute_str = attribute.replace('_', ' ').capitalize()
     _, axs = plt.subplots(1, 2, figsize=(15, 5), gridspec_kw={'width_ratios': [1, 2]})
-    df[attribute].value_counts().sort_index().plot(kind='bar', ax=axs[0], color='gray') # TODO: usare altra scala di colori (diversi da quelli usati per il clustering)
+    df[attribute].value_counts().sort_index().plot(kind='bar', ax=axs[0], color='gray')
     axs[0].set_title(f'{attribute_str} distribution in the whole dataset')
     axs[0].set_xlabel(attribute_str)
     axs[0].set_ylabel('Number of incidents')
@@ -402,7 +402,8 @@ def plot_distribution_categorical_attribute(df, attribute):
         kind='bar',
         stacked=False,
         figsize=(15, 7),
-        ax=axs[1]
+        ax=axs[1],
+        color=sns.color_palette('hls').as_hex()
         )
     axs[1].set_title(f'{attribute_str} distribution in each cluster')
     axs[1].set_xlabel('Cluster')
@@ -421,7 +422,9 @@ nplots = len(features_to_scatter)*(len(features_to_scatter)-1)/2
 nrows = int(nplots / ncols)
 if nplots % ncols != 0:
     nrows += 1
-colors = [cmaps["tab10"].colors[c] for c in incidents_df['cluster']] # TODO: usare scala colori usata per clustering
+
+colors = [sns.color_palette()[c] for c in incidents_df['cluster']]
+#colors = [cmaps["tab10"].colors[c] for c in incidents_df['cluster']]
 f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(36,36))
 id = 0
 for i in range(len(features_to_scatter)):
