@@ -116,6 +116,48 @@ incidents_grouped_by_state['nan_entries_date_ratio'] = incidents_grouped_by_stat
     ] / incidents_grouped_by_state['not_nan_entries']
 
 # %%
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+attribute_list = ['nan_entries_city_ratio', 'nan_entries_county_ratio', 'nan_entries_lat_long_ratio', 
+    'nan_entries_n_participants_ratio', 'nan_entries_date_ratio']
+label_list = ['City', 'County', 'Latitude and Longitude', 'Number of Participants', 'Date']
+
+# Create subplots
+fig = make_subplots(rows=2, cols=3, subplot_titles=label_list)
+
+for i, (attribute, label) in enumerate(zip(attribute_list, label_list), start=1):
+    frame = px.choropleth(
+        incidents_grouped_by_state,
+        color=attribute,
+        locations='px_code',
+        locationmode="USA-states",
+        scope="usa",
+        title=f"Number of NaN entries by state for {label}",
+        hover_name='state',
+        hover_data={
+            'px_code': False,
+            'not_nan_entries': True,
+            'nan_entries_city': True,
+            'nan_entries_county': True,
+            'nan_entries_lat_long': True,
+            'nan_entries_n_participants': True,
+            'nan_entries_date': True,
+        },
+    )
+
+    frame.update_layout(
+        coloraxis_colorbar=dict(title=f'Ratio NaN entries for {label}'))
+    
+    # Add subplot to the main figure
+    fig.add_trace(frame['data'][0], row=(i-1)//3+1, col=(i-1)%3+1)
+
+# Update layout for the main figure
+fig.update_layout(title_text="Number of NaN entries by state for different attributes", showlegend=False)
+
+fig.show()
+
+# %%
 attribute_list = ['nan_entries_city_ratio', 'nan_entries_county_ratio', 'nan_entries_lat_long_ratio', 
     'nan_entries_n_participants_ratio', 'nan_entries_date_ratio']
 label_list = ['City', 'County', 'Latitude and Longitude', 'Number of Participants', 'Date']
@@ -255,6 +297,19 @@ illinois_df.head(2)
 
 # %% [markdown]
 # # Density clustering
+
+# %% [markdown]
+# DBSCAN: density-based cluster, define a cluster as a dense region of objects.
+#
+# Partitional clustering, number of clester automatically detected from algorithm.
+# Points in low-density region are classified as noise.
+#
+# Pros: can handle irregular clusters and with arbitrary shape and size, works well when noise or oulier are present.
+# an find many cluster that K-means could not find.
+#
+# Contro: not able to classified correctly whan the clusters have widley varing density, and have trouble with high dimensional data because density is difficult to define.
+#
+#
 
 # %% [markdown]
 # ## Indices correlation
