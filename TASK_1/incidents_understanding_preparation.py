@@ -168,7 +168,7 @@ incidents_df.info()
 
 # %%
 print(f"# of rows before dropping duplicates: {incidents_df.shape[0]}")
-incidents_df.drop_duplicates(inplace=True) #, ignore_index=True) # TODO: geopy assume qui non sia stato resettato??
+incidents_df.drop_duplicates(inplace=True)
 print(f"# of rows after dropping duplicates: {incidents_df.shape[0]}")
 
 # %% [markdown]
@@ -518,7 +518,7 @@ incidents_df[(incidents_df['latitude'] == 37.6499) & (incidents_df['longitude'] 
 # To fix these inconsistencies we used the library [GeoPy]((https://geopy.readthedocs.io/en/stable/)). This library allows to retrieve the address (state, county, suburb, city, town, village, location name, and other features) corresponding to a given latitude and longitude. We queried the library using all the latitudes and longitudes of the points in the dataset and we saved the results in the CSV file we now load:
 
 # %%
-geopy_path = os.path.join(DATA_FOLDER_PATH, 'external_data/geopy.csv') # TODO: questo potraà diventare geopy (cancellare il vecchio geopy)
+geopy_path = os.path.join(DATA_FOLDER_PATH, 'external_data/geopy.csv')
 geopy_df = pd.read_csv(geopy_path, index_col=['index'], low_memory=False, dtype={})
 geopy_df.head(n=2)
 
@@ -571,7 +571,7 @@ if LOAD_DATA_FROM_CHECKPOINT:
     incidents_df = load_checkpoint('checkpoint_1', date_cols=['date', 'date_original'])
 else:
     geo_df = incidents_df[['state', 'city_or_county', 'address', 'latitude', 'longitude']]
-    geo_df = pd.concat([geo_df, geopy_df.loc[incidents_df.index]], axis=1) # TODO: geopy ha più righe perchè tiene anche quelle dei vecchi duplicati????
+    geo_df = pd.concat([geo_df, geopy_df.loc[incidents_df.index]], axis=1)
     geo_df = geo_df.apply(lambda row: check_geographical_data_consistency(row, additional_data=counties_df), axis=1)
     incidents_df[geo_df.columns] = geo_df[geo_df.columns]
     save_checkpoint(incidents_df, 'checkpoint_1')
@@ -1243,7 +1243,7 @@ knn_eu_clf.fit(X_train_converted, y_train)
 # We plot the boundaries of the classifier:
 
 # %%
-alabama_color_map = { #TODO: NON SO DOVE SI ROMPE, adesso in y_train ha più di 7 valori
+alabama_color_map = {
     1:'red',
     2:'orange',
     3:'yellow',
@@ -1333,7 +1333,7 @@ plot_scattermap_plotly(
 # %% [markdown]
 # #### Features
 # %%
-incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot( #TODO: TOGLIERE(?)
+incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
     kind='bar',
     figsize=(10,6),
     title='Counts of the addresses with the 50 highest number of incidents'
@@ -1687,7 +1687,7 @@ from TASK_1.data_preparation_utils import set_gender_age_consistent_data
 
 if LOAD_DATA_FROM_CHECKPOINT:
     with zipfile.ZipFile('checkpoints/checkpoint_4.csv.zip', 'r') as zip_ref:
-        zip_ref.extractall('checkpoints/') # TODO: magari fare all'inizio una chiamata che decomprime tutti i *.zip
+        zip_ref.extractall('checkpoints/')
     incidents_df = load_checkpoint('checkpoint_4', date_cols=['date', 'date_original'])
 else:
     new_age_df = age_temporary_df.apply(lambda row: set_gender_age_consistent_data(row), axis=1)
@@ -1957,31 +1957,6 @@ incidents_df['tag_consistency'].value_counts()
 # %%
 from TASK_1.data_preparation_utils import set_tags_consistent_data
 
-CASTING = {'latitude':'Float64',
-           'longitude':'Float64',
-           'participant_age1':'Int64',
-           'min_age_participants':'Int64',
-           'avg_age_participants':'Int64',
-           'max_age_participants':'Int64',
-           'n_participants_child':'Int64',
-           'n_participants_teen':'Int64',
-           'n_participants_adult':'Int64',
-           'n_males':'Int64',
-           'n_females':'Int64',
-           'n_killed':'Int64',
-           'n_injured':'Int64',
-           'n_arrested':'Int64',
-           'n_unharmed':'Int64',
-           'n_participants':'Int64',
-           'year':'Int64',
-           'month':'Int64',
-           'day':'Int64',
-           'day_of_week':'Int64',
-           'location_importance':'Float64',
-           'state_house_district':'Int64',
-           'state_senate_district':'Int64',
-           'congressional_district':'Int64'
-           }
 if LOAD_DATA_FROM_CHECKPOINT:
     with zipfile.ZipFile('checkpoints/checkpoint_6.csv.zip', 'r') as zip_ref:
         zip_ref.extractall('checkpoints/')
@@ -2315,10 +2290,9 @@ characteristic_columns = ['notes', 'incident_characteristics1', 'incident_charac
     'firearm', 'air_gun', 'shots', 'aggression', 'suicide', 'injuries',
     'death', 'road', 'illegal_holding', 'house', 'school', 'children',
     'drugs', 'officers', 'organized', 'social_reasons', 'defensive',
-    'workplace', 'abduction', 'unintentional'] #TODO: add tag_consistency
+    'workplace', 'abduction', 'unintentional']
 
 external_columns = ['povertyPercentage', 'party', 'candidatevotes', 'totalvotes', 'candidateperc', 'population_state_2010']
-#TODO:  majority state party?
 
 # %% [markdown]
 # We re-order the columns and we save the cleaned dataset:
@@ -2344,4 +2318,4 @@ corr_matrix = incidents_df[numerical_columns].corr()
 sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
 
 # %%
-incidents_df.to_csv(DATA_FOLDER_PATH +'incidents_cleaned.csv', index=False)
+incidents_df.to_csv(DATA_FOLDER_PATH +'incidents_cleaned.csv', index=True)

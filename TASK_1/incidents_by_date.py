@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
@@ -32,17 +33,46 @@ incidents_df[incidents_df['city'].isna()].shape[0]
 incidents_df[incidents_df['city'].isna()].groupby('state')['state'].count()
 
 # %%
-fig, ax = plt.subplots(figsize=(10, 3))
+fig, ax = plt.subplots(figsize=(20, 3))
 ax.bar(incidents_df.groupby('state')['state'].count().index, incidents_df.groupby('state')['state'].count().values, 
     label='#Total', edgecolor='black', linewidth=0.8, alpha=0.5)
 ax.bar(incidents_df[incidents_df['city'].isna()].groupby('state')['state'].count().index, incidents_df[incidents_df['city'].isna()
     ].groupby('state')['state'].count().values, label='#Missing city', edgecolor='black', linewidth=0.8)
 ax.set_xlabel('State')
-#ax.set_yscale('log')
+ax.set_yscale('log')
 ax.set_ylabel('Number of incidents')
 ax.legend()
 ax.xaxis.set_tick_params(rotation=90)
 plt.show()
+
+
+# %%
+def plot_missing_values_for_state(incidents_df, attribute):
+    fig, ax = plt.subplots(figsize=(20, 3))
+    ax.bar(incidents_df.groupby('state')['state'].count().index, incidents_df.groupby('state')['state'].count().values, 
+        label='#Total', edgecolor='black', linewidth=0.8, alpha=0.5)
+    ax.bar(incidents_df[incidents_df[attribute].isna()].groupby('state')['state'].count().index, incidents_df[incidents_df[attribute].isna()
+        ].groupby('state')['state'].count().values, label=f'#Missing {attribute}', edgecolor='black', linewidth=0.8)
+    ax.set_xlabel('State')
+    ax.set_yscale('log')
+    ax.set_ylabel('Number of incidents')
+    ax.legend()
+    ax.set_title(f'Percentage of missing values for {attribute} values by state')
+    ax.xaxis.set_tick_params(rotation=90)
+    for state in incidents_df['state'].unique():
+        plt.text(
+            x=state, 
+            y=incidents_df[incidents_df[attribute].isna()].groupby('state')['state'].count()[state], 
+            s=str(round(100*incidents_df[incidents_df[attribute].isna()].groupby('state')['state'].count()[state] / 
+            incidents_df.groupby('state')['state'].count()[state]))+'%', 
+            horizontalalignment='center',
+            verticalalignment='bottom',
+            fontsize=8)
+    plt.show()
+
+attributes_list = ['city', 'county', 'n_participants', 'latitude']
+for attribute in attributes_list:
+    plot_missing_values_for_state(incidents_df=incidents_df, attribute=attribute)
 
 # %% [markdown]
 # ### Incidents per day, during years
@@ -131,7 +161,7 @@ incidents_df[(incidents_df['date'].dt.month==7) & (incidents_df['date'].dt.day==
 
 # %% [markdown]
 # [Federal Holiday calendar in USA](https://www.commerce.gov/hr/employees/leave/holidays)
-# 
+#
 # | Holiday | Date |
 # | :------------: | :------------: |
 # | New Year’s Day | January 1 |
@@ -168,16 +198,16 @@ incidents_df.groupby(incidents_df['date'].isin(['2013-11-29', '2014-11-28', '201
 
 # %% [markdown]
 # Thanksgiving Day è il giorno con meno incidenti in assoluto
-# 
+#
 # Capodanno quello con più incidenti
-# 
+#
 # 29 febbraio non lo considero
-# 
+#
 # Natale, Columnbus Day, Juneteenth National Independence Day, Thanksgiving Day, Veterans Day sono nel primo quantile. \
 # Natale e Ringraziamento stanno a casa a festeggiare. \
 # Durante Columnbus Day, Juneteenth National Independence Day, Veterans Day vengono organizzate parate e cose pubbliche. \
 # Juneteenth National Independence Day: celebra la liberazione degli schiavi in ​​Texas il 19 giugno 1865.           
-# 
+#
 # A marzo molti incidenti \
 # Altre cose da considerare: spring break, san Patrick (17 marzo), pasqua (la festeggiano e ci sono anche eventi religiosi tipo processioni)
 
@@ -274,7 +304,6 @@ print('Incidets with more than 10 participants: ', incidents_df[incidents_df['n_
 
 # %%
 years = list(range(2013, 2019))
-years.extend([2028, 2029, 2030])
 years
 
 # %% [markdown]
@@ -289,9 +318,9 @@ plt.bar(incidents_df[incidents_df['n_participants']==1].groupby('year')['year'].
     incidents_df[incidents_df['n_participants']==1].groupby('year')['year'].count(), edgecolor='black', linewidth=0.8,
     label='Incidents with 1 participant')
 plt.xlabel('Year')
-plt.xticks(range(2013, 2031), range(2013, 2031))
+plt.xticks(years, years)
 for i in years:
-    plt.text(i-0.3, incidents_df[incidents_df['n_participants']==1].groupby('year')['year'].count()[i]+100, 
+    plt.text(i-0.1, incidents_df[incidents_df['n_participants']==1].groupby('year')['year'].count()[i]+500, 
         str(round(100*incidents_df[incidents_df['n_participants']==1].groupby('year')['year'].count()[i] / 
         incidents_df.groupby('year')['year'].count()[i], 2))+'%', fontsize=10)
 plt.ylabel('Number of incidents')
@@ -480,8 +509,8 @@ plt.show()
 
 # %% [markdown]
 # Non sembra avere senso dividere per incidenti con 1 unico partecipante (:
-# 
-# 
+#
+#
 
 # %% [markdown]
 # ### grafici da copiare da un altra parte
