@@ -5,6 +5,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib import colormaps as cmaps
+from matplotlib.lines import Line2D
 import plotly.express as px
 import warnings
 np.warnings = warnings # altrimenti numpy da problemi con pyclustering, TODO: è un problema solo mio?
@@ -424,7 +425,6 @@ if nplots % ncols != 0:
     nrows += 1
 
 colors = [sns.color_palette()[c] for c in incidents_df['cluster']]
-#colors = [cmaps["tab10"].colors[c] for c in incidents_df['cluster']]
 f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(36,36))
 id = 0
 for i in range(len(features_to_scatter)):
@@ -435,16 +435,24 @@ for i in range(len(features_to_scatter)):
             axs[int(id/ncols)][id%ncols].scatter(
                 centroids[c][incidents_df[features_to_scatter].columns.get_loc(x)],
                 centroids[c][incidents_df[features_to_scatter].columns.get_loc(y)],
-                marker='o', c="white", alpha=1, s=200, edgecolor='k')
+                marker='o', c='white', alpha=1, s=200, edgecolor='k')
             axs[int(id/ncols)][id%ncols].scatter(
                 centroids[c][incidents_df[features_to_scatter].columns.get_loc(x)],
                 centroids[c][incidents_df[features_to_scatter].columns.get_loc(y)],
-                marker='$%d$' % c, alpha=1, s=50, edgecolor='k')
+                marker='$%d$' % c, c='black', alpha=1, s=50, edgecolor='k')
         axs[int(id/ncols)][id%ncols].set_xlabel(x)
         axs[int(id/ncols)][id%ncols].set_ylabel(y)
         id += 1
 for ax in axs[nrows-1, id%ncols:]:
     ax.remove()
+
+legend_elements = []
+clusters_ids = incidents_df['cluster'].unique()
+for c in sorted(clusters_ids):
+    legend_elements.append(Line2D(
+        [0], [0], marker='o', color='w', label=f'Cluster {c}', markerfacecolor=sns.color_palette()[c]))
+f.legend(handles=legend_elements, loc='lower center', ncols=len(clusters_ids))
+
 plt.suptitle(("Clusters in different feature spaces"), fontsize=20)
 plt.show()
 
