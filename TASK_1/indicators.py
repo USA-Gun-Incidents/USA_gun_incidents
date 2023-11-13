@@ -18,119 +18,90 @@ incidents_df['date'] = pd.to_datetime(incidents_df['date'], format='%Y-%m-%d')
 incidents_df['semester'] = (incidents_df['date'].dt.month // 7) + 1
 
 # %%
+incidents_df['ID'] = (incidents_df['date'].index)
+
+# %%
 incidents_df['city'] = incidents_df['city'].fillna('UKN') # to treat all points without city as belonging to the same fake city
 
 # %%
-def compute_ratio_indicator(df, new_df, ext_df, gby, num, den, suffix, agg_fun):
+incidents_df
+
+
+# %%
+def compute_ratio_indicator(df, ext_df, gby, num, den, suffix, agg_fun):
+    df = df.dropna(axis=0, subset=gby + [num, den])
+    ext_df = ext_df.loc[df.index]
     grouped_df = ext_df.groupby(gby)[den].agg(agg_fun)
-    df = df.merge(grouped_df, on=gby, how='left', suffixes=[None, suffix])
-    new_df[num+'_'+den+suffix+'_ratio'] = np.divide(df[num], df[den+suffix], out=np.zeros_like(df[num]), where=(df[den+suffix] != 0))
-    #df.drop(columns=[den+suffix], inplace=True)
-    #return df
+    
+    df = df.merge(grouped_df, on=gby, how='left', suffixes=[None, suffix]).set_index(df.index)
+    df[num+'_'+den+suffix+'_ratio'] = np.divide(df[num], df[den+suffix], out=np.zeros_like(df[num]), where=(df[den+suffix] != 0))
+    return df[[num+'_'+den+suffix+'_ratio']]
 
 ratios = pd.DataFrame(index=incidents_df.index)
 
 # %%
-compute_ratio_indicator(incidents_df, ratios, incidents_df, ['year', 'state'], 'n_males', 'n_males', '_tot_year_state', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state'], 'n_females', 'n_females', '_tot_year_state', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state'], 'n_males', 'n_participants', '_year_state', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'congressional_district'], 'n_males', 'n_males', '_tot_year_congdist', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'congressional_district'], 'n_females', 'n_females', '_tot_year_congdist', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'congressional_district'], 'n_males', 'n_participants', '_year_congdist', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'county'], 'n_males', 'n_males', '_tot_year_county', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'county'], 'n_females', 'n_females', '_tot_year_county', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'county'], 'n_males', 'n_participants', '_year_county', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'city'], 'n_males', 'n_males', '_tot_year_city', 'sum') # 1
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'city'], 'n_females', 'n_females', '_tot_year_city', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'city'], 'n_males', 'n_participants', '_year_city', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'city'], 'n_males', 'n_males', '_mean_year_city', 'mean')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'city'], 'n_males', 'n_males', '_median_year_city', 'median')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'city'], 'n_females', 'n_females', '_mean_year_city', 'mean')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'city'], 'n_females', 'n_females', '_median_year_city', 'median')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester', 'state'], 'n_males', 'n_males', '_tot_semester_state', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester', 'state'], 'n_females', 'n_females', '_tot_semester_state', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester', 'state'], 'n_males', 'n_participants', '_semester_state', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_males', 'n_males', '_tot_semester_congdist', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_females', 'n_females', '_tot_semester_congdist', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_males', 'n_participants', '_semester_congdist', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester', 'state', 'county'], 'n_males', 'n_males', '_tot_semester_county', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester', 'state', 'county'], 'n_females', 'n_females', '_tot_semester_county', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester', 'state', 'county'], 'n_males', 'n_participants', '_semester_county', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester', 'state', 'city'], 'n_males', 'n_males', '_tot_semester_city', 'sum') # 1
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester', 'state', 'city'], 'n_females', 'n_females', '_tot_semester_city', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester', 'state', 'city'], 'n_males', 'n_participants', '_semester_city', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'city'], 'n_killed', 'n_killed', '_tot_year_city', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state', 'city'], 'n_injured', 'n_injured', '_tot_year_city', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_killed', 'n_killed', '_tot_semester_congdist', 'sum') # 2
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_injured', 'n_injured', '_tot_semester_congdist', 'sum') # 2
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year'], 'n_unharmed', 'n_unharmed', '_mean_year', 'mean') # 4
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'semester'], 'n_unharmed', 'n_unharmed', '_mean_semester', 'mean') # 4
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state'], 'n_participants_child', 'n_participants_child', '_tot_year_state', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state'], 'n_participants_teen', 'n_participants_teen', '_tot_year_state', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state'], 'n_participants_adult', 'n_participants_adult', '_tot_year_state', 'sum')
-compute_ratio_indicator(incidents_df, ratios,  incidents_df, ['year', 'state'], 'n_participants_adult', 'n_participants', '_tot_year_state', 'sum')
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_males', 'n_males', '_tot_year_state', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_females', 'n_females', '_tot_year_state', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_males', 'n_participants', '_year_state', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df,incidents_df, ['year', 'state', 'congressional_district'], 'n_males', 'n_males', '_tot_year_congdist', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'congressional_district'], 'n_females', 'n_females', '_tot_year_congdist', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'congressional_district'], 'n_males', 'n_participants', '_year_congdist', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'county'], 'n_males', 'n_males', '_tot_year_county', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'county'], 'n_females', 'n_females', '_tot_year_county', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'county'], 'n_males', 'n_participants', '_year_county', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_males', 'n_males', '_tot_year_city', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_females', 'n_females', '_tot_year_city', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_males', 'n_participants', '_year_city', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_males', 'n_males', '_mean_year_city', 'mean'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_males', 'n_males', '_median_year_city', 'median'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_females', 'n_females', '_mean_year_city', 'mean'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_females', 'n_females', '_median_year_city', 'median'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state'], 'n_males', 'n_males', '_tot_semester_state', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state'], 'n_females', 'n_females', '_tot_semester_state', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state'], 'n_males', 'n_participants', '_semester_state', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_males', 'n_males', '_tot_semester_congdist', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_females', 'n_females', '_tot_semester_congdist', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_males', 'n_participants', '_semester_congdist', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'county'], 'n_males', 'n_males', '_tot_semester_county', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'county'], 'n_females', 'n_females', '_tot_semester_county', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'county'], 'n_males', 'n_participants', '_semester_county', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'city'], 'n_males', 'n_males', '_tot_semester_city', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'city'], 'n_females', 'n_females', '_tot_semester_city', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'city'], 'n_males', 'n_participants', '_semester_city', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_killed', 'n_killed', '_tot_year_city', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_injured', 'n_injured', '_tot_year_city', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_killed', 'n_killed', '_tot_semester_congdist', 'sum')) # 2
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_injured', 'n_injured', '_tot_semester_congdist', 'sum')) # 2
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year'], 'n_unharmed', 'n_unharmed', '_mean_year', 'mean')) # 4
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester'], 'n_unharmed', 'n_unharmed', '_mean_semester', 'mean')) # 4
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_participants_child', 'n_participants_child', '_tot_year_state', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_participants_teen', 'n_participants_teen', '_tot_year_state', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_participants_adult', 'n_participants_adult', '_tot_year_state', 'sum'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_participants_adult', 'n_participants', '_tot_year_state', 'sum'))
 
 # %%
-compute_ratio_indicator(incidents_df, ratios, incidents_df, ['year', 'state'], 'n_killed', 'n_killed', '_mean_year_state', 'mean')
-compute_ratio_indicator(incidents_df, ratios, incidents_df, ['year', 'state'], 'n_killed', 'n_killed', '_median_year_state', 'median')
-compute_ratio_indicator(incidents_df, ratios, incidents_df, ['year', 'state', 'congressional_district'], 'n_killed', 'n_killed', '_mean_year_congdist', 'mean')
-compute_ratio_indicator(incidents_df, ratios, incidents_df, ['year', 'state', 'congressional_district'], 'n_killed', 'n_killed', '_median_year_congdist', 'median')
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_killed', 'n_killed', '_mean_year_state', 'mean'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_killed', 'n_killed', '_median_year_state', 'median'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'congressional_district'], 'n_killed', 'n_killed', '_mean_year_congdist', 'mean'))
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'congressional_district'], 'n_killed', 'n_killed', '_median_year_congdist', 'median'))
 
-compute_ratio_indicator(incidents_df, ratios, incidents_df, ['year', 'state', 'congressional_district'], 'n_participants', 'n_participants', '_mean_year_congdist', 'mean')
-
-# %%
-ratios['n_killed_n_participants_ratio'] = incidents_df['n_killed'] / incidents_df['n_participants'] # 3
-ratios['n_injured_n_participants_ratio'] = incidents_df['n_injured'] / incidents_df['n_participants']
-ratios['n_unharmed_n_participants_ratio'] = incidents_df['n_unharmed'] / incidents_df['n_participants']
+ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'congressional_district'], 'n_participants', 'n_participants', '_mean_year_congdist', 'mean'))
 
 # %%
-pd.DataFrame(incidents_df.loc[62395]).T['n_males']
+ratios.tail(6)
+
 
 # %%
-ratios.sample(10, random_state=1)
+def compute_simple_division(df, col_1, col_2):
+    dummy = df.loc[(df[col_1].notna()) & (df[col_2].notna())]
+    return dummy[col_1]/dummy[col_2]
+
+ratios['n_killed_n_participants_ratio'] = compute_simple_division(incidents_df, 'n_killed', 'n_participants')
+ratios['n_injured_n_participants_ratio'] = compute_simple_division(incidents_df, 'n_injured', 'n_participants')
+ratios['n_unharmed_n_participants_ratio'] = compute_simple_division(incidents_df, 'n_unharmed', 'n_participants')
 
 # %%
-'''
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_females', 'n_females', '_tot_year_state', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_males', 'n_participants', '_year_state', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'congressional_district'], 'n_males', 'n_males', '_tot_year_congdist', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'congressional_district'], 'n_females', 'n_females', '_tot_year_congdist', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'congressional_district'], 'n_males', 'n_participants', '_year_congdist', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'county'], 'n_males', 'n_males', '_tot_year_county', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'county'], 'n_females', 'n_females', '_tot_year_county', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'county'], 'n_males', 'n_participants', '_year_county', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_males', 'n_males', '_tot_year_city', 'sum') # 1
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_females', 'n_females', '_tot_year_city', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_males', 'n_participants', '_year_city', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_males', 'n_males', '_mean_year_city', 'mean')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_males', 'n_males', '_median_year_city', 'median')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_females', 'n_females', '_mean_year_city', 'mean')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_females', 'n_females', '_median_year_city', 'median')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state'], 'n_males', 'n_males', '_tot_semester_state', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state'], 'n_females', 'n_females', '_tot_semester_state', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state'], 'n_males', 'n_participants', '_semester_state', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_males', 'n_males', '_tot_semester_congdist', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_females', 'n_females', '_tot_semester_congdist', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_males', 'n_participants', '_semester_congdist', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'county'], 'n_males', 'n_males', '_tot_semester_county', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'county'], 'n_females', 'n_females', '_tot_semester_county', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'county'], 'n_males', 'n_participants', '_semester_county', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'city'], 'n_males', 'n_males', '_tot_semester_city', 'sum') # 1
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'city'], 'n_females', 'n_females', '_tot_semester_city', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'city'], 'n_males', 'n_participants', '_semester_city', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_killed', 'n_killed', '_tot_year_city', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_injured', 'n_injured', '_tot_year_city', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_killed', 'n_killed', '_tot_semester_congdist', 'sum') # 2
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'congressional_district'], 'n_injured', 'n_injured', '_tot_semester_congdist', 'sum') # 2
-incidents_df['n_killed_n_participants_ratio'] = incidents_df['n_killed'] / incidents_df['n_participants'] # 3
-incidents_df['n_injured_n_participants_ratio'] = incidents_df['n_injured'] / incidents_df['n_participants']
-incidents_df['n_unharmed_n_participants_ratio'] = incidents_df['n_unharmed'] / incidents_df['n_participants']
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year'], 'n_unharmed', 'n_unharmed', '_mean_year', 'mean') # 4
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester'], 'n_unharmed', 'n_unharmed', '_mean_semester', 'mean') # 4
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_participants_child', 'n_participants_child', '_tot_year_state', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_participants_teen', 'n_participants_teen', '_tot_year_state', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_participants_adult', 'n_participants_adult', '_tot_year_state', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_participants_adult', 'n_participants', '_tot_year_state', 'sum')'''
+ratios
 
 # %%
 ratios_wrt_tot = []
@@ -153,6 +124,12 @@ log_normalization(ratios, log_ratios, ratios.columns)
 log_ratios_wrt_tot = ['log_'+x for x in ratios_wrt_tot]
 log_ratios_wrt_center = ['log_'+x for x in ratios_wrt_center]
 
+
+# %%
+incidents_df.tail(10)
+
+# %%
+log_ratios.tail(10)
 
 # %%
 ratios[ratios_wrt_tot].describe() # females quantiles are 0 (that's why they suggested to do it for males only)
@@ -217,21 +194,23 @@ hist_box_plot(
 )
 
 # %%
-def compute_square_distance_indicator(df, new_df, ext_df, gby, minuend, subtrahend, suffix, agg_fun):
+def compute_square_distance_indicator(df, ext_df, gby, minuend, subtrahend, suffix, agg_fun):
+
+    df = df.dropna(axis=0, subset=gby + [minuend, subtrahend])
+    ext_df = ext_df.loc[df.index]
+    
     grouped_df = ext_df.groupby(gby)[subtrahend].agg(agg_fun)
-    df = df.merge(grouped_df, on=gby, how='left', suffixes=[None, suffix])
-    new_df[minuend+'_'+subtrahend+suffix+'_SD'] = np.square((df[minuend]- df[subtrahend+suffix]))#, out=np.zeros_like(df[num]), where=(df[den+suffix] != 0)
-    #df.drop(columns=[den+suffix], inplace=True)
-    #return df
+    df = df.merge(grouped_df, on=gby, how='left', suffixes=[None, suffix]).set_index(df.index)
+    df[minuend+'_'+subtrahend+suffix+'_SD'] = np.square((df[minuend]- df[subtrahend+suffix]))
+    return df[[minuend+'_'+subtrahend+suffix+'_SD']]
 
 square_distances = pd.DataFrame(index=incidents_df.index)
 
 # %%
-
 c_list = ['n_participants_child','n_participants_teen','n_participants_adult','n_males','n_females','n_killed','n_injured','n_arrested','n_unharmed', 'n_participants']
 for l in c_list:
-    compute_square_distance_indicator(incidents_df, square_distances, incidents_df, ['year', 'state'], l, l, '_mean_year_state', 'mean')
-    compute_square_distance_indicator(incidents_df, square_distances, incidents_df, ['year', 'state', 'congressional_district'], l, l, '_mean_year_congdist', 'mean')
+    square_distances = square_distances.join(compute_square_distance_indicator(incidents_df, incidents_df, ['year', 'state'], l, l, '_mean_year_state', 'mean'))
+    square_distances = square_distances.join(compute_square_distance_indicator(incidents_df, incidents_df, ['year', 'state', 'congressional_district'], l, l, '_mean_year_congdist', 'mean'))
 
 # %%
 square_distances.sample(5)
@@ -261,13 +240,20 @@ sns.violinplot(data=log_square_distances,ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %%
-def compute_entropy_indicator(df, new_df, col_aggr, col_group, lab=''):
+dummy = incidents_df.dropna(axis=0, subset=['state', 'year', 'day_of_week'])
+
+dummy.groupby(['state', 'year'])[['day_of_week']].value_counts().reset_index()
+
+
+# %%
+def compute_entropy_indicator(df, col_aggr, col_group, lab=''):
+    df = df.dropna(axis=0, subset=col_aggr + col_group)
+
     a = incidents_df.groupby(col_aggr)[col_group].value_counts().reset_index()
     b = incidents_df.groupby(col_aggr[:-1])[col_aggr[-1]].value_counts().reset_index()
     a_b = a.merge(b, how='left', on=col_aggr, suffixes=['_occ', '_tot'])
     a_b['prob_occ'] = a_b['count_occ']/a_b['count_tot']
-    a_b['entropy'] = np.log2(a_b['prob_occ'])*([-1]*len(a_b['prob_occ']))
-
+    a_b['entropy'] = np.log2(a_b['prob_occ'])*(-1)
     if lab == '':
         lab = 'entropy'
         for s in col_group:
@@ -276,19 +262,22 @@ def compute_entropy_indicator(df, new_df, col_aggr, col_group, lab=''):
         for s in col_aggr:
             lab += '_' + s
 
-    new_df[lab] = df.merge(a_b, how='left', on=(col_aggr+col_group))['entropy']
+    ret = df.merge(a_b, how='left', on=(col_aggr+col_group)).set_index(df.index).rename(columns={'entropy':lab})
+    return ret[[lab]]
+entropies = pd.DataFrame(index=ratios.index)
 
 # %%
-entropies = pd.DataFrame(index=ratios.index)
 dummy_col = ['date','month','day','day_of_week','county','city','address_type','congressional_district','avg_age_participants','n_killed', 'party']
 for col in dummy_col:
     if not col in ['state', 'year']:
-        compute_entropy_indicator(incidents_df, entropies, ['state', 'year'], [col])
-compute_entropy_indicator(incidents_df, entropies, ['state', 'year'], ['firearm','suicide','death','house'], 'mix_col_1')
-compute_entropy_indicator(incidents_df, entropies, ['state', 'year'], ['firearm','air_gun','shots','aggression','suicide','injuries','death','road','illegal_holding','house','school','children','drugs','officers','organized','social_reasons','defensive','workplace','abduction','unintentional'], 'mix_col_2')
+        entropies = entropies.join(compute_entropy_indicator(incidents_df, ['state', 'year'], [col]))
 
-# %%
-compute_entropy_indicator(incidents_df, entropies, ['state', 'year'], ['school','children','drugs'], 'mix_col_3')
+entropies = entropies.join(compute_entropy_indicator(incidents_df, ['state', 'year'], ['firearm','suicide','death','house'], 'mix_col_1'))
+entropies = entropies.join(compute_entropy_indicator(incidents_df, ['state', 'year'], ['firearm','air_gun','shots','aggression','suicide','injuries','death','road','illegal_holding','house','school','children','drugs','officers','organized','social_reasons','defensive','workplace','abduction','unintentional'], 'mix_col_2'))
+entropies = entropies.join(compute_entropy_indicator(incidents_df, ['state', 'year'], ['school','children','drugs'], 'mix_col_3'))
+
+
+
 
 # %%
 entropies
@@ -387,7 +376,7 @@ radius = (X_scores.max() - X_scores) / (X_scores.max() - X_scores.min())
 scatter = plt.scatter(
     incidents_numeric['longitude'],
     incidents_numeric['latitude'],
-    s=1000 * radius,
+    s=500 * radius,
     edgecolors="r",
     facecolors="none",
     label="Outlier scores",
@@ -429,7 +418,7 @@ incidents_df['days_from_last_incident_in_congdist'] = incidents_df.groupby(['con
 incidents_df['days_from_last_incident_in_congdist'].describe()
 
 # %%
-ratios.boxplot(by='state', column='days_from_last_incident_in_congdist', figsize=(20, 10), rot=90)
+#ratios.boxplot(by='state', column='days_from_last_incident_in_congdist', figsize=(20, 10), rot=90)
 
 # %%
 x = pd.DataFrame(data={'a': [0, np.nan,], 'b':[0, np.nan]})
@@ -449,15 +438,18 @@ incidents_df.sample(5, random_state=1)
 #
 
 # %%
+log_square_distances.columns
+
+# %%
 final_indicators = pd.DataFrame(index=ratios.index)
-final_indicators['n_killed_n_participants__ratio'] = ratios['n_killed_n_participants__ratio']
+final_indicators['n_killed_n_participants_ratio'] = ratios['n_killed_n_participants_ratio']
 final_indicators['n_unharmed_n_participants_ratio'] = ratios['n_unharmed_n_participants_ratio']
 
 final_indicators['log_n_killed_n_killed_mean_year_state_ratio'] = log_ratios['log_n_killed_n_killed_mean_year_state_ratio']
 final_indicators['log_n_participants_n_participants_mean_year_congdist_ratio'] = log_ratios['log_n_participants_n_participants_mean_year_congdist_ratio']
 
-final_indicators['log_n_male_n_male_mean_year_congdist_SD'] = log_square_distances['log_n_male_n_male_mean_year_congdist_SD']
-final_indicators['log_n_female_n_female_mean_year_congdist_SD'] = log_square_distances['log_n_female_n_female_mean_year_congdist_SD']
+final_indicators['log_n_males_n_males_mean_year_congdist_SD'] = log_square_distances['log_n_males_n_males_mean_year_congdist_SD']
+final_indicators['log_n_females_n_females_mean_year_congdist_SD'] = log_square_distances['log_n_females_n_females_mean_year_congdist_SD']
 
 final_indicators['entropy_city_fixed_state_year'] = entropies['entropy_city_fixed_state_year']
 final_indicators['mix_col_1'] = entropies['mix_col_1']
