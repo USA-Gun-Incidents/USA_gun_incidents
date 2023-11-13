@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Import library and dataset
 
@@ -16,9 +15,6 @@ incidents_df = pd.read_csv(
 
 # %%
 incidents_df.head(2)
-
-# %%
-incidents_df.columns
 
 # %% [markdown]
 # # Chose best state
@@ -53,7 +49,6 @@ colors_dict_state = dict(zip(states, plt_colors))
 def get_color(row):
     return colors_dict_state[row['state']]
 colors_dict_county = dict(zip(incidents_grouped['county'], incidents_grouped.apply(get_color, axis=1)))
-
 
 # %% [markdown]
 # ### Visualizzo per stato
@@ -101,30 +96,39 @@ fig = px.choropleth(incidents_grouped_by_state,
                 'nan_entries_date': True},
 )
 fig.update_geos(fitbounds="locations", visible=False)
+
 fig.show()
 
 # %%
-incidents_grouped_by_state['nan_entries_city_ratio'] = incidents_grouped_by_state['nan_entries_city'
+# create ration for number of NaN entries for each attributes by state wrt the total number of entries by state
+incidents_grouped_by_state['nan_entries_city_ratio'] = 100*incidents_grouped_by_state['nan_entries_city'
     ] / incidents_grouped_by_state['not_nan_entries']
-incidents_grouped_by_state['nan_entries_county_ratio'] = incidents_grouped_by_state['nan_entries_county'
+incidents_grouped_by_state['nan_entries_county_ratio'] = 100*incidents_grouped_by_state['nan_entries_county'
     ] / incidents_grouped_by_state['not_nan_entries']
-incidents_grouped_by_state['nan_entries_lat_long_ratio'] = incidents_grouped_by_state['nan_entries_lat_long'
+incidents_grouped_by_state['nan_entries_lat_long_ratio'] = 100*incidents_grouped_by_state['nan_entries_lat_long'
     ] / incidents_grouped_by_state['not_nan_entries']
-incidents_grouped_by_state['nan_entries_n_participants_ratio'] = incidents_grouped_by_state['nan_entries_n_participants'
+incidents_grouped_by_state['nan_entries_n_participants_ratio'] = 100*incidents_grouped_by_state['nan_entries_n_participants'
     ] / incidents_grouped_by_state['not_nan_entries']
-incidents_grouped_by_state['nan_entries_date_ratio'] = incidents_grouped_by_state['nan_entries_date'
+incidents_grouped_by_state['nan_entries_date_ratio'] = 100*incidents_grouped_by_state['nan_entries_date'
     ] / incidents_grouped_by_state['not_nan_entries']
 
 # %%
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import plotly.express as px
 
-attribute_list = ['nan_entries_city_ratio', 'nan_entries_county_ratio', 'nan_entries_lat_long_ratio', 
-    'nan_entries_n_participants_ratio', 'nan_entries_date_ratio']
+attribute_list = ['nan_entries_city_ratio', 'nan_entries_county_ratio', 'nan_entries_lat_long_ratio',
+                  'nan_entries_n_participants_ratio', 'nan_entries_date_ratio']
 label_list = ['City', 'County', 'Latitude and Longitude', 'Number of Participants', 'Date']
 
 # Create subplots
-fig = make_subplots(rows=2, cols=3, subplot_titles=label_list)
+rows = 2
+cols = 3
+fig = make_subplots(
+    rows=rows, cols=cols,
+    specs=[[{'type': 'choropleth'} for c in range(cols)] for r in range(rows)],
+    subplot_titles=label_list
+)
 
 for i, (attribute, label) in enumerate(zip(attribute_list, label_list), start=1):
     frame = px.choropleth(
@@ -132,62 +136,31 @@ for i, (attribute, label) in enumerate(zip(attribute_list, label_list), start=1)
         color=attribute,
         locations='px_code',
         locationmode="USA-states",
-        scope="usa",
-        title=f"Number of NaN entries by state for {label}",
         hover_name='state',
         hover_data={
             'px_code': False,
             'not_nan_entries': True,
-            'nan_entries_city': True,
-            'nan_entries_county': True,
-            'nan_entries_lat_long': True,
-            'nan_entries_n_participants': True,
-            'nan_entries_date': True,
         },
     )
 
-    frame.update_layout(
-        coloraxis_colorbar=dict(title=f'Ratio NaN entries for {label}'))
-    
-    # Add subplot to the main figure
-    fig.add_trace(frame['data'][0], row=(i-1)//3+1, col=(i-1)%3+1)
-
-# Update layout for the main figure
-fig.update_layout(title_text="Number of NaN entries by state for different attributes", showlegend=False)
+    choropleth_trace = frame['data'][0]
+    fig.add_trace(choropleth_trace, 
+        row=(i-1)//cols+1, 
+        col=(i-1) % cols+1
+    )
+    fig.update_layout(
+        title_text="Ratio of NaN entries by state for different attributes",
+        showlegend=False,
+    )
+    fig.update_geos(
+        fitbounds="locations", 
+        scope = 'usa',
+        visible=False)
 
 fig.show()
 
-# %%
-attribute_list = ['nan_entries_city_ratio', 'nan_entries_county_ratio', 'nan_entries_lat_long_ratio', 
-    'nan_entries_n_participants_ratio', 'nan_entries_date_ratio']
-label_list = ['City', 'County', 'Latitude and Longitude', 'Number of Participants', 'Date']
-
-for attribute, label in zip(attribute_list, label_list):
-    frame = px.choropleth(
-        incidents_grouped_by_state,
-        color=attribute,
-        locations='px_code',
-        locationmode="USA-states",
-        scope="usa",
-        title=f"Number of NaN entries by state for {label}",
-        hover_name='state',
-        hover_data={
-            'px_code': False,
-            'not_nan_entries': True,
-            'nan_entries_city': True,
-            'nan_entries_county': True,
-            'nan_entries_lat_long': True,
-            'nan_entries_n_participants': True,
-            'nan_entries_date': True,
-        },
-    )
-
-    frame.update_layout(
-        #coloraxis=dict(colorbar=dict(orientation='h', y=-0.15)),
-        coloraxis_colorbar=dict(title=f'Ratio NaN entries for {label}'))
-    frame.update_geos(fitbounds="locations", visible=False)
-    frame.show()
-
+# %% [markdown]
+# Visualizzo i missing value per ogni attributo per stato, le percentuali sono rispetto al numero totali si samples per stato, sopar i rates sono calcolati rispetto solo alle entrate con tutti valori non nulli, quindi sono diversi
 
 # %%
 def plot_missing_values_for_state(incidents_df, attribute):
@@ -236,6 +209,39 @@ incidents_df[incidents_df['state']=='TEXAS'].dropna(subset=columns).shape[0]
 
 # %%
 incidents_df[incidents_df['state']=='FLORIDA'].dropna(subset=columns).shape[0]
+
+# %% [markdown]
+# ## Illinois
+
+# %%
+def attribute_density_plot(incidents_df, attribute, state):    
+    plt.figure(figsize=(20, 5))
+    plt.bar(incidents_df.groupby(attribute)[attribute].count().index,
+        incidents_df.groupby(attribute)[attribute].count().values, 
+        label='Whole dataset', edgecolor='black', linewidth=0.8, alpha=0.5)
+    plt.bar(incidents_df[incidents_df['state']==state].groupby(attribute)[attribute].count().index, 
+        incidents_df[incidents_df['state']==state].groupby(attribute)[attribute].count().values, 
+        label=state, edgecolor='black', linewidth=0.8, alpha=0.8)
+    plt.xlabel(f'Number of {attribute}')
+    plt.ylabel('Number of incidents')
+    plt.legend()
+    plt.yscale('log')
+    plt.title(f'Number of {attribute} per incident')
+    plt.show()
+
+# %%
+numeric_attributes = ['n_participants', 'min_age_participants', 'avg_age_participants', 'max_age_participants',
+    'n_killed', 'n_injured', 'n_arrested', 'n_unharmed']
+
+for attribute in numeric_attributes:
+    attribute_density_plot(incidents_df, attribute=attribute, state='ILLINOIS')
+    attribute_density_plot(incidents_df, attribute=attribute, state='CALIFORNIA')
+
+# %% [markdown]
+# Più o meno uguali, quindi illinoise va bene visto che abbiamo più entries
+
+# %%
+# TODO: fare questa cosa sopra per inidici + vedere outlier per verificare che density based clustering funzioni e abbia senso
 
 # %% [markdown]
 # # Prepare dataset and indices for choosen state
@@ -300,16 +306,16 @@ illinois_df.head(2)
 
 # %% [markdown]
 # DBSCAN: density-based cluster, define a cluster as a dense region of objects.
-#
+# 
 # Partitional clustering, number of clester automatically detected from algorithm.
 # Points in low-density region are classified as noise.
-#
+# 
 # Pros: can handle irregular clusters and with arbitrary shape and size, works well when noise or oulier are present.
 # an find many cluster that K-means could not find.
-#
+# 
 # Contro: not able to classified correctly whan the clusters have widley varing density, and have trouble with high dimensional data because density is difficult to define.
-#
-#
+# 
+# 
 
 # %% [markdown]
 # ## Indices correlation
@@ -350,7 +356,6 @@ illinois_df[columns].describe()
 # show Nan values in illinois_df[columns]
 illinois_df[columns].isna().sum()
 
-
 # %%
 # select features for clustering
 columns = ['n_participants', 'avg_age_participants', 'max_age_participants',
@@ -373,7 +378,6 @@ def standardization(df, columns):
     std_scaler = StandardScaler()
     std_scaler.fit(df[columns].values)
     return std_scaler.transform(df[columns].values)
-
 
 # %%
 def plot_dbscan(X_std, db): 
@@ -416,7 +420,6 @@ def plot_dbscan(X_std, db):
     plt.title(f"Estimated number of clusters: {n_clusters_}")
     plt.show()
 
-
 # %%
 from sklearn.cluster import DBSCAN
 from sklearn import metrics 
@@ -439,7 +442,6 @@ def dbscan(X, eps=0.1, min_samples=10, plot_clusters=False):
     if plot_clusters:
         plot_dbscan(X, db)
 
-
 # %% [markdown]
 # The silhouette value is a measure of how similar an object is to its own cluster (cohesion) compared to other clusters (separation). The silhouette ranges from −1 to +1, where a high value indicates that the object is well matched to its own cluster and poorly matched to neighboring clusters. If most objects have a high value, then the clustering configuration is appropriate. If many points have a low or negative value, then the clustering configuration may have too many or too few clusters.
 
@@ -448,7 +450,7 @@ def dbscan(X, eps=0.1, min_samples=10, plot_clusters=False):
 
 # %% [markdown]
 # Paper [Kneed alg](https://raghavan.usc.edu//papers/kneedle-simplex11.pdf)
-#
+# 
 # contro di questo metodo: è fixed neighbord
 
 # %%
@@ -470,7 +472,6 @@ def kneed_algorithm(X, neighbors=3, S=1, curvature='convex', direction='decreasi
 
     kneedle.plot_knee_normalized()
     print('kneed point: ', kneedle.knee)
-
 
 # %%
 from scipy.spatial.distance import pdist, squareform
@@ -497,7 +498,6 @@ def find_best_eps(X, k_list=[3, 5, 9, 15]):
         ax[int(i%2), int((i/2))].grid()
 
     plt.show()
-
 
 # %% [markdown]
 # ## Clustering: Illinois
@@ -570,3 +570,5 @@ for e in eps:
 
 # %%
 dbscan(X_std_california, eps=0.03, min_samples=5, plot_clusters=True)
+
+
