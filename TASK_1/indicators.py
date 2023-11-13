@@ -18,14 +18,10 @@ incidents_df['date'] = pd.to_datetime(incidents_df['date'], format='%Y-%m-%d')
 incidents_df['semester'] = (incidents_df['date'].dt.month // 7) + 1
 
 # %%
-incidents_df['ID'] = (incidents_df['date'].index)
-
-# %%
 incidents_df['city'] = incidents_df['city'].fillna('UKN') # to treat all points without city as belonging to the same fake city
 
 # %%
 incidents_df
-
 
 # %%
 def compute_ratio_indicator(df, ext_df, gby, num, den, suffix, agg_fun):
@@ -90,7 +86,6 @@ ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year'
 # %%
 ratios.tail(6)
 
-
 # %%
 def compute_simple_division(df, col_1, col_2):
     dummy = df.loc[(df[col_1].notna()) & (df[col_2].notna())]
@@ -123,7 +118,6 @@ log_ratios = pd.DataFrame(index=ratios.index)
 log_normalization(ratios, log_ratios, ratios.columns)
 log_ratios_wrt_tot = ['log_'+x for x in ratios_wrt_tot]
 log_ratios_wrt_center = ['log_'+x for x in ratios_wrt_center]
-
 
 # %%
 incidents_df.tail(10)
@@ -158,7 +152,7 @@ plt.xticks(rotation=90, ha='right');
 # Non possiamo trasformare dei dati poco significanti in dati significanti in questo modo, attenzione e io consiglierei di non utilizzare il logaritmo per i valori tra [0,1]
 
 # %%
-fig, ax = plt.subplots(figsize=(15, 10))
+fig, ax = plt.subplots(figsize=(15, 8))
 sns.violinplot(data=log_ratios[log_ratios_wrt_center],ax=ax)
 plt.xticks(rotation=90, ha='right');
 
@@ -244,7 +238,6 @@ dummy = incidents_df.dropna(axis=0, subset=['state', 'year', 'day_of_week'])
 
 dummy.groupby(['state', 'year'])[['day_of_week']].value_counts().reset_index()
 
-
 # %%
 def compute_entropy_indicator(df, col_aggr, col_group, lab=''):
     df = df.dropna(axis=0, subset=col_aggr + col_group)
@@ -320,7 +313,8 @@ hist_box_plot(
 # %%
 from sklearn.neighbors import LocalOutlierFactor
 numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
-incidents_numeric = incidents_df.select_dtypes(include=numerics).dropna(axis=0)
+#col_ num = ['date','latitude','longitude', 'location_importance', 'participant_age1','participant1_child','participant1_teen','participant1_adult',participant1_male,participant1_female,min_age_participants,avg_age_participants,max_age_participants,n_participants_child,n_participants_teen,n_participants_adult,n_males,n_females,n_killed,n_injured,n_arrested,n_unharmed,n_participants,notes,incident_characteristics1,incident_characteristics2,firearm,air_gun,shots,aggression,suicide,injuries,death,road,illegal_holding,house,school,children,drugs,officers,organized,social_reasons,defensive,workplace,abduction,unintentional]
+incidents_numeric = incidents_df.select_dtypes(include=numerics).dropna(axis=0).drop(columns=['poverty_perc','candidate_votes','total_votes','candidate_perc','population_state_2010'])
 print(incidents_numeric.shape)
 
 ground_truth = np.ones(incidents_numeric.shape[0], dtype=int)
@@ -329,7 +323,6 @@ ground_truth = np.ones(incidents_numeric.shape[0], dtype=int)
 N_NEIGHBORS = 20
 CONTAMINATION = 0.1
 clf = LocalOutlierFactor(n_neighbors=N_NEIGHBORS, contamination=CONTAMINATION)
-
 
 # %%
 y_pred = clf.fit_predict(incidents_numeric)
@@ -376,7 +369,7 @@ radius = (X_scores.max() - X_scores) / (X_scores.max() - X_scores.min())
 scatter = plt.scatter(
     incidents_numeric['longitude'],
     incidents_numeric['latitude'],
-    s=500 * radius,
+    s=1000 * radius,
     edgecolors="r",
     facecolors="none",
     label="Outlier scores",
@@ -392,17 +385,86 @@ plt.title("Local Outlier Factor (LOF)")
 plt.show()
 
 # %%
-population_df = pd.read_csv('../data/external_data/population.csv')
+import matplotlib.pyplot as mplt
+import plotly.express as px
+from sklearn.decomposition import PCA
+pd.set_option('display.max_columns', None)
+pd.set_option('max_colwidth', None)
+
+# %%
+incidents_numeric
+
+# %%
+pca = PCA()
+X_pca = pca.fit_transform(incidents_numeric)
+
+# %%
+nrows=5
+ncols=6
+row=0
+fig, axs = mplt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 20), sharex=True, sharey=True)
+for i, col in enumerate(incidents_numeric.columns):
+    if i != 0 and i % ncols == 0:
+        row += 1
+    axs[row][i % ncols].scatter(X_pca[:, 0], X_pca[:, 1], edgecolor='k', s=40, c=incidents_numeric[col])
+    axs[row][i % ncols].set_title(col)
+    axs[row][i % ncols].set_xlabel("1st eigenvector")
+    axs[row][i % ncols].set_ylabel("2nd eigenvector")
+
+# %%
+fig = plt.figure()
+ax = fig.add_subplot(111, projection = '3d')
+
+x = X_pca[:, 0]
+y = X_pca[:, 2]
+z = X_pca[:, 1]
+
+ax.set_xlabel("1st eigenvector")
+ax.set_ylabel("3rd eigenvector")
+ax.set_zlabel("2nd eigenvector")
+
+ax.scatter(x, y, z)
+
+fig = px.scatter_3d(x=x, y=y, z=z, labels={'x': '1st eigenvector', 'y': '3rd eigenvector', 'z': '2nd eigenvector'})
+fig.show()
+
+
+# %%
+X_reconstructed = pca.inverse_transform(X_pca)
+PCA_errors = pd.DataFrame(index=incidents_numeric.index)
+PCA_errors['reconstruction_error'] = np.sum(np.square(X_pca-X_reconstructed), axis=1)
+
+#incidents_df['pca_reconstruction_error'] = square_error
+
+
+# %%
+hist_box_plot(
+    PCA_errors,
+    'reconstruction_error',
+    title='reconstruction_error',
+    bins=int(np.log(ratios.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
+
+# %%
+
+# %%
+
+
+# %%
+'''population_df = pd.read_csv('../data/external_data/population.csv')
 population_df['n_males'] = population_df['male_child'] + population_df['male_teen'] + population_df['male_adult']
 population_df['n_females'] = population_df['female_child'] + population_df['female_teen'] + population_df['female_adult']
-population_df
+population_df'''
 
 # %%
-compute_ratio_indicator(incidents_df, ratios, population_df, ['year', 'state'], 'n_males', 'n_males', '_pop_year_state', 'sum')
-compute_ratio_indicator(incidents_df, ratios, population_df, ['year', 'state', 'congressional_district'], 'n_males', 'n_males', '_pop_year_cong', 'sum')
+#compute_ratio_indicator(incidents_df, ratios, population_df, ['year', 'state'], 'n_males', 'n_males', '_pop_year_state', 'sum')
+#compute_ratio_indicator(incidents_df, ratios, population_df, ['year', 'state', 'congressional_district'], 'n_males', 'n_males', '_pop_year_cong', 'sum')
 
 # %%
-pop_ratios = []
+'''pop_ratios = []
 for att in ratios.columns:
     if 'pop' in att and 'ratio' in att:
         pop_ratios.append(att)
@@ -410,25 +472,25 @@ for att in ratios.columns:
 ratios.boxplot(
     column=pop_ratios,
     rot=90
-)
+)'''
 
 # %%
-incidents_df = incidents_df.sort_values(by=['date'])
+'''incidents_df = incidents_df.sort_values(by=['date'])
 incidents_df['days_from_last_incident_in_congdist'] = incidents_df.groupby(['congressional_district'])['date'].diff().dt.days
-incidents_df['days_from_last_incident_in_congdist'].describe()
+incidents_df['days_from_last_incident_in_congdist'].describe()'''
 
 # %%
 #ratios.boxplot(by='state', column='days_from_last_incident_in_congdist', figsize=(20, 10), rot=90)
 
 # %%
-x = pd.DataFrame(data={'a': [0, np.nan,], 'b':[0, np.nan]})
-x['a'] / x['b']
+'''x = pd.DataFrame(data={'a': [0, np.nan,], 'b':[0, np.nan]})
+x['a'] / x['b']'''
 
 # %%
-np.divide(x['a'], x['b'], out=np.zeros_like(x['a']), where=(x['b'] != 0))
+#np.divide(x['a'], x['b'], out=np.zeros_like(x['a']), where=(x['b'] != 0))
 
 # %%
-incidents_df.sample(5, random_state=1)
+#incidents_df.sample(5, random_state=1)
 
 # %% [markdown]
 # # Quali sono, circa, i migliori indici individuati:
@@ -436,9 +498,6 @@ incidents_df.sample(5, random_state=1)
 # - rapporto degli uccisi/totali o feriti/totali dell'incidente (magari sostituiti)
 # - entropie pazzerelle (su tutti i tag o combinazioni di tag)
 #
-
-# %%
-log_square_distances.columns
 
 # %%
 final_indicators = pd.DataFrame(index=ratios.index)
@@ -457,4 +516,5 @@ final_indicators['mix_col_2'] = entropies['mix_col_2']
 
 DATA_FOLDER_PATH = '../data/'
 final_indicators.to_csv(DATA_FOLDER_PATH +'incidents_cleaned_indicators.csv', index=False)
+
 
