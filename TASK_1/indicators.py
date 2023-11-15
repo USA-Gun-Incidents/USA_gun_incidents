@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
@@ -8,7 +7,7 @@ import os
 import seaborn as sns
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-# %matplotlib inline
+%matplotlib inline
 
 # %%
 incidents_df = pd.read_csv('../data/incidents_cleaned.csv')
@@ -148,7 +147,7 @@ plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
 # La trasformazione logaritmica serve a rendere i dati meno sparsi, e in questo caso è utilizzata con il proposito opposto... 
-#
+# 
 # Non possiamo trasformare dei dati poco significanti in dati significanti in questo modo, attenzione e io consiglierei di non utilizzare il logaritmo per i valori tra [0,1]
 
 # %%
@@ -314,7 +313,7 @@ hist_box_plot(
 from sklearn.neighbors import LocalOutlierFactor
 numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
 #col_ num = ['date','latitude','longitude', 'location_importance', 'participant_age1','participant1_child','participant1_teen','participant1_adult',participant1_male,participant1_female,min_age_participants,avg_age_participants,max_age_participants,n_participants_child,n_participants_teen,n_participants_adult,n_males,n_females,n_killed,n_injured,n_arrested,n_unharmed,n_participants,notes,incident_characteristics1,incident_characteristics2,firearm,air_gun,shots,aggression,suicide,injuries,death,road,illegal_holding,house,school,children,drugs,officers,organized,social_reasons,defensive,workplace,abduction,unintentional]
-incidents_numeric = incidents_df.select_dtypes(include=numerics).dropna(axis=0).drop(columns=['poverty_perc','candidate_votes','total_votes','candidate_perc','population_state_2010'])
+incidents_numeric = incidents_df.select_dtypes(include=numerics).dropna(axis=0).drop(columns=['poverty_perc','candidate_votes','total_votes','candidate_perc','population_state_2010', 'congressional_district','state_house_district',	'state_senate_district'])
 print(incidents_numeric.shape)
 
 ground_truth = np.ones(incidents_numeric.shape[0], dtype=int)
@@ -334,6 +333,10 @@ X_scores
 local_outlier_factors = pd.DataFrame(index=incidents_numeric.index, data=X_scores).rename(columns={0:'local_outlier_factor'})
 local_outlier_factors['log_inv_local_outlier_factor'] = np.log2(local_outlier_factors['local_outlier_factor']*([-1]*len(local_outlier_factors['local_outlier_factor'])))
 local_outlier_factors
+
+# %%
+dummy = incidents_df.join(local_outlier_factors).select_dtypes(include=numerics).dropna(axis=0).drop(columns=['poverty_perc','candidate_votes','total_votes','candidate_perc','population_state_2010', 'congressional_district','state_house_district',	'state_senate_district'])
+dummy[dummy['local_outlier_factor']<-1.8].sample(10)
 
 # %%
 hist_box_plot(
@@ -369,7 +372,7 @@ radius = (X_scores.max() - X_scores) / (X_scores.max() - X_scores.min())
 scatter = plt.scatter(
     incidents_numeric['longitude'],
     incidents_numeric['latitude'],
-    s=1000 * radius,
+    s=500 * radius,
     edgecolors="r",
     facecolors="none",
     label="Outlier scores",
@@ -395,11 +398,11 @@ pd.set_option('max_colwidth', None)
 incidents_numeric
 
 # %%
-pca = PCA()
+pca = PCA(n_components=4)
 X_pca = pca.fit_transform(incidents_numeric)
 
-# %%
-nrows=5
+
+nrows=4
 ncols=6
 row=0
 fig, axs = mplt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 20), sharex=True, sharey=True)
@@ -428,14 +431,12 @@ ax.scatter(x, y, z)
 fig = px.scatter_3d(x=x, y=y, z=z, labels={'x': '1st eigenvector', 'y': '3rd eigenvector', 'z': '2nd eigenvector'})
 fig.show()
 
-
 # %%
 X_reconstructed = pca.inverse_transform(X_pca)
 PCA_errors = pd.DataFrame(index=incidents_numeric.index)
 PCA_errors['reconstruction_error'] = np.sum(np.square(X_pca-X_reconstructed), axis=1)
 
 #incidents_df['pca_reconstruction_error'] = square_error
-
 
 # %%
 hist_box_plot(
@@ -445,10 +446,6 @@ hist_box_plot(
     bins=int(np.log(ratios.shape[0])), # Sturger's rule
     figsize=(10, 5)
 )
-
-# %%
-
-# %%
 
 # %%
 
@@ -497,24 +494,273 @@ x['a'] / x['b']'''
 # - uccisi, feriti ecc.. rispetto alla media, con norm. logaritmica
 # - rapporto degli uccisi/totali o feriti/totali dell'incidente (magari sostituiti)
 # - entropie pazzerelle (su tutti i tag o combinazioni di tag)
-#
+# 
 
 # %%
-final_indicators = pd.DataFrame(index=ratios.index)
-final_indicators['n_killed_n_participants_ratio'] = ratios['n_killed_n_participants_ratio']
-final_indicators['n_unharmed_n_participants_ratio'] = ratios['n_unharmed_n_participants_ratio']
+final_col = ['latitude', 'longitude', 'location_importance',
+             'participant_age1',
+            'avg_age_participants',
+            
+            'n_participants_child', 'n_participants_teen', 'n_participants_adult',
+            'n_males', 'n_females', 'n_killed', 'n_injured', 'n_arrested',
+            'n_unharmed', 'n_participants']
 
-final_indicators['log_n_killed_n_killed_mean_year_state_ratio'] = log_ratios['log_n_killed_n_killed_mean_year_state_ratio']
-final_indicators['log_n_participants_n_participants_mean_year_congdist_ratio'] = log_ratios['log_n_participants_n_participants_mean_year_congdist_ratio']
+# %%
+def compute_simple_subtraction(df, col_1, col_2):
+    dummy = df.loc[(df[col_1].notna()) & (df[col_2].notna())]
+    return dummy[col_1] - dummy[col_2]
 
-final_indicators['log_n_males_n_males_mean_year_congdist_SD'] = log_square_distances['log_n_males_n_males_mean_year_congdist_SD']
-final_indicators['log_n_females_n_females_mean_year_congdist_SD'] = log_square_distances['log_n_females_n_females_mean_year_congdist_SD']
+# %%
+indicators = pd.DataFrame(index=incidents_df.index, data=incidents_df[['latitude', 'longitude', 'location_importance',
+            'avg_age_participants',
+            
+            'n_participants']].copy(deep=True))
 
-final_indicators['entropy_city_fixed_state_year'] = entropies['entropy_city_fixed_state_year']
-final_indicators['mix_col_1'] = entropies['mix_col_1']
-final_indicators['mix_col_2'] = entropies['mix_col_2']
+# %%
+indicators['age_range'] = compute_simple_subtraction(incidents_df, 'max_age_participants', 'min_age_participants')
 
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+sns.violinplot(data=indicators,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+for col in ['n_participants_child', 'n_participants_teen', 'n_participants_adult',
+            'n_males', 'n_females', 'n_killed', 'n_injured', 'n_arrested',
+            'n_unharmed']:
+    indicators[col +'_prop'] = compute_simple_division(incidents_df, col, 'n_participants')
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+sns.violinplot(data=indicators,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+ratios = pd.DataFrame(index=incidents_df.index)
+log_ratios = pd.DataFrame(index=incidents_df.index)
+
+coppie = [['n_males', 'n_males'], ['n_killed', 'n_killed'], ['n_injured', 'n_injured'], ['avg_age_participants', 'avg_age_participants'], ['n_participants_adult', 'n_participants']]
+for cop in coppie:
+    ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'congressional_district'], cop[0], cop[1], '_mean_semest_congd', 'mean'))
+log_normalization(ratios, log_ratios, ratios.columns)
+
+# %%
+log_ratios
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+sns.violinplot(data=log_ratios,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+indicators = indicators.join(log_ratios[['log_n_males_n_males_tot_semest_congd_ratio','log_n_killed_n_killed_tot_semest_congd_ratio','log_n_injured_n_injured_tot_semest_congd_ratio']])
+
+# %%
+indicators
+
+# %%
+dist = pd.DataFrame(index=incidents_df.index)
+log_dist = pd.DataFrame(index=incidents_df.index)
+
+coppie = [['n_males', 'n_males'], ['n_killed', 'n_killed'], ['n_injured', 'n_injured'], ['avg_age_participants', 'avg_age_participants']]
+for cop in coppie:
+    dist = dist.join(compute_square_distance_indicator(incidents_df, incidents_df, ['year', 'semester', 'state', 'congressional_district'], cop[0], cop[1], '_tot_year_state', 'mean'))
+log_normalization(dist, log_dist, dist.columns)
+
+# %%
+log_dist
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+sns.violinplot(data=log_dist,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+indicators = indicators.join(log_dist['log_avg_age_participants_avg_age_participants_tot_year_state_SD'])
+
+# %%
+entropies = pd.DataFrame(index=incidents_df.index)
+dummy_col = ['month', 'day', 'state', 'county', 'city', 'address_type', 'congressional_district', 'n_participants_child', 'n_participants_teen', 'n_participants_adult'
+             , 'min_age_participants', 'avg_age_participants', 'max_age_participants']
+
+for col in dummy_col:
+    if not col in ['year', 'semester', 'state', 'congressional_district']:
+        entropies = entropies.join(compute_entropy_indicator(incidents_df, ['year', 'semester', 'state', 'congressional_district'], [col]))
+
+tag = [ 'firearm', 'air_gun', 'shots',
+       'aggression', 'suicide', 'injuries', 'death', 'road', 'illegal_holding',
+       'house', 'school', 'children', 'drugs', 'officers', 'organized',
+       'social_reasons', 'defensive', 'workplace', 'abduction',
+       'unintentional']
+
+
+# %%
+entropies
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+sns.violinplot(data=entropies,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+indicators = indicators.join(entropies['entropy_avg_age_participants_fixed_year_semester_state_congressional_district'])
+indicators = indicators.join(entropies['entropy_city_fixed_year_semester_state_congressional_district'])
+indicators = indicators.join(entropies['entropy_address_type_fixed_year_semester_state_congressional_district'])
+indicators = indicators.join(entropies['entropy_n_participants_adult_fixed_year_semester_state_congressional_district'])
+
+# %%
+hist_box_plot(
+    entropies,
+    'entropy_city_fixed_year_semester_state_congressional_district',
+    title='entropy_city_fixed_year_semester_state_congressional_district',
+    bins=int(np.log(ratios.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
+tag_e = compute_entropy_indicator(incidents_df, ['year', 'semester', 'state', 'congressional_district'], tag, 'mix_tag')
+indicators = indicators.join(tag_e)
+
+# %%
+hist_box_plot(
+    tag_e,
+    'mix_tag',
+    title='mix_tag',
+    bins=int(np.log(ratios.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
+l_i_e = compute_entropy_indicator(incidents_df, ['year', 'semester', 'state', 'congressional_district'], ['location_importance'], 'loc_imp')
+#indicators = indicators.join(tag_e)
+
+hist_box_plot(
+    l_i_e,
+    'loc_imp',
+    title='loc_imp',
+    bins=int(np.log(ratios.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
+hist_box_plot(
+    incidents_df,
+    'location_importance',
+    title='location_importance',
+    bins=int(np.log(ratios.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
+incidents_df.loc[(incidents_df['avg_age_participants']==0)] #FIXME #TODO ATTENZIONE!!! età media a zero ?!?!?!?!?!?! #TUTTI
+
+# %%
+indicators.dropna().describe()
+
+# %%
+sns.heatmap(indicators.corr())
+
+# %%
+col_to_drop = ['n_participants_adult_prop',  'n_females_prop', 'log_n_killed_n_killed_tot_semest_congd_ratio', 'log_n_injured_n_injured_tot_semest_congd_ratio']
+final_indicators = indicators.drop(columns=col_to_drop)
+
+# %%
+sns.heatmap(final_indicators.corr())
+
+# %%
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+scaler_obj = MinMaxScaler()#, MinMaxScaler(), RobustScaler()]
+ciao = pd.DataFrame(data=scaler_obj.fit_transform(final_indicators.values), columns=final_indicators.columns)
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+sns.violinplot(data=final_indicators,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+sns.violinplot(data=ciao,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+a = {}
+for c in final_indicators.columns:
+    a[c]='popo'
+
+# %%
+a
+
+# %%
+final_indicators.rename(columns={'n_males_prop': 'n_males_pr',
+ 'n_killed_prop': 'n_killed_pr',
+ 'n_injured_prop': 'n_injured_pr',
+ 'n_arrested_prop': 'n_arrested_pr',
+ 'n_unharmed_prop': 'n_unharmed_pr',
+ 'log_n_males_n_males_tot_semest_congd_ratio': 'log_males_mean_ratio',
+ 'log_avg_age_participants_avg_age_participants_tot_year_state_SD': 'log_avg_age_mean_SD',
+ 'entropy_avg_age_participants_fixed_year_semester_state_congressional_district': 'avg_age_entropy',
+ 'entropy_city_fixed_year_semester_state_congressional_district': 'city_entropy',
+ 'entropy_address_type_fixed_year_semester_state_congressional_district': 'address_entropy',
+ 'entropy_n_participants_adult_fixed_year_semester_state_congressional_district': 'n_participants_adult_entropy',
+ 'mix_tag': 'tags_entropy'}, inplace=True)
+
+# %%
 DATA_FOLDER_PATH = '../data/'
-final_indicators.to_csv(DATA_FOLDER_PATH +'incidents_cleaned_indicators.csv', index=False)
+ciao.to_csv(DATA_FOLDER_PATH +'incidents_cleaned_indicators.csv')
+
+# %%
+dummy = ciao.dropna()
+pca = PCA(n_components=4)
+X_pca = pca.fit_transform(dummy)
+
+nrows=4
+ncols=6
+row=0
+fig, axs = mplt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 20), sharex=True, sharey=True)
+for i, col in enumerate(dummy.columns):
+    if i != 0 and i % ncols == 0:
+        row += 1
+    axs[row][i % ncols].scatter(X_pca[:, 0], X_pca[:, 1], edgecolor='k', s=40, c=dummy[col])
+    axs[row][i % ncols].set_title(col)
+    axs[row][i % ncols].set_xlabel("1st eigenvector")
+    axs[row][i % ncols].set_ylabel("2nd eigenvector")
+
+# %%
+fig = plt.figure()
+ax = fig.add_subplot(111, projection = '3d')
+
+x = X_pca[:, 0]
+y = X_pca[:, 2]
+z = X_pca[:, 1]
+
+ax.set_xlabel("1st eigenvector")
+ax.set_ylabel("3rd eigenvector")
+ax.set_zlabel("2nd eigenvector")
+
+ax.scatter(x, y, z)
+
+fig = px.scatter_3d(x=x, y=y, z=z, labels={'x': '1st eigenvector', 'y': '3rd eigenvector', 'z': '2nd eigenvector'})
+fig.show()
+
+# %%
+final_indicators.describe()
+
+# %% [markdown]
+# ['date', 'date_original', 'year', 'month', 'day', 'day_of_week', 'state',
+#        'address', 'latitude', 'longitude', 'county', 'city',
+#        'location_importance', 'address_type', 'congressional_district',
+#        'state_house_district', 'state_senate_district', 'px_code',
+#        'participant_age1', 'participant1_child', 'participant1_teen',
+#        'participant1_adult', 'participant1_male', 'participant1_female',
+#        'min_age_participants', 'avg_age_participants', 'max_age_participants',
+#        'n_participants_child', 'n_participants_teen', 'n_participants_adult',
+#        'n_males', 'n_females', 'n_killed', 'n_injured', 'n_arrested',
+#        'n_unharmed', 'n_participants', 'notes', 'incident_characteristics1',
+#        'incident_characteristics2', 'firearm', 'air_gun', 'shots',
+#        'aggression', 'suicide', 'injuries', 'death', 'road', 'illegal_holding',
+#        'house', 'school', 'children', 'drugs', 'officers', 'organized',
+#        'social_reasons', 'defensive', 'workplace', 'abduction',
+#        'unintentional', 'poverty_perc', 'party', 'candidate_votes',
+#        'total_votes', 'candidate_perc', 'population_state_2010', 'semester']
 
 
