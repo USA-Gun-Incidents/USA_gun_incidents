@@ -668,11 +668,6 @@ final_indicators = indicators.drop(columns=col_to_drop)
 sns.heatmap(final_indicators.corr())
 
 # %%
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
-scaler_obj = MinMaxScaler()#, MinMaxScaler(), RobustScaler()]
-ciao = pd.DataFrame(data=scaler_obj.fit_transform(final_indicators.values), columns=final_indicators.columns)
-
-# %%
 fig, ax = plt.subplots(figsize=(15, 5))
 sns.violinplot(data=final_indicators,ax=ax)
 plt.xticks(rotation=90, ha='right');
@@ -705,11 +700,19 @@ final_indicators.rename(columns={'n_males_prop': 'n_males_pr',
  'mix_tag': 'tags_entropy'}, inplace=True)
 
 # %%
-DATA_FOLDER_PATH = '../data/'
-ciao.to_csv(DATA_FOLDER_PATH +'incidents_cleaned_indicators.csv')
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+scaler_obj = MinMaxScaler()#, MinMaxScaler(), RobustScaler()]
+final_indicators = pd.DataFrame(data=scaler_obj.fit_transform(final_indicators.values), columns=final_indicators.columns)
 
 # %%
-dummy = ciao.dropna()
+final_indicators
+
+# %%
+DATA_FOLDER_PATH = '../data/'
+final_indicators.to_csv(DATA_FOLDER_PATH +'incidents_cleaned_indicators.csv')
+
+# %%
+dummy = final_indicators.dropna()
 pca = PCA(n_components=4)
 X_pca = pca.fit_transform(dummy)
 
