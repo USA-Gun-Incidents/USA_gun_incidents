@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
@@ -23,7 +24,7 @@ import os
 import sys
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-%matplotlib inline
+# %matplotlib inline
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 
@@ -344,6 +345,15 @@ fig.update_layout(
 fig.show()
 
 # %%
+n_components = 4
+pca_data = {}
+for i in range(n_components):
+    pca_data[f'Component {i+1}'] = X_pca[:,i]
+pca_data['Cluster'] = incidents_df['cluster']
+df_pca = pd.DataFrame(data=pca_data)
+sns.pairplot(df_pca, hue='Cluster', palette=[sns.color_palette()[i] for i in range(n_components+1)], corner=True)
+
+# %%
 plt.scatter(X_pca[:, 0], X_pca[:, 1], edgecolor='k', s=40, c=colors)
 plt.xlabel('Component 1')
 plt.ylabel('Component 2')
@@ -384,6 +394,36 @@ fig.update_layout(
         legend_title_text="Cluster"
     )
 fig.show()
+
+# %%
+new_labels = np.full(labels.shape[0], -1)
+for i, s in enumerate(silhouette_scores):
+    if s >= 0:
+        new_labels[i] = labels[i]
+
+pca_data['Cluster'] = new_labels
+df_pca = pd.DataFrame(data=pca_data)
+sns.pairplot(df_pca, hue='Cluster', palette=([(0,0,0)]+[sns.color_palette()[i] for i in range(n_components+1)]), corner=True)
+
+# %%
+new_labels = np.full(labels.shape[0], 5)
+for i, s in enumerate(silhouette_scores):
+    if s >= 0:
+        new_labels[i] = labels[i]
+
+pca_data['Cluster'] = new_labels
+df_pca = pd.DataFrame(data=pca_data)
+sns.pairplot(df_pca, hue='Cluster', palette=([sns.color_palette()[i] for i in range(n_components+1)]+[(0,0,0)]), corner=True)
+
+# %%
+new_labels = np.full(labels.shape[0], 5)
+for i, s in enumerate(silhouette_scores):
+    if s >= 0:
+        new_labels[i] = labels[i]
+
+pca_data['Cluster'] = new_labels
+df_pca = pd.DataFrame(data=pca_data)
+sns.pairplot(df_pca, hue='Cluster', hue_order=[0,1,2,3,4,5], palette=([sns.color_palette()[i] for i in range(n_components+1)]+[(0,0,0)]), corner=True)
 
 # %%
 visualizer = InterclusterDistance(kmeans)
