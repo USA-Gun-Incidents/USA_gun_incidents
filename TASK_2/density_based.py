@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Import library and dataset
 
@@ -243,6 +244,20 @@ for attribute in numeric_attributes:
 # %%
 # TODO: fare questa cosa sopra per inidici + vedere outlier per verificare che density based clustering funzioni e abbia senso
 
+# %%
+numeric_attributes = ['n_participants', 'min_age_participants', 'avg_age_participants', 'max_age_participants',
+    'n_killed', 'n_injured', 'n_arrested', 'n_unharmed']
+
+fig, ax = plt.subplots(4, 2, figsize=(20, 12))
+for attribute in numeric_attributes:
+    ax[numeric_attributes.index(attribute)//2, numeric_attributes.index(attribute)%2].boxplot(incidents_df[incidents_df['state'
+    ]=='ILLINOIS'][attribute].dropna(), vert=False)
+    ax[numeric_attributes.index(attribute)//2, numeric_attributes.index(attribute)%2].set_title(attribute)
+plt.show()
+
+# %% [markdown]
+# Bene con outlier
+
 # %% [markdown]
 # # Prepare dataset and indices for choosen state
 
@@ -306,16 +321,16 @@ illinois_df.head(2)
 
 # %% [markdown]
 # DBSCAN: density-based cluster, define a cluster as a dense region of objects.
-# 
+#
 # Partitional clustering, number of clester automatically detected from algorithm.
 # Points in low-density region are classified as noise.
-# 
+#
 # Pros: can handle irregular clusters and with arbitrary shape and size, works well when noise or oulier are present.
 # an find many cluster that K-means could not find.
-# 
+#
 # Contro: not able to classified correctly whan the clusters have widley varing density, and have trouble with high dimensional data because density is difficult to define.
-# 
-# 
+#
+#
 
 # %% [markdown]
 # ## Indices correlation
@@ -450,7 +465,7 @@ def dbscan(X, eps=0.1, min_samples=10, plot_clusters=False):
 
 # %% [markdown]
 # Paper [Kneed alg](https://raghavan.usc.edu//papers/kneedle-simplex11.pdf)
-# 
+#
 # contro di questo metodo: è fixed neighbord
 
 # %%
