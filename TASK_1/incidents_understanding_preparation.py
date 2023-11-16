@@ -32,7 +32,7 @@ from nltk.corpus import stopwords
 from wordcloud import WordCloud
 from pyproj import Transformer
 import zipfile
-sys.path.append(os.path.abspath('..')) # TODO: ???
+sys.path.append(os.path.abspath('..'))
 from plot_utils import *
 
 
@@ -334,18 +334,18 @@ plot_dates(incidents_df['date_mean'], 'Dates distribution (oor replaced with mea
 plot_dates(incidents_df['date_median'], 'Dates distribution (oor replaced with median)', color='red')
 
 # %% [markdown]
-# Unfortunately, these methods lead to unsatisfactory results, as they all remarkably alter the distribution. Therefore, we will keep the errors and take them into account in subsequent analyses. 
+# Unfortunately, these methods lead to unsatisfactory results, as they significantly alter the distribution. Therefore, we have decided to delete dates after 2018 and still consider the incorrect data in subsequent analyses.
 
 # %%
 incidents_df.drop(columns=['date_minus10', 'date_minus11', 'date_mean', 'date_median'], inplace=True)
 incidents_df['date_original'] = incidents_df['date']
 incidents_df['date'] = incidents_df['date'].apply(lambda x : pd.NaT if x.year>2018 else x)
 incidents_df['year'] = incidents_df['date'].dt.year.astype('UInt64')
-incidents_df['month'] = incidents_df['date_original'].dt.month.astype('int64')
-incidents_df['month_name'] = incidents_df['date_original'].dt.month_name()
-incidents_df['day'] = incidents_df['date_original'].dt.day.astype('int64')
-incidents_df['day_of_week'] = incidents_df['date_original'].dt.dayofweek.astype('UInt64')
-incidents_df['day_of_week_name'] = incidents_df['date_original'].dt.day_name()
+incidents_df['month'] = incidents_df['date'].dt.month.astype('int64')
+incidents_df['month_name'] = incidents_df['date'].dt.month_name()
+incidents_df['day'] = incidents_df['date'].dt.day.astype('int64')
+incidents_df['day_of_week'] = incidents_df['date'].dt.dayofweek.astype('UInt64')
+incidents_df['day_of_week_name'] = incidents_df['date'].dt.day_name()
 
 # %%
 incidents_df.groupby('month').size().plot(
@@ -416,27 +416,127 @@ pyo.plot(fig, filename='../html/incidents_per_day.html', auto_open=False)
 # stampare le giornate con numero inncidenti <5% e >95% di ogni anno e mapparli su festività (ragionare al contrario)
 # scrivere qualcosa su 29 febbraio
 
-# %%
-incidents_df['month'] = incidents_df['date'].dt.month
-incidents_df.groupby('month').size().plot(
-    kind='bar',
-    figsize=(10, 5),
-    title='Number of incidents per month',
-    xlabel='Month',
-    ylabel='Number of incidents'
-)
-plt.xticks(range(12), calendar.month_name[1:13], rotation=45);
+# %% [markdown]
+# #### Incidents During Festivities
+
+# %% [markdown]
+# We visualized the number of incidents during various festivities, including federal holidays in the USA. Here is a reference to the Federal Holiday calendar:
+#
+# [Federal Holiday Calendar in USA](https://www.commerce.gov/hr/employees/leave/holidays)
+#
+# | Holiday | Date |
+# | :------------: | :------------: |
+# | New Year’s Day | January 1 |
+# | Martin Luther King’s Birthday | 3rd Monday in January |
+# | Washington’s Birthday | 3rd Monday in February |
+# | Memorial Day | last Monday in May |
+# | Juneteenth National Independence Day | June 19 |
+# | Independence Day | July 4 |
+# | Labor Day | 1st Monday in September |
+# | Columbus Day | 2nd Monday in October |
+# | Veterans’ Day | November 11 |
+# | Thanksgiving Day | 4th Thursday in November |
+# | Christmas Day | December 25 |
+#
+# Additionally, we considered the following holidays or days:
+#
+# | Holiday | Date |
+# | :------------: | :------------: |
+# | Easter | Sunday (based on moon phase) |
+# | Easter Monday | Day after Easter |
+# | Black Friday | Day after Thanksgiving |
+#
 
 # %%
-incidents_df['day_of_week'] = incidents_df['date'].dt.dayofweek
-incidents_df.groupby('day_of_week').size().plot(
-    kind='bar',
-    figsize=(10, 5),
-    title='Number of incidents per day of the week',
-    xlabel='Day of the week',
-    ylabel='Number of incidents'
+holiday_dict = {'New Year': ['2013-01-01', '2014-01-01', '2015-01-01', '2016-01-01', '2017-01-01', '2018-01-01'],
+    'Martin Luther King Day': ['2013-01-21', '2014-01-20', '2015-01-19', '2016-01-18', '2017-01-16', '2018-01-15'],
+    'Washington Birthday': ['2013-02-18', '2014-02-17', '2015-02-16', '2016-02-15', '2017-02-20', '2018-02-19'],
+    'Sant Patrick Day': ['2013-03-17', '2014-03-17', '2015-03-17', '2016-03-17', '2017-03-17', '2018-03-17'],
+    'Easter': ['2013-03-31', '2014-04-20', '2015-04-05', '2016-03-27', '2017-04-16', '2018-04-01'], 
+    'Easter Monday': ['2013-04-01', '2014-04-21', '2015-04-06', '2016-03-28', '2017-04-17', '2018-04-02'],
+    'Memorial Day': ['2013-05-27', '2014-05-26', '2015-05-25', '2016-05-30', '2017-05-29', '2018-05-28'],
+    'Juneteenth National Independence Day': ['2013-06-19', '2014-06-19', '2015-06-19', '2016-06-19', '2017-06-19', '2018-06-19'],
+    'Independence Day': ['2013-07-04', '2014-07-04', '2015-07-03', '2016-07-04', '2017-07-04', '2018-07-04'],
+    'Labor Day': ['2013-09-02', '2014-09-01', '2015-09-07', '2016-09-05', '2017-09-04', '2018-09-03'],
+    'Columbus Day': ['2013-10-14', '2014-10-13', '2015-10-12', '2016-10-10', '2017-10-09', '2018-10-08'],
+    'Veterans Day': ['2013-11-11', '2014-11-11', '2015-11-11', '2016-11-11', '2017-11-11', '2018-11-11'],
+    'Thanksgiving Day': ['2013-11-28', '2014-11-27', '2015-11-26', '2016-11-24', '2017-11-23', '2018-11-22'],
+    'Black Friday': ['2013-11-29', '2014-11-28', '2015-11-27', '2016-11-25', '2017-11-24', '2018-11-23'],
+    'Christmas Day': ['2013-12-25', '2014-12-25', '2015-12-25', '2016-12-26', '2017-12-25', '2018-12-25']}
+
+# %% [markdown]
+# In the cells below, we have displayed the number of samples for each holiday, divided by year, and then as a percentage of the total incidents that occurred in the same year. 
+#
+# Note that for the year 2018, we only have data until the end of March.
+
+# %%
+dfs = []
+for holiday in holiday_dict.keys():
+    holiday_data = {
+        'holiday': holiday,
+        'n_incidents_2013': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][0]])].shape[0],
+        'n_incidents_2014': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][1]])].shape[0],
+        'n_incidents_2015': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][2]])].shape[0],
+        'n_incidents_2016': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][3]])].shape[0],
+        'n_incidents_2017': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][4]])].shape[0],
+        'n_incidents_2018': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][5]])].shape[0],
+        'n_incidents_total': incidents_df[incidents_df['date'].isin(holiday_dict[holiday])].shape[0]
+    }
+
+    df = pd.DataFrame([holiday_data])
+    dfs.append(df)
+dfs.append(pd.DataFrame([{
+    'holiday': 'Total incidents during the year',
+    'n_incidents_2013': incidents_df[incidents_df['date'].dt.year==2013].shape[0],
+    'n_incidents_2014': incidents_df[incidents_df['date'].dt.year==2014].shape[0],
+    'n_incidents_2015': incidents_df[incidents_df['date'].dt.year==2015].shape[0],
+    'n_incidents_2016': incidents_df[incidents_df['date'].dt.year==2016].shape[0],
+    'n_incidents_2017': incidents_df[incidents_df['date'].dt.year==2017].shape[0],
+    'n_incidents_2018': incidents_df[incidents_df['date'].dt.year==2018].shape[0],
+    'n_incidents_total': incidents_df.shape[0]}]))
+holidays_df = pd.concat(dfs, ignore_index=True)
+holidays_df
+
+# %%
+# same df as above, but with percentages
+holidays_df_percents = holidays_df.copy()
+
+holidays_df_percents['n_incidents_2013'] = holidays_df_percents['n_incidents_2013'] / holidays_df_percents[
+    holidays_df_percents['holiday']=='Total incidents during the year']['n_incidents_2013'].values[0] * 100
+holidays_df_percents['n_incidents_2014'] = holidays_df_percents['n_incidents_2014'] / holidays_df_percents[
+    holidays_df_percents['holiday']=='Total incidents during the year']['n_incidents_2014'].values[0] * 100
+holidays_df_percents['n_incidents_2015'] = holidays_df_percents['n_incidents_2015'] / holidays_df_percents[
+    holidays_df_percents['holiday']=='Total incidents during the year']['n_incidents_2015'].values[0] * 100
+holidays_df_percents['n_incidents_2016'] = holidays_df_percents['n_incidents_2016'] / holidays_df_percents[
+    holidays_df_percents['holiday']=='Total incidents during the year']['n_incidents_2016'].values[0] * 100
+holidays_df_percents['n_incidents_2017'] = holidays_df_percents['n_incidents_2017'] / holidays_df_percents[
+    holidays_df_percents['holiday']=='Total incidents during the year']['n_incidents_2017'].values[0] * 100
+holidays_df_percents['n_incidents_2018'] = holidays_df_percents['n_incidents_2018'] / holidays_df_percents[
+    holidays_df_percents['holiday']=='Total incidents during the year']['n_incidents_2018'].values[0] * 100
+holidays_df_percents.drop(holidays_df.index[-1], inplace=True)
+
+holidays_df_percents
+
+# %% [markdown]
+# Visualize data in a bar plot:
+
+# %%
+px.bar(
+    holidays_df.drop(holidays_df.index[-1]),
+    x='holiday',
+    y=['n_incidents_2013', 'n_incidents_2014', 'n_incidents_2015', 'n_incidents_2016', 'n_incidents_2017', 'n_incidents_2018'],
+    title='Number of incidents per holiday',
+    labels={'holiday': 'Holiday', 'value': 'Number of incidents', 'variable': 'Year'},
+    barmode='group',
 )
-plt.xticks(range(7), calendar.day_name[0:7], rotation=45);
+#TODO: py offline?
+
+# %% [markdown]
+# In summary, the analysis reveals that there are not many incidents during any holiday. The distribution of the number of incidents during each holiday, relative to the total number of incidents in that year, remains consistent over the years. This consistency aligns with our expectations, given the similarity in the distribution of incidents across days throughout the years.
+#
+# New Year's Eve is the holiday with the highest number of incidents, but they still account for less than 2% of the total annual incidents.
+#
+# Given that these analyses did not yield significant findings, we have decided not to incorporate the holiday-related information into subsequent analyses.
 
 # %% [markdown]
 # ### Geospatial features: exploration and preparation
@@ -730,7 +830,7 @@ plot_scattermap_plotly(dummy_df, 'state', zoom=2, title='Missing city')
 # Visualize data group by *state*, *county* and *city*
 
 # %%
-incidents_df.groupby(['state', 'county', 'city']).size().reset_index(name='count')
+incidents_df.groupby(['state', 'county', 'city']).size().reset_index(name='count').sample(3,random_state=1)
 
 # %% [markdown]
 # Compute the centroid for each city and visualize the first 10 centroids in alphabetical order.
@@ -799,7 +899,7 @@ info_city.loc[info_city['tot_points'] > 1].info()
 #import matplotlib.pyplot as plt
 from matplotlib.legend_handler import HandlerPathCollection
 
-def plot_info_city(df, lat, lon, info_circle):
+def plot_info_city(df, lat, lon, info_circle, prop_rad=True):
     def update_legend_marker_size(handle, orig):
         "Customize size of the legend marker"
         handle.update_from(orig)
@@ -807,8 +907,11 @@ def plot_info_city(df, lat, lon, info_circle):
 
     plt.scatter(df[lon], df[lat], color="k", s=3.0, label="Data points")
     # plot circles with radius proportional to the outlier scores
-    radius = (df[info_circle].max() - df[info_circle]) / (df[info_circle].max() - df[info_circle].min())
-    radius_scale = 100
+    if prop_rad:
+        radius = (df[info_circle].max() - df[info_circle]) / (df[info_circle].max() - df[info_circle].min())
+        radius_scale = 100
+    else:
+        radius = df[info_circle]
     scatter = plt.scatter(
         df[lon],
         df[lat],
@@ -828,13 +931,10 @@ def plot_info_city(df, lat, lon, info_circle):
 
 
 # %%
-plot_info_city(info_city, 'centroid_lat', 'centroid_lon', '75')
-
-# %%
 plot_info_city(info_city, 'centroid_lat', 'centroid_lon', 'tot_points')
 
 # %%
-plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat', 
+plot_scattermap_plotly(info_city, size='tot_points', x_column='centroid_lat', 
     y_column='centroid_lon', hover_name=False, zoom=2, title='Number of points per city') 
 # FIXME: discretizzare e.g. <x, between(x, y), ...
 
@@ -845,7 +945,7 @@ plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat',
 def substitute_city(row, info_city):
     if pd.isna(row['city']) and not np.isnan(row['latitude']):
         for state, county, city in info_city.index:
-            if row['state'] == state and row['county'] == county: # FIXME: mettere in &
+            if row['state'] == state and row['county'] == county:
                 if info_city.loc[state, county, city]['tot_points'] > 1:
                     max_radius = info_city.loc[state, county, city]['75'] # terzo quantile
                     centroid_coord = [info_city.loc[state, county, city]['centroid_lat'], 
@@ -864,9 +964,9 @@ plot_scattermap_plotly(dummy_df, 'city', zoom=2, title='City')
 
 # %%
 if LOAD_DATA_FROM_CHECKPOINT:
-    incidents_df = load_checkpoint('checkpoint_2', date_cols=['date', 'date_original'])
+    new_incidents_df = load_checkpoint('checkpoint_2', date_cols=['date', 'date_original'])
 else:
-    incidents_df = incidents_df.apply(lambda row: substitute_city(row, info_city), axis=1)
+    new_incidents_df = incidents_df.apply(lambda row: substitute_city(row, info_city), axis=1)
     save_checkpoint(incidents_df, 'checkpoint_2')
 
 # %%
@@ -874,7 +974,15 @@ incidents_df.head(2)
 
 # %%
 print('Number of rows with null values for city before: ', incidents_df['city'].isnull().sum())
-print('Number of rows with null values for city: ', incidents_df['city'].isnull().sum())
+print('Number of rows with null values for city: ', new_incidents_df['city'].isnull().sum())
+
+# %%
+dummy_df = new_incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].notna()) & (incidents_df['city'].isna())]
+print('Number of rows with null values for city, but not for lat/lon and county: ', len(dummy_df))
+plot_scattermap_plotly(dummy_df, 'city', zoom=2, title='City inferred')
+
+# %%
+incidents_df = new_incidents_df
 
 # %% [markdown]
 # From this process, we infer 2248 *city* values.
@@ -910,6 +1018,10 @@ print( 'Samples with null values for lat/lon    \t', geo_null_counts[4]+geo_null
 # %%
 plot_scattermap_plotly(incidents_df.loc[(incidents_df['latitude'].notna()) & 
     (incidents_df['county'].notna()) & (incidents_df['city'].isna())], 'state', zoom=2, title='Missing city')
+
+# %%
+plot_scattermap_plotly(incidents_df.loc[(incidents_df['latitude'].notna()) & 
+    (incidents_df['county'].notna()) & (incidents_df['city'].isna())], 'city', zoom=2, title='city')
 
 # %%
 #TODO: plottare le città inferite e i centroidi dello stesso colore e quelle che rimangono nan di nero
@@ -1385,7 +1497,7 @@ age_df['participant_age_group1'].unique()
 # Display the maximum and minimum ages, among the possible valid values, in the dataset. We have set a maximum threshold of 122 years, as it is the age reached by [Jeanne Louise Calment](https://www.focus.it/scienza/scienze/longevita-vita-umana-limite-biologico#:~:text=Dal%201997%2C%20anno%20in%20cui,ha%20raggiunto%20un%20limite%20biologico), the world's oldest person.
 
 # %%
-def max_min_value(attribute): # FIXME: convertire in float, escludere <= 122 e > 0 e usare la funzione max sulle colonne di interesse
+def max_min_value(attribute):
     age = []
     for i in age_df[attribute].unique():
         try: 
@@ -1492,8 +1604,8 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 # %%
 from TASK_1.data_preparation_utils import check_age_gender_data_consistency
 
-if True:#LOAD_DATA_FROM_CHECKPOINT: # load data
-    age_temporary_df = load_checkpoint('checkpoint_tmp')#, ['date', 'date_original']) # TODO: questa cosa è temporanea
+if LOAD_DATA_FROM_CHECKPOINT: # load data
+    age_temporary_df = load_checkpoint('checkpoint_tmp')#, date_cols=['date', 'date_original']) #TODO: rimette uniforme ad altri
 else: # compute data
     age_temporary_df = age_df.apply(lambda row: check_age_gender_data_consistency(row), axis=1)
     save_checkpoint(age_temporary_df, 'checkpoint_tmp') # save data
@@ -1626,14 +1738,18 @@ display(age_temporary_df['n_participants'].describe())
 # Below, we have presented the distribution of the number of participants for each incident.
 
 # %%
-#distribution munber of participants
 plt.figure(figsize=(20, 5))
-plt.hist(age_temporary_df['n_participants'], bins=102, edgecolor='black', linewidth=0.8)
-plt.xlabel('Number of participants')
-plt.ylabel('Frequency (log scale)')
-plt.xticks(np.arange(1, 104, 2))
+plt.bar(incidents_df.groupby('n_participants')['n_participants'].count().index, incidents_df.groupby('n_participants')['n_participants'].count(),
+    alpha=0.8, edgecolor='black', linewidth=0.8)
 plt.yscale('log')
-plt.title('Distribution of number of participants')
+plt.xlabel('Number of participants for incidents')
+plt.ylabel('Number of incidents')
+plt.plot([0.5, 103.5], [1, 1], '--', color='magenta', label='1 incident')
+plt.plot([0.5, 103.5], [2, 2], '--', color='red', label='2 incidents')
+plt.plot([0.5, 103.5], [10, 10], '--', color='green', label='10 incidents')
+plt.plot([0.5, 103.5], [100, 100], '--', color='blue', label='100 incidents')
+plt.xticks(range(1, 104, 2), range(1, 104, 2))
+plt.legend()
 plt.show()
 
 # %% [markdown]
