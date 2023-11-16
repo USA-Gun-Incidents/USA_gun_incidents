@@ -163,7 +163,8 @@ def plot_scattermap_plotly(
     x_column='latitude',
     y_column='longitude',
     hover_name=True,
-    black_nan=True
+    black_nan=True,
+    size=None
     ):
     '''
     This function plots a scattermap using plotly.
@@ -199,7 +200,9 @@ def plot_scattermap_plotly(
         width=width,
         title=title,
         text=data[attribute].astype(str) if attribute is not None else None,
-        category_orders={'color': sorted(data[attribute].astype(str).unique())} if attribute is not None else None
+        category_orders={'color': sorted(data[attribute].astype(str).unique())} if attribute is not None else None,
+        size= data[size] if size is not None else None
+
     )
     fig.update_layout(
         mapbox_style="open-street-map",
@@ -243,7 +246,7 @@ def plot_clf_decision_boundary(clf, X_train, y_train, color_map, title=None):
     plt.xticks([])
     plt.show()
 
-"""def get_box_plot_data(labels, bp): # TODO: si puà rimuovere?
+def get_box_plot_data(labels, bp):
     rows_list = []
 
     for i in range(len(labels)):
@@ -258,4 +261,4 @@ def plot_clf_decision_boundary(clf, X_train, y_train, color_map, title=None):
         dict1['fliers'] = len(bp['fliers'][i].get_ydata())
         rows_list.append(dict1)
 
-    return pd.DataFrame(rows_list)"""
+    return pd.DataFrame(rows_list)
