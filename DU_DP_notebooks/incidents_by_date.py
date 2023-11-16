@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from plot_utils import hist_box_plot
 
 # %%
 incidents_df = pd.read_csv('../data/incidents_cleaned.csv')
@@ -44,7 +42,6 @@ ax.set_ylabel('Number of incidents')
 ax.legend()
 ax.xaxis.set_tick_params(rotation=90)
 plt.show()
-
 
 # %%
 def plot_missing_values_for_state(incidents_df, attribute):
@@ -160,8 +157,12 @@ incidents_df[(incidents_df['date'].dt.month==1) & (incidents_df['date'].dt.day==
 incidents_df[(incidents_df['date'].dt.month==7) & (incidents_df['date'].dt.day==4)].groupby('year')['year'].count()
 
 # %% [markdown]
-# [Federal Holiday calendar in USA](https://www.commerce.gov/hr/employees/leave/holidays)
-#
+# #### Incidents During Festivities
+# 
+# In our analysis, we visualized the number of incidents during various festivities, including federal holidays in the USA. Here is a reference to the Federal Holiday calendar:
+# 
+# [Federal Holiday Calendar in USA](https://www.commerce.gov/hr/employees/leave/holidays)
+# 
 # | Holiday | Date |
 # | :------------: | :------------: |
 # | New Year’s Day | January 1 |
@@ -175,6 +176,15 @@ incidents_df[(incidents_df['date'].dt.month==7) & (incidents_df['date'].dt.day==
 # | Veterans’ Day | November 11 |
 # | Thanksgiving Day | 4th Thursday in November |
 # | Christmas Day | December 25 |
+# 
+# Additionally, we considered the following holidays or days:
+# 
+# | Holiday | Date |
+# | :------------: | :------------: |
+# | Easter | Sunday (based on moon phase) |
+# | Easter Monday | Day after Easter |
+# | Black Friday | Day after Thanksgiving |
+# 
 
 # %%
 incidents_df['date'][0].day_name()
@@ -198,16 +208,16 @@ incidents_df.groupby(incidents_df['date'].isin(['2013-11-29', '2014-11-28', '201
 
 # %% [markdown]
 # Thanksgiving Day è il giorno con meno incidenti in assoluto
-#
+# 
 # Capodanno quello con più incidenti
-#
+# 
 # 29 febbraio non lo considero
-#
+# 
 # Natale, Columnbus Day, Juneteenth National Independence Day, Thanksgiving Day, Veterans Day sono nel primo quantile. \
 # Natale e Ringraziamento stanno a casa a festeggiare. \
 # Durante Columnbus Day, Juneteenth National Independence Day, Veterans Day vengono organizzate parate e cose pubbliche. \
 # Juneteenth National Independence Day: celebra la liberazione degli schiavi in ​​Texas il 19 giugno 1865.           
-#
+# 
 # A marzo molti incidenti \
 # Altre cose da considerare: spring break, san Patrick (17 marzo), pasqua (la festeggiano e ci sono anche eventi religiosi tipo processioni)
 
@@ -216,7 +226,7 @@ holiday_dict = {'New Year': ['2013-01-01', '2014-01-01', '2015-01-01', '2016-01-
     'Martin Luther King Day': ['2013-01-21', '2014-01-20', '2015-01-19', '2016-01-18', '2017-01-16', '2018-01-15'],
     'Washington Birthday': ['2013-02-18', '2014-02-17', '2015-02-16', '2016-02-15', '2017-02-20', '2018-02-19'],
     'Sant Patrick Day': ['2013-03-17', '2014-03-17', '2015-03-17', '2016-03-17', '2017-03-17', '2018-03-17'],
-    'Easter': ['2013-03-31', '2014-04-20', '2015-04-05', '2016-03-27', '2017-04-16', '2018-04-01'],
+    'Easter': ['2013-03-31', '2014-04-20', '2015-04-05', '2016-03-27', '2017-04-16', '2018-04-01'], 
     'Easter Monday': ['2013-04-01', '2014-04-21', '2015-04-06', '2016-03-28', '2017-04-17', '2018-04-02'],
     'Memorial Day': ['2013-05-27', '2014-05-26', '2015-05-25', '2016-05-30', '2017-05-29', '2018-05-28'],
     'Juneteenth National Independence Day': ['2013-06-19', '2014-06-19', '2015-06-19', '2016-06-19', '2017-06-19', '2018-06-19'],
@@ -230,6 +240,42 @@ holiday_dict = {'New Year': ['2013-01-01', '2014-01-01', '2015-01-01', '2016-01-
 
 # %%
 holiday_dict = {str(key): pd.to_datetime(holiday_dict[key], format='%Y-%m-%d') for key in holiday_dict.keys()}
+
+# %%
+dfs = []
+for holiday in holiday_dict.keys():
+    holiday_data = {
+        'holiday': holiday,
+        'n_incidents_2013': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][0]])].shape[0],
+        'n_incidents_2014': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][1]])].shape[0],
+        'n_incidents_2015': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][2]])].shape[0],
+        'n_incidents_2016': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][3]])].shape[0],
+        'n_incidents_2017': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][4]])].shape[0],
+        'n_incidents_2018': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][5]])].shape[0],
+        'n_incidents_total': incidents_df[incidents_df['date'].isin(holiday_dict[holiday])].shape[0]
+    }
+    df = pd.DataFrame([holiday_data])
+    dfs.append(df)
+holidays_df = pd.concat(dfs, ignore_index=True)
+holidays_df
+
+# %%
+# create dataframe with holidays by years 
+holidays_df = pd.DataFrame(columns=['holiday', 'n_incidents_2013', 'n_incidents_2014', 'n_incidents_2015', 'n_incidents_2016',
+    'n_incidents_2017', 'n_incidents_2018', 'n_incidents_total'])
+
+for holiday in holiday_dict.keys():
+    holidays_df = holidays_df.append({
+        'holiday': holiday, 
+        'n_incidents_2013': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][0]])].shape[0],
+        'n_incidents_2014': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][1]])].shape[0],
+        'n_incidents_2015': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][2]])].shape[0],
+        'n_incidents_2016': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][3]])].shape[0],
+        'n_incidents_2017': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][4]])].shape[0],
+        'n_incidents_2018': incidents_df[incidents_df['date'].isin([holiday_dict[holiday][5]])].shape[0],
+        'n_incidents_total': incidents_df[incidents_df['date'].isin(holiday_dict[holiday])].shape[0]
+    }, ignore_index=True)
+holidays_df
 
 # %%
 # number of incidents in each holiday
@@ -248,12 +294,12 @@ plt.bar(incidents_df.groupby('holiday')['holiday'].count().index, incidents_df.g
 plt.xticks(rotation=90)
 plt.ylabel('Number of incidents')
 plt.xlabel('Holiday')
-plt.plot([-0.5, 14.5], [incidents_df.groupby('holiday')['holiday'].count().quantile(0.25)]*2, '--', color='magenta', label='Primo quantile')
-plt.plot([-0.5, 14.5], [incidents_df.groupby('holiday')['holiday'].count().quantile(0.5)]*2, '--', color='yellow', label='Secondo quantile')
-plt.plot([-0.5, 14.5], [incidents_df.groupby('holiday')['holiday'].count().quantile(0.75)]*2, '--', color='orange', label='Terzo quantile')
-plt.plot([-0.5, 14.5], [incidents_df.groupby('holiday')['holiday'].count().quantile(1)]*2, '--', color='red', label='Quarto quantile')
-plt.plot([-0.5, 14.5], [incidents_df.groupby('holiday')['holiday'].count().quantile(0.1)]*2, '--', color='green', label='Primo percentile')
-plt.legend()
+plt.plot([-0.5, 14.5], [incidents_df.groupby('holiday')['holiday'].count().quantile(0.25)]*2, '--', color='magenta', label='First quantile')
+plt.plot([-0.5, 14.5], [incidents_df.groupby('holiday')['holiday'].count().quantile(0.5)]*2, '--', color='yellow', label='Second quantile')
+plt.plot([-0.5, 14.5], [incidents_df.groupby('holiday')['holiday'].count().quantile(0.75)]*2, '--', color='orange', label='Third quantile')
+plt.plot([-0.5, 14.5], [incidents_df.groupby('holiday')['holiday'].count().quantile(1)]*2, '--', color='red', label='Fourth quantile')
+plt.plot([-0.5, 14.5], [incidents_df.groupby('holiday')['holiday'].count().quantile(0.1)]*2, '--', color='green', label='First percentile')
+plt.legend(loc='upper right')
 plt.show()
 
 # %%
@@ -359,7 +405,7 @@ tags_columns = ['firearm', 'air_gun', 'shots', 'aggression', 'suicide','injuries
     'children', 'drugs', 'officers', 'organized', 'social_reasons','defensive', 'workplace', 'abduction', 'unintentional']
 
 # %%
-incidents_df[(incidents_df['n_participants']==1) & (incidents_df['tag_consistency'])].shape[0]
+incidents_df[(incidents_df['n_participants']==1)].shape[0]
 
 # %% [markdown]
 # Studio la correlazione dei tag per incidenti con 1 solo partecipante
@@ -377,7 +423,7 @@ def annot_text(val):
 
 # %%
 plt.figure(figsize=(20, 7))
-correlation_matrix = incidents_df[(incidents_df['n_participants']==1) & (incidents_df['tag_consistency'])][tags_columns].corr()
+correlation_matrix = incidents_df[(incidents_df['n_participants']==1)][tags_columns].corr()
 sns.heatmap(correlation_matrix, annot=correlation_matrix.applymap(annot_text), cmap='coolwarm', center=0, fmt='')
 plt.title('Correlation between tags (incidents with 1 participants and consistent tag)')
 plt.show()
@@ -509,8 +555,8 @@ plt.show()
 
 # %% [markdown]
 # Non sembra avere senso dividere per incidenti con 1 unico partecipante (:
-#
-#
+# 
+# 
 
 # %% [markdown]
 # ### grafici da copiare da un altra parte
