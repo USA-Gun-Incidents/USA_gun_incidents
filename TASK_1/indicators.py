@@ -10,7 +10,7 @@ from plot_utils import *
 %matplotlib inline
 
 # %%
-incidents_df = pd.read_csv('../data/incidents_cleaned.csv')
+incidents_df = pd.read_csv('../data/incidents_cleaned.csv', index_col=0)
 incidents_df['date'] = pd.to_datetime(incidents_df['date'], format='%Y-%m-%d')
 
 # %%
@@ -119,7 +119,7 @@ log_ratios_wrt_tot = ['log_'+x for x in ratios_wrt_tot]
 log_ratios_wrt_center = ['log_'+x for x in ratios_wrt_center]
 
 # %%
-incidents_df.tail(10)
+incidents_df.tail(3)
 
 # %%
 log_ratios.tail(10)
@@ -331,7 +331,6 @@ X_scores
 
 # %%
 local_outlier_factors = pd.DataFrame(index=incidents_numeric.index, data=X_scores).rename(columns={0:'local_outlier_factor'})
-local_outlier_factors['log_inv_local_outlier_factor'] = np.log2(local_outlier_factors['local_outlier_factor']*([-1]*len(local_outlier_factors['local_outlier_factor'])))
 local_outlier_factors
 
 # %%
@@ -343,15 +342,6 @@ hist_box_plot(
     local_outlier_factors,
     'local_outlier_factor',
     title='local_outlier_factor',
-    bins=int(np.log(local_outlier_factors.shape[0])), # Sturger's rule
-    figsize=(10, 5)
-)
-
-# %%
-hist_box_plot(
-    local_outlier_factors,
-    'log_inv_local_outlier_factor',
-    title='log_inv_local_outlier_factor',
     bins=int(np.log(local_outlier_factors.shape[0])), # Sturger's rule
     figsize=(10, 5)
 )
@@ -386,69 +376,6 @@ plt.legend(
 )
 plt.title("Local Outlier Factor (LOF)")
 plt.show()
-
-# %%
-import matplotlib.pyplot as mplt
-import plotly.express as px
-from sklearn.decomposition import PCA
-pd.set_option('display.max_columns', None)
-pd.set_option('max_colwidth', None)
-
-# %%
-incidents_numeric
-
-# %%
-pca = PCA(n_components=4)
-X_pca = pca.fit_transform(incidents_numeric)
-
-
-nrows=4
-ncols=6
-row=0
-fig, axs = mplt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 20), sharex=True, sharey=True)
-for i, col in enumerate(incidents_numeric.columns):
-    if i != 0 and i % ncols == 0:
-        row += 1
-    axs[row][i % ncols].scatter(X_pca[:, 0], X_pca[:, 1], edgecolor='k', s=40, c=incidents_numeric[col])
-    axs[row][i % ncols].set_title(col)
-    axs[row][i % ncols].set_xlabel("1st eigenvector")
-    axs[row][i % ncols].set_ylabel("2nd eigenvector")
-
-# %%
-fig = plt.figure()
-ax = fig.add_subplot(111, projection = '3d')
-
-x = X_pca[:, 0]
-y = X_pca[:, 2]
-z = X_pca[:, 1]
-
-ax.set_xlabel("1st eigenvector")
-ax.set_ylabel("3rd eigenvector")
-ax.set_zlabel("2nd eigenvector")
-
-ax.scatter(x, y, z)
-
-fig = px.scatter_3d(x=x, y=y, z=z, labels={'x': '1st eigenvector', 'y': '3rd eigenvector', 'z': '2nd eigenvector'})
-fig.show()
-
-# %%
-X_reconstructed = pca.inverse_transform(X_pca)
-PCA_errors = pd.DataFrame(index=incidents_numeric.index)
-PCA_errors['reconstruction_error'] = np.sum(np.square(X_pca-X_reconstructed), axis=1)
-
-#incidents_df['pca_reconstruction_error'] = square_error
-
-# %%
-hist_box_plot(
-    PCA_errors,
-    'reconstruction_error',
-    title='reconstruction_error',
-    bins=int(np.log(ratios.shape[0])), # Sturger's rule
-    figsize=(10, 5)
-)
-
-# %%
-
 
 # %%
 '''population_df = pd.read_csv('../data/external_data/population.csv')
@@ -513,7 +440,6 @@ def compute_simple_subtraction(df, col_1, col_2):
 # %%
 indicators = pd.DataFrame(index=incidents_df.index, data=incidents_df[['latitude', 'longitude', 'location_importance',
             'avg_age_participants',
-            
             'n_participants']].copy(deep=True))
 
 # %%
@@ -553,7 +479,7 @@ sns.violinplot(data=log_ratios,ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %%
-indicators = indicators.join(log_ratios[['log_n_males_n_males_tot_semest_congd_ratio','log_n_killed_n_killed_tot_semest_congd_ratio','log_n_injured_n_injured_tot_semest_congd_ratio']])
+indicators = indicators.join(log_ratios[['log_n_males_n_males_mean_semest_congd_ratio','log_n_killed_n_killed_mean_semest_congd_ratio','log_n_injured_n_injured_mean_semest_congd_ratio']])
 
 # %%
 indicators
@@ -658,23 +584,18 @@ incidents_df.loc[(incidents_df['avg_age_participants']==0)] #FIXME #TODO ATTENZI
 indicators.dropna().describe()
 
 # %%
-sns.heatmap(indicators.corr())
+sns.heatmap(indicators.corr(), vmin=-1, vmax=1)
 
 # %%
-col_to_drop = ['n_participants_adult_prop',  'n_females_prop', 'log_n_killed_n_killed_tot_semest_congd_ratio', 'log_n_injured_n_injured_tot_semest_congd_ratio']
+col_to_drop = ['n_participants_adult_prop',  'n_females_prop', 'log_n_killed_n_killed_mean_semest_congd_ratio', 'log_n_injured_n_injured_mean_semest_congd_ratio']
 final_indicators = indicators.drop(columns=col_to_drop)
 
 # %%
-sns.heatmap(final_indicators.corr())
+sns.heatmap(final_indicators.corr(), vmin=-1, vmax=1)
 
 # %%
 fig, ax = plt.subplots(figsize=(15, 5))
 sns.violinplot(data=final_indicators,ax=ax)
-plt.xticks(rotation=90, ha='right');
-
-# %%
-fig, ax = plt.subplots(figsize=(15, 5))
-sns.violinplot(data=ciao,ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %%
@@ -702,20 +623,36 @@ final_indicators.rename(columns={'n_males_prop': 'n_males_pr',
 # %%
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 scaler_obj = MinMaxScaler()#, MinMaxScaler(), RobustScaler()]
-final_indicators = pd.DataFrame(data=scaler_obj.fit_transform(final_indicators.values), columns=final_indicators.columns)
+normalized_indicators = pd.DataFrame(data=scaler_obj.fit_transform(final_indicators.values), columns=final_indicators.columns)
 
 # %%
-final_indicators
+normalized_indicators.sample(2)
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+sns.violinplot(data=normalized_indicators,ax=ax)
+plt.xticks(rotation=90, ha='right');
 
 # %%
 DATA_FOLDER_PATH = '../data/'
-final_indicators.to_csv(DATA_FOLDER_PATH +'incidents_cleaned_indicators.csv')
+normalized_indicators.to_csv(DATA_FOLDER_PATH +'incidents_cleaned_indicators.csv')
 
 # %%
-dummy = final_indicators.dropna()
-pca = PCA(n_components=4)
-X_pca = pca.fit_transform(dummy)
+normalized_indicators.describe()
 
+# %%
+import matplotlib.pyplot as mplt
+import plotly.express as px
+from sklearn.decomposition import PCA
+pd.set_option('display.max_columns', None)
+pd.set_option('max_colwidth', None)
+
+# %%
+pca = PCA()
+X_pca = pca.fit_transform(dummy)
+pca_df = pd.DataFrame(index=incidents_df.index)
+
+# %%
 nrows=4
 ncols=6
 row=0
@@ -729,24 +666,99 @@ for i, col in enumerate(dummy.columns):
     axs[row][i % ncols].set_ylabel("2nd eigenvector")
 
 # %%
-fig = plt.figure()
-ax = fig.add_subplot(111, projection = '3d')
+nrows=4
+ncols=6
+row=0
+fig, axs = mplt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 20), sharex=True, sharey=True)
+for i, col in enumerate(dummy.columns):
+    if i != 0 and i % ncols == 0:
+        row += 1
+    axs[row][i % ncols].scatter(X_pca[:, 18], X_pca[:, 19], edgecolor='k', s=40, c=dummy[col])
+    axs[row][i % ncols].set_title(col)
+    axs[row][i % ncols].set_xlabel("1st eigenvector")
+    axs[row][i % ncols].set_ylabel("2nd eigenvector")
 
-x = X_pca[:, 0]
-y = X_pca[:, 2]
-z = X_pca[:, 1]
-
-ax.set_xlabel("1st eigenvector")
-ax.set_ylabel("3rd eigenvector")
-ax.set_zlabel("2nd eigenvector")
-
-ax.scatter(x, y, z)
-
+# %%
 fig = px.scatter_3d(x=x, y=y, z=z, labels={'x': '1st eigenvector', 'y': '3rd eigenvector', 'z': '2nd eigenvector'})
 fig.show()
 
 # %%
-final_indicators.describe()
+exp_var_pca = pca.explained_variance_ratio_
+plt.bar(range(0,len(exp_var_pca)), exp_var_pca, align='center')
+plt.ylabel('Explained variance ratio')
+plt.xlabel('Principal component')
+plt.title('Explained variance by principal component')
+plt.xticks(np.arange(0,len(exp_var_pca),1.0));
+
+# %%
+def get_reconstruction_error(x_pca, x_orig, pca, n_comp):
+    dummy = np.matmul(x_pca[:,:n_comp], pca.components_[:n_comp,:]) + pca.mean_
+    return pd.DataFrame(index=x_orig.index, data=np.sum((dummy - x_orig.values)**2, axis=1))
+
+                 
+final_indicators['PCA_reconstruction_e_5C'] = get_reconstruction_error(X_pca, dummy, pca, 5)
+final_indicators.sample(3)
+
+# %%
+hist_box_plot(
+    final_indicators,
+    'PCA_reconstruction_e_5C',
+    title='PCA_reconstruction_e_5C',
+    bins=int(np.log(ratios.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
+col = ['1st_comp',
+ '2nd_comp',
+ '3rd_comp',
+ '4th_comp',
+ '5th_comp',
+ '6th_comp',
+ '7th_comp',
+ '8th_comp',
+ '9th_comp',
+ '10th_comp',
+ '11th_comp',
+ '12th_comp',
+ '13th_comp',
+ '14th_comp',
+ '15th_comp',
+ '16th_comp',
+ '17th_comp',
+ '18th_comp',
+ '19th_comp',
+ '20th_comp',
+ ,
+ 'PCA_rec_error_11C']
+
+
+# %%
+pca_indicators = pd.DataFrame(index=dummy.index, data=X_pca, columns=col[:-2])
+
+# %%
+pca_indicators['PCA_rec_error_5C'] = get_reconstruction_error(X_pca, dummy, pca, 5)
+pca_indicators['PCA_rec_error_11C'] = get_reconstruction_error(X_pca, dummy, pca, 11)
+pca_indicators['PCA_rec_error_20C'] = get_reconstruction_error(X_pca, dummy, pca, 20)
+
+# %%
+pca_indicators.sample(3)
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+sns.violinplot(data=pca_indicators,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+pca_normalized_indicators = pd.DataFrame(data=scaler_obj.fit_transform(pca_indicators.values), columns=pca_indicators.columns)
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+sns.violinplot(data=pca_normalized_indicators,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+pca_normalized_indicators.to_csv(DATA_FOLDER_PATH +'incidents_cleaned_indicators_PCA.csv')
 
 # %% [markdown]
 # ['date', 'date_original', 'year', 'month', 'day', 'day_of_week', 'state',
