@@ -32,7 +32,7 @@ from nltk.corpus import stopwords
 from wordcloud import WordCloud
 from pyproj import Transformer
 import zipfile
-sys.path.append(os.path.abspath('..')) # TODO: ???
+sys.path.append(os.path.abspath('..'))
 from plot_utils import *
 
 
@@ -730,7 +730,7 @@ plot_scattermap_plotly(dummy_df, 'state', zoom=2, title='Missing city')
 # Visualize data group by *state*, *county* and *city*
 
 # %%
-incidents_df.groupby(['state', 'county', 'city']).size().reset_index(name='count')
+incidents_df.groupby(['state', 'county', 'city']).size().reset_index(name='count').sample(3,random_state=1)
 
 # %% [markdown]
 # Compute the centroid for each city and visualize the first 10 centroids in alphabetical order.
@@ -799,7 +799,7 @@ info_city.loc[info_city['tot_points'] > 1].info()
 #import matplotlib.pyplot as plt
 from matplotlib.legend_handler import HandlerPathCollection
 
-def plot_info_city(df, lat, lon, info_circle):
+def plot_info_city(df, lat, lon, info_circle, prop_rad=True):
     def update_legend_marker_size(handle, orig):
         "Customize size of the legend marker"
         handle.update_from(orig)
@@ -807,8 +807,11 @@ def plot_info_city(df, lat, lon, info_circle):
 
     plt.scatter(df[lon], df[lat], color="k", s=3.0, label="Data points")
     # plot circles with radius proportional to the outlier scores
-    radius = (df[info_circle].max() - df[info_circle]) / (df[info_circle].max() - df[info_circle].min())
-    radius_scale = 100
+    if prop_rad:
+        radius = (df[info_circle].max() - df[info_circle]) / (df[info_circle].max() - df[info_circle].min())
+        radius_scale = 100
+    else:
+        radius = df[info_circle]
     scatter = plt.scatter(
         df[lon],
         df[lat],
@@ -828,13 +831,10 @@ def plot_info_city(df, lat, lon, info_circle):
 
 
 # %%
-plot_info_city(info_city, 'centroid_lat', 'centroid_lon', '75')
-
-# %%
 plot_info_city(info_city, 'centroid_lat', 'centroid_lon', 'tot_points')
 
 # %%
-plot_scattermap_plotly(info_city, 'tot_points', x_column='centroid_lat', 
+plot_scattermap_plotly(info_city, size='tot_points', x_column='centroid_lat', 
     y_column='centroid_lon', hover_name=False, zoom=2, title='Number of points per city') 
 # FIXME: discretizzare e.g. <x, between(x, y), ...
 
@@ -864,9 +864,9 @@ plot_scattermap_plotly(dummy_df, 'city', zoom=2, title='City')
 
 # %%
 if LOAD_DATA_FROM_CHECKPOINT:
-    incidents_df = load_checkpoint('checkpoint_2', date_cols=['date', 'date_original'])
+    new_incidents_df = load_checkpoint('checkpoint_2', date_cols=['date', 'date_original'])
 else:
-    incidents_df = incidents_df.apply(lambda row: substitute_city(row, info_city), axis=1)
+    new_incidents_df = incidents_df.apply(lambda row: substitute_city(row, info_city), axis=1)
     save_checkpoint(incidents_df, 'checkpoint_2')
 
 # %%
@@ -874,7 +874,15 @@ incidents_df.head(2)
 
 # %%
 print('Number of rows with null values for city before: ', incidents_df['city'].isnull().sum())
-print('Number of rows with null values for city: ', incidents_df['city'].isnull().sum())
+print('Number of rows with null values for city: ', new_incidents_df['city'].isnull().sum())
+
+# %%
+dummy_df = new_incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].notna()) & (incidents_df['city'].isna())]
+print('Number of rows with null values for city, but not for lat/lon and county: ', len(dummy_df))
+plot_scattermap_plotly(dummy_df, 'city', zoom=2, title='City inferred')
+
+# %%
+incidents_df = new_incidents_df
 
 # %% [markdown]
 # From this process, we infer 2248 *city* values.
@@ -910,6 +918,10 @@ print( 'Samples with null values for lat/lon    \t', geo_null_counts[4]+geo_null
 # %%
 plot_scattermap_plotly(incidents_df.loc[(incidents_df['latitude'].notna()) & 
     (incidents_df['county'].notna()) & (incidents_df['city'].isna())], 'state', zoom=2, title='Missing city')
+
+# %%
+plot_scattermap_plotly(incidents_df.loc[(incidents_df['latitude'].notna()) & 
+    (incidents_df['county'].notna()) & (incidents_df['city'].isna())], 'city', zoom=2, title='city')
 
 # %%
 #TODO: plottare le città inferite e i centroidi dello stesso colore e quelle che rimangono nan di nero

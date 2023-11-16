@@ -6,7 +6,6 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import AgglomerativeClustering
-#from sklearn.metrics import silhouette_score
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram
 
@@ -70,8 +69,8 @@ incidents_df['n_participants_adult_n_participants_ratio'] = np.divide(incidents_
 incidents_df
 
 # %%
-incidents_df = incidents_df.select_dtypes(include='number')
-incidents_df.isna().sum()
+incidents_df_clustering = incidents_df.select_dtypes(include='number')
+incidents_df_clustering.isna().sum()
 
 # %% [markdown]
 # ## Clustering
@@ -100,21 +99,23 @@ dropna_columns = ['latitude', 'longitude', 'n_participants', 'min_age_participan
     'n_participants']
 
 # %%
+incidents_df_clustering = incidents_df_clustering.dropna(subset=dropna_columns)
 incidents_df = incidents_df.dropna(subset=dropna_columns)
-incidents_df[clustering_columns].isna().sum()
+incidents_df_clustering[clustering_columns].isna().sum()
 
 # %%
 # standardization
 std_scaler = StandardScaler()
-std_scaler.fit(incidents_df[standardization_columns].values)
-X = std_scaler.fit_transform(incidents_df[standardization_columns].values)
+std_scaler.fit(incidents_df_clustering[standardization_columns].values)
+X = std_scaler.fit_transform(incidents_df_clustering[standardization_columns].values)
 
 # %%
 # clustering
-single_link = AgglomerativeClustering(linkage="single", compute_distances=True, distance_threshold=2.0, n_clusters=None).fit(X)
-complete_link = AgglomerativeClustering(linkage="complete", compute_distances=True).fit(X)
-average = AgglomerativeClustering(linkage="average", compute_distances=True).fit(X)
-ward = AgglomerativeClustering(linkage="ward", compute_distances=True).fit(X)
+n_clusters = 134
+single_link = AgglomerativeClustering(linkage="single", compute_distances=True, n_clusters=n_clusters).fit(X)
+complete_link = AgglomerativeClustering(linkage="complete", compute_distances=True, n_clusters=n_clusters).fit(X)
+average = AgglomerativeClustering(linkage="average", compute_distances=True, n_clusters=n_clusters).fit(X)
+ward = AgglomerativeClustering(linkage="ward", compute_distances=True, n_clusters=n_clusters).fit(X)
 
 # %%
 # results
@@ -124,7 +125,7 @@ print("average: " + str(average.labels_))
 print("ward: " + str(ward.labels_))
 
 # %%
-def plot_dendrogram(model):
+def plot_dendrogram(model, p):
     # Create linkage matrix and then plot the dendrogram
 
     # create the counts of samples under each node
@@ -144,34 +145,122 @@ def plot_dendrogram(model):
     ).astype(float)
 
     # Plot the corresponding dendrogram
-    dendrogram(linkage_matrix, truncate_mode="level", p=5)
+    dendrogram(linkage_matrix, truncate_mode="level", p=p)
 
 # %%
 plt.figure(figsize=(15, 12))
 plt.title("Hierarchical Clustering Dendrogram - Ward")
-plot_dendrogram(ward)
+plot_dendrogram(ward, 5)
 plt.xlabel("Number of points in node (or index of point if no parenthesis)")
 plt.show()
 
 # %%
 plt.figure(figsize=(15, 12))
 plt.title("Hierarchical Clustering Dendrogram - Single Link")
-plot_dendrogram(single_link)
+plot_dendrogram(single_link, 8)
 plt.xlabel("Number of points in node (or index of point if no parenthesis)")
 plt.show()
 
 # %%
 plt.figure(figsize=(15, 12))
 plt.title("Hierarchical Clustering Dendrogram - Complete Link")
-plot_dendrogram(complete_link)
+plot_dendrogram(complete_link, 5)
 plt.xlabel("Number of points in node (or index of point if no parenthesis)")
 plt.show()
 
 # %%
 plt.figure(figsize=(15, 12))
 plt.title("Hierarchical Clustering Dendrogram - Average Link")
-plot_dendrogram(average)
+plot_dendrogram(average, 10)
 plt.xlabel("Number of points in node (or index of point if no parenthesis)")
 plt.show()
+
+# %%
+from enum import Enum
+
+class IncidentTag(Enum):
+    firearm = 1
+    air_gun = 2
+    shots = 3
+    aggression = 4
+    suicide = 5
+    injuries = 6
+    death = 7
+    road = 8
+    illegal_holding = 9
+    house = 10
+    school = 11
+    children = 12
+    drugs = 13
+    officers = 14
+    organized = 15
+    social_reasons = 16
+    defensive = 17
+    workplace = 18
+    abduction = 19
+    unintentional = 20
+
+tags = [v.name for v in IncidentTag]
+
+group_values = incidents_df.groupby(tags, group_keys=True, as_index=False).count()
+tag_groups = group_values.filter(tags)
+group_values = group_values.drop(tags, axis=1)
+
+# %%
+tag_groups['n_incidents'] = group_values.max(axis=1)
+
+tag_groups
+
+# %%
+len(incidents_df) - tag_groups['n_incidents'].sum() # must be 0
+
+# %%
+incidents_per_different_tagmap = tag_groups.sort_values('n_incidents')['n_incidents'].values
+
+incidents_per_different_tagmap
+
+# %%
+cluster_map = pd.DataFrame()
+cluster_map['cluster'] = single_link.labels_
+
+single_link_cluster_population = []
+for i in range(n_clusters):
+    single_link_cluster_population.append((cluster_map.loc[cluster_map['cluster'] == i].count()).values[0])
+single_link_cluster_population.sort()
+
+np.array(single_link_cluster_population)
+
+# %%
+cluster_map = pd.DataFrame()
+cluster_map['cluster'] = complete_link.labels_
+
+complete_link_cluster_population = []
+for i in range(n_clusters):
+    complete_link_cluster_population.append((cluster_map.loc[cluster_map['cluster'] == i].count()).values[0])
+complete_link_cluster_population.sort()
+
+np.array(complete_link_cluster_population)
+
+# %%
+cluster_map = pd.DataFrame()
+cluster_map['cluster'] = average.labels_
+
+average_link_cluster_population = []
+for i in range(n_clusters):
+    average_link_cluster_population.append((cluster_map.loc[cluster_map['cluster'] == i].count()).values[0])
+average_link_cluster_population.sort()
+
+np.array(average_link_cluster_population)
+
+# %%
+cluster_map = pd.DataFrame()
+cluster_map['cluster'] = ward.labels_
+
+ward_cluster_population = []
+for i in range(n_clusters):
+    ward_cluster_population.append((cluster_map.loc[cluster_map['cluster'] == i].count()).values[0])
+ward_cluster_population.sort()
+
+np.array(ward_cluster_population)
 
 
