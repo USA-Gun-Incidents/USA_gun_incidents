@@ -710,7 +710,7 @@ plt.ylabel('Explained variance ratio')
 plt.xlabel('Principal component')
 plt.title('Explained variance by principal component')
 plt.xticks(xtick, range(20))
-plt.legend()
+plt.legend();
 
 
 # %%
