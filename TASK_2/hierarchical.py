@@ -11,12 +11,33 @@ from scipy.cluster.hierarchy import dendrogram
 
 # %%
 # import dataset
-incidents_df = pd.read_csv(
-    '../data/incidents_cleaned.csv',
-    index_col=False,
-    parse_dates=['date', 'date_original'],
-    date_parser=lambda x: pd.to_datetime(x, format='%Y-%m-%d')
-)
+incidents_df = pd.read_csv('../data/incidents_cleaned_indicators.csv', index_col=False)
+incidents_df.drop("Unnamed: 0", axis=1, inplace=True)
+
+# %%
+incidents_df.info()
+
+# %%
+incidents_df.isna().sum()
+
+# %% [markdown]
+# ## Dataset preparation
+# We already have normalized data, so we just select the better state for clustering analysis
+
+# %%
+# FIXME: provvisiorio
+
+incidents_df_full = pd.read_csv('../data/incidents_cleaned.csv')
+incidents_df_full.head(2)
+
+# %%
+# FIXME: provvisiorio
+
+incidents_df['state'] = incidents_df_full['state']
+
+state = "ILLINOIS"
+incidents_df = incidents_df[incidents_df['state'] == state]
+incidents_df.drop('state', axis=1)
 
 # %% [markdown]
 # ## Dataset preparation

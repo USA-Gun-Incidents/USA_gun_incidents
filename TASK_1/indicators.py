@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
@@ -7,10 +8,10 @@ import os
 import seaborn as sns
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-%matplotlib inline
+# %matplotlib inline
 
 # %%
-incidents_df = pd.read_csv('../data/incidents_cleaned.csv', index_col=0)
+incidents_df = pd.read_csv('../data/incidents_cleaned.csv')
 incidents_df['date'] = pd.to_datetime(incidents_df['date'], format='%Y-%m-%d')
 
 # %%
@@ -20,7 +21,7 @@ incidents_df['semester'] = (incidents_df['date'].dt.month // 7) + 1
 incidents_df['city'] = incidents_df['city'].fillna('UKN') # to treat all points without city as belonging to the same fake city
 
 # %%
-incidents_df
+incidents_df.describe()
 
 # %%
 def compute_ratio_indicator(df, ext_df, gby, num, den, suffix, agg_fun):
@@ -32,9 +33,9 @@ def compute_ratio_indicator(df, ext_df, gby, num, den, suffix, agg_fun):
     df[num+'_'+den+suffix+'_ratio'] = np.divide(df[num], df[den+suffix], out=np.zeros_like(df[num]), where=(df[den+suffix] != 0))
     return df[[num+'_'+den+suffix+'_ratio']]
 
-ratios = pd.DataFrame(index=incidents_df.index)
 
 # %%
+ratios = pd.DataFrame(index=incidents_df.index)
 ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_males', 'n_males', '_tot_year_state', 'sum'))
 ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_females', 'n_females', '_tot_year_state', 'sum'))
 ratios = ratios.join(compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state'], 'n_males', 'n_participants', '_year_state', 'sum'))
@@ -90,9 +91,6 @@ def compute_simple_division(df, col_1, col_2):
     dummy = df.loc[(df[col_1].notna()) & (df[col_2].notna())]
     return dummy[col_1]/dummy[col_2]
 
-ratios['n_killed_n_participants_ratio'] = compute_simple_division(incidents_df, 'n_killed', 'n_participants')
-ratios['n_injured_n_participants_ratio'] = compute_simple_division(incidents_df, 'n_injured', 'n_participants')
-ratios['n_unharmed_n_participants_ratio'] = compute_simple_division(incidents_df, 'n_unharmed', 'n_participants')
 
 # %%
 ratios
@@ -147,7 +145,7 @@ plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
 # La trasformazione logaritmica serve a rendere i dati meno sparsi, e in questo caso è utilizzata con il proposito opposto... 
-# 
+#
 # Non possiamo trasformare dei dati poco significanti in dati significanti in questo modo, attenzione e io consiglierei di non utilizzare il logaritmo per i valori tra [0,1]
 
 # %%
@@ -334,7 +332,7 @@ local_outlier_factors = pd.DataFrame(index=incidents_numeric.index, data=X_score
 local_outlier_factors
 
 # %%
-dummy = incidents_df.join(local_outlier_factors).select_dtypes(include=numerics).dropna(axis=0).drop(columns=['poverty_perc','candidate_votes','total_votes','candidate_perc','population_state_2010', 'congressional_district','state_house_district',	'state_senate_district'])
+dummy = incidents_df.join(local_outlier_factors).select_dtypes(include=numerics).dropna(axis=0).drop(columns=['poverty_perc','candidate_votes','total_votes','candidate_perc','population_state_2010', 'congressional_district','state_house_district',	'state_senate_district', 'semester'])
 dummy[dummy['local_outlier_factor']<-1.8].sample(10)
 
 # %%
@@ -421,7 +419,7 @@ x['a'] / x['b']'''
 # - uccisi, feriti ecc.. rispetto alla media, con norm. logaritmica
 # - rapporto degli uccisi/totali o feriti/totali dell'incidente (magari sostituiti)
 # - entropie pazzerelle (su tutti i tag o combinazioni di tag)
-# 
+#
 
 # %%
 final_col = ['latitude', 'longitude', 'location_importance',
@@ -557,18 +555,6 @@ hist_box_plot(
 )
 
 # %%
-l_i_e = compute_entropy_indicator(incidents_df, ['year', 'semester', 'state', 'congressional_district'], ['location_importance'], 'loc_imp')
-#indicators = indicators.join(tag_e)
-
-hist_box_plot(
-    l_i_e,
-    'loc_imp',
-    title='loc_imp',
-    bins=int(np.log(ratios.shape[0])), # Sturger's rule
-    figsize=(10, 5)
-)
-
-# %%
 hist_box_plot(
     incidents_df,
     'location_importance',
@@ -578,7 +564,7 @@ hist_box_plot(
 )
 
 # %%
-incidents_df.loc[(incidents_df['avg_age_participants']==0)] #FIXME #TODO ATTENZIONE!!! età media a zero ?!?!?!?!?!?! #TUTTI
+incidents_df.loc[(incidents_df['avg_age_participants']==0)]
 
 # %%
 indicators.dropna().describe()
@@ -626,6 +612,13 @@ scaler_obj = MinMaxScaler()#, MinMaxScaler(), RobustScaler()]
 normalized_indicators = pd.DataFrame(data=scaler_obj.fit_transform(final_indicators.values), columns=final_indicators.columns)
 
 # %%
+incidents_df[['avg_age_participants', 'max_age_participants', 'min_age_participants', 'n_participants_child', 'n_participants_teen', 'semester',
+              'congressional_district', 'year']].describe()
+
+# %%
+normalized_indicators.describe()
+
+# %%
 normalized_indicators.sample(2)
 
 # %%
@@ -648,8 +641,9 @@ pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 
 # %%
+normalized_indicators_notna = normalized_indicators.dropna()
 pca = PCA()
-X_pca = pca.fit_transform(dummy)
+X_pca = pca.fit_transform(normalized_indicators_notna)
 pca_df = pd.DataFrame(index=incidents_df.index)
 
 # %%
@@ -657,10 +651,10 @@ nrows=4
 ncols=6
 row=0
 fig, axs = mplt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 20), sharex=True, sharey=True)
-for i, col in enumerate(dummy.columns):
+for i, col in enumerate(normalized_indicators_notna.columns):
     if i != 0 and i % ncols == 0:
         row += 1
-    axs[row][i % ncols].scatter(X_pca[:, 0], X_pca[:, 1], edgecolor='k', s=40, c=dummy[col])
+    axs[row][i % ncols].scatter(X_pca[:, 0], X_pca[:, 1], edgecolor='k', s=40, c=normalized_indicators_notna[col])
     axs[row][i % ncols].set_title(col)
     axs[row][i % ncols].set_xlabel("1st eigenvector")
     axs[row][i % ncols].set_ylabel("2nd eigenvector")
@@ -670,15 +664,18 @@ nrows=4
 ncols=6
 row=0
 fig, axs = mplt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 20), sharex=True, sharey=True)
-for i, col in enumerate(dummy.columns):
+for i, col in enumerate(normalized_indicators_notna.columns):
     if i != 0 and i % ncols == 0:
         row += 1
-    axs[row][i % ncols].scatter(X_pca[:, 18], X_pca[:, 19], edgecolor='k', s=40, c=dummy[col])
+    axs[row][i % ncols].scatter(X_pca[:, 18], X_pca[:, 19], edgecolor='k', s=40, c=normalized_indicators_notna[col])
     axs[row][i % ncols].set_title(col)
-    axs[row][i % ncols].set_xlabel("1st eigenvector")
-    axs[row][i % ncols].set_ylabel("2nd eigenvector")
+    axs[row][i % ncols].set_xlabel("19th eigenvector")
+    axs[row][i % ncols].set_ylabel("20th eigenvector")
 
 # %%
+x = X_pca[:, 0]
+y = X_pca[:, 2]
+z = X_pca[:, 1]
 fig = px.scatter_3d(x=x, y=y, z=z, labels={'x': '1st eigenvector', 'y': '3rd eigenvector', 'z': '2nd eigenvector'})
 fig.show()
 
@@ -695,21 +692,9 @@ def get_reconstruction_error(x_pca, x_orig, pca, n_comp):
     dummy = np.matmul(x_pca[:,:n_comp], pca.components_[:n_comp,:]) + pca.mean_
     return pd.DataFrame(index=x_orig.index, data=np.sum((dummy - x_orig.values)**2, axis=1))
 
-                 
-final_indicators['PCA_reconstruction_e_5C'] = get_reconstruction_error(X_pca, dummy, pca, 5)
-final_indicators.sample(3)
 
 # %%
-hist_box_plot(
-    final_indicators,
-    'PCA_reconstruction_e_5C',
-    title='PCA_reconstruction_e_5C',
-    bins=int(np.log(ratios.shape[0])), # Sturger's rule
-    figsize=(10, 5)
-)
-
-# %%
-col = ['1st_comp',
+pca_col = ['1st_comp',
  '2nd_comp',
  '3rd_comp',
  '4th_comp',
@@ -728,18 +713,16 @@ col = ['1st_comp',
  '17th_comp',
  '18th_comp',
  '19th_comp',
- '20th_comp',
- ,
- 'PCA_rec_error_11C']
+ '20th_comp']
 
 
 # %%
-pca_indicators = pd.DataFrame(index=dummy.index, data=X_pca, columns=col[:-2])
+pca_indicators = pd.DataFrame(index=normalized_indicators_notna.index, data=X_pca, columns=pca_col)
 
 # %%
-pca_indicators['PCA_rec_error_5C'] = get_reconstruction_error(X_pca, dummy, pca, 5)
-pca_indicators['PCA_rec_error_11C'] = get_reconstruction_error(X_pca, dummy, pca, 11)
-pca_indicators['PCA_rec_error_20C'] = get_reconstruction_error(X_pca, dummy, pca, 20)
+pca_indicators['PCA_rec_error_5C'] = get_reconstruction_error(X_pca, normalized_indicators_notna, pca, 5)
+pca_indicators['PCA_rec_error_11C'] = get_reconstruction_error(X_pca, normalized_indicators_notna, pca, 11)
+pca_indicators['PCA_rec_error_20C'] = get_reconstruction_error(X_pca, normalized_indicators_notna, pca, 20)
 
 # %%
 pca_indicators.sample(3)
@@ -756,6 +739,24 @@ pca_normalized_indicators = pd.DataFrame(data=scaler_obj.fit_transform(pca_indic
 fig, ax = plt.subplots(figsize=(15, 5))
 sns.violinplot(data=pca_normalized_indicators,ax=ax)
 plt.xticks(rotation=90, ha='right');
+
+# %%
+hist_box_plot(
+    pca_normalized_indicators,
+    'PCA_rec_error_5C',
+    title='PCA_rec_error_5C',
+    bins=int(np.log(ratios.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
+hist_box_plot(
+    pca_normalized_indicators,
+    'PCA_rec_error_11C',
+    title='PCA_rec_error_11C',
+    bins=int(np.log(ratios.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
 
 # %%
 pca_normalized_indicators.to_csv(DATA_FOLDER_PATH +'incidents_cleaned_indicators_PCA.csv')
