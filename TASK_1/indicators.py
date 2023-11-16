@@ -681,11 +681,37 @@ fig.show()
 
 # %%
 exp_var_pca = pca.explained_variance_ratio_
-plt.bar(range(0,len(exp_var_pca)), exp_var_pca, align='center')
+diff_var = []
+
+for i, var in enumerate(exp_var_pca[:-1]):
+    diff_var.append( var-exp_var_pca[i+1])
+
+
+xtick = []
+gap = 0
+for i, var in enumerate(diff_var):
+    xtick.append(i+gap)
+    if i != 0 and diff_var[i-1] <= var:
+        gap += 0.5
+        if gap == 0.5:
+            plt.axvline(x = i+gap+0.25, color = 'green', linestyle = '-.', alpha=0.5, label='possible cut')
+        else:
+             plt.axvline(x = i+gap+0.25, color = 'green', linestyle = '-.', alpha=0.5)
+    
+
+#xtick = [0,1,2,3,4,5.5,6.5,7.5,8.5,9.5,10.5,12,13,14,15,16,17,18,19,20]
+#diff_var = list(zip(xtick, diff_var))
+xtick.append(23)
+
+plt.bar(xtick, exp_var_pca, align='center')
+plt.plot(xtick[1:], diff_var, label='difference from prevoius variance', color='orange')
+
 plt.ylabel('Explained variance ratio')
 plt.xlabel('Principal component')
 plt.title('Explained variance by principal component')
-plt.xticks(np.arange(0,len(exp_var_pca),1.0));
+plt.xticks(xtick, range(20))
+plt.legend()
+
 
 # %%
 def get_reconstruction_error(x_pca, x_orig, pca, n_comp):
