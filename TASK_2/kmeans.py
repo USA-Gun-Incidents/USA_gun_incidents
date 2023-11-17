@@ -33,12 +33,16 @@ incidents_df = pd.read_csv(
     '../data/incidents_cleaned.csv'
 )
 indicators_df = pd.read_csv(
-    '../data/incidents_cleaned_indicators.csv'
+    '../data/incidents_cleaned_indicators.csv', index_col=0
 )
-incidents_df[indicators_df.columns] = indicators_df
 
 # %%
-features_to_cluster = indicators_df.columns
+clustering_features = ['latitude_proj', 'longitude_proj', 'location_importance', 'avg_age_participants',
+                       'n_participants', 'age_range', 'n_participants_child_prop', 'n_participants_teen_prop',
+                       'n_males_pr', 'n_killed_pr', 'n_injured_pr', 'n_arrested_pr', 'n_unharmed_pr',
+                       'log_n_males_n_males_mean_semest_congd_ratio', 'log_avg_age_mean_SD',
+                       'avg_age_entropy', 'city_entropy', 'address_entropy', 'n_participants_adult_entropy',
+                       'tags_entropy']
 categorical_features = [
     'year', 'month', 'day_of_week', #'state', 'address_type', 
     'firearm', 'air_gun', 'shots', 'aggression', 'suicide',
@@ -47,21 +51,31 @@ categorical_features = [
     'defensive', 'workplace', 'abduction', 'unintentional', 'party']
 
 # %%
-incidents_df = incidents_df.dropna(subset=features_to_cluster)
+indicators_df = indicators_df.dropna()
+
+# %%
+latlong_projs = utm.from_latlon(indicators_df['latitude'].to_numpy(), indicators_df['longitude'].to_numpy()) # TODO: da spostare nel file che fa gli indicatori
+
+scaler= MinMaxScaler()
+
+latlong = scaler.fit_transform(np.stack([latlong_projs[0], latlong_projs[1]]).reshape(-1, 2))
+
+indicators_df['latitude_proj'] = latlong[:,0]
+indicators_df['longitude_proj'] = latlong[:,1]
+
+
+# %%
 #incidents_df.replace([np.inf, -np.inf], 0, inplace=True)
 
 # %%
 plt.figure(figsize=(15, 12))
-corr_matrix = incidents_df[features_to_cluster].corr() # TODO: different coor coefficients
+corr_matrix = indicators_df.corr() # TODO: different coor coefficients
 sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
 
 # %%
-incidents_df[features_to_cluster].boxplot()
-plt.xticks(rotation=90);
-
-# %%
-scaler= StandardScaler()
-X = scaler.fit_transform(incidents_df[features_to_cluster].values) # TODO: come scegliere?
+# scaler= StandardScaler() # TODO: non farlo nel file che calcola gli indicatori
+# X = scaler.fit_transform(indicators_df.values) # TODO: come scegliere?
+X = indicators_df[clustering_features].values
 
 # %%
 def plot_k_elbow(X, kmeans_params, metric, start_k, max_k): # TODO: plottare nello stesso plot curva che parte da 1 e da 2 se sono diverse
@@ -174,29 +188,29 @@ results_df = pd.DataFrame(results).T
 results_df.drop(columns=['model'])
 
 # %%
-k = 5
+k = 3
 kmeans = results[f'{k}means']['model']
 labels = results[f'{k}means']['model'].labels_
 centroids = results[f'{k}means']['model'].cluster_centers_
-centroids_inverse = scaler.inverse_transform(centroids)
-incidents_df['cluster'] = labels
+#centroids_inverse = scaler.inverse_transform(centroids)
+indicators_df['cluster'] = labels
 
 # %%
-plt.figure(figsize=(8, 4))
-for i in range(0, len(centroids_inverse)):
-    plt.plot(centroids_inverse[i], marker='o', label='Cluster %s' % i)
-plt.tick_params(axis='both', which='major', labelsize=10)
-plt.xticks(range(0, len(features_to_cluster)), features_to_cluster, rotation=90)
-plt.legend(fontsize=10)
-plt.title('Centroids (original features)')
-plt.show()
+# plt.figure(figsize=(8, 4))
+# for i in range(0, len(centroids_inverse)):
+#     plt.plot(centroids_inverse[i], marker='o', label='Cluster %s' % i)
+# plt.tick_params(axis='both', which='major', labelsize=10)
+# plt.xticks(range(0, len(features_to_cluster)), features_to_cluster, rotation=90)
+# plt.legend(fontsize=10)
+# plt.title('Centroids (original features)')
+# plt.show()
 
 # %%
 plt.figure(figsize=(8, 4))
 for i in range(0, len(centroids)):
     plt.plot(centroids[i], marker='o', label='Cluster %s' % i)
 plt.tick_params(axis='both', which='major', labelsize=10)
-plt.xticks(range(0, len(features_to_cluster)), features_to_cluster, rotation=90)
+plt.xticks(range(0, len(clustering_features)), clustering_features, rotation=90)
 plt.legend(fontsize=10)
 plt.title('Centroids (scaled features)')
 plt.show()
@@ -204,7 +218,7 @@ plt.show()
 # %%
 df = pd.DataFrame()
 for i, center in enumerate(centroids):
-    tmp_df = pd.DataFrame(dict(r=center, theta=features_to_cluster))
+    tmp_df = pd.DataFrame(dict(r=center, theta=clustering_features))
     tmp_df['Centroid'] = f'Centroid {i}'
     df = pd.concat([df,tmp_df], axis=0)
 
@@ -220,9 +234,9 @@ for i in range(X.shape[1]):
 
 # %%
 plt.figure(figsize=(15, 5))
-sse_feature, features_to_cluster_sorted = zip(*sorted(zip(sse_feature, features_to_cluster)))
+sse_feature, clustering_features_sorted = zip(*sorted(zip(sse_feature, clustering_features)))
 plt.bar(range(len(sse_feature)), sse_feature)
-plt.xticks(range(len(sse_feature)), features_to_cluster_sorted)
+plt.xticks(range(len(sse_feature)), clustering_features_sorted)
 plt.xticks(rotation=90)
 plt.ylabel('SSE')
 plt.xlabel('Feature')
@@ -243,7 +257,7 @@ indices_of_top_contributors = np.argsort(sse_points)[-5:]
 incidents_df.iloc[indices_of_top_contributors]
 
 # %%
-plot_scattermap_plotly(incidents_df, 'cluster', zoom=2, title='Kmeans clustering (with standardized data)')
+plot_scattermap_plotly(indicators_df, 'cluster', zoom=2, title='Kmeans clustering (with standardized data)')
 
 # %%
 def plot_distribution_categorical_attribute(df, attribute):
@@ -267,32 +281,35 @@ def plot_distribution_categorical_attribute(df, attribute):
     plt.show()
 
 # %%
+incidents_df = incidents_df.loc[indicators_df.index]
+incidents_df['cluster'] = labels
+
+# %%
 for attribute in categorical_features:
     plot_distribution_categorical_attribute(incidents_df, attribute)
 
 # %%
-features_to_scatter = features_to_cluster
 ncols = 3
-nplots = len(features_to_scatter)*(len(features_to_scatter)-1)/2
+nplots = len(clustering_features)*(len(clustering_features)-1)/2
 nrows = int(nplots / ncols)
 if nplots % ncols != 0:
     nrows += 1
 
-colors = [sns.color_palette()[c%6] for c in incidents_df['cluster']] # FIXME: assumes having max 6 clusters
-f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(36,36))
+colors = [sns.color_palette()[c%6] for c in indicators_df['cluster']] # FIXME: assumes having max 6 clusters
+f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(36,50))
 id = 0
-for i in range(len(features_to_scatter)):
-    for j in range(i+1, len(features_to_scatter)):
-        x, y = incidents_df[features_to_scatter].columns[i], incidents_df[features_to_scatter].columns[j]
-        axs[int(id/ncols)][id%ncols].scatter(incidents_df[x], incidents_df[y], s=20, c=colors)
+for i in range(len(clustering_features)):
+    for j in range(i+1, len(clustering_features)):
+        x, y = indicators_df[clustering_features].columns[i], indicators_df[clustering_features].columns[j]
+        axs[int(id/ncols)][id%ncols].scatter(indicators_df[x], indicators_df[y], s=20, c=colors)
         for c in range(len(centroids)):
             axs[int(id/ncols)][id%ncols].scatter(
-                centroids[c][incidents_df[features_to_scatter].columns.get_loc(x)],
-                centroids[c][incidents_df[features_to_scatter].columns.get_loc(y)],
+                centroids[c][indicators_df[clustering_features].columns.get_loc(x)],
+                centroids[c][indicators_df[clustering_features].columns.get_loc(y)],
                 marker='o', c='white', alpha=1, s=200, edgecolor='k')
             axs[int(id/ncols)][id%ncols].scatter(
-                centroids[c][incidents_df[features_to_scatter].columns.get_loc(x)],
-                centroids[c][incidents_df[features_to_scatter].columns.get_loc(y)],
+                centroids[c][indicators_df[clustering_features].columns.get_loc(x)],
+                centroids[c][indicators_df[clustering_features].columns.get_loc(y)],
                 marker='$%d$' % c, c='black', alpha=1, s=50, edgecolor='k')
         axs[int(id/ncols)][id%ncols].set_xlabel(x)
         axs[int(id/ncols)][id%ncols].set_ylabel(y)
@@ -301,7 +318,7 @@ for ax in axs[nrows-1, id%ncols:]:
     ax.remove()
 
 legend_elements = []
-clusters_ids = incidents_df['cluster'].unique()
+clusters_ids = indicators_df['cluster'].unique()
 for c in sorted(clusters_ids):
     legend_elements.append(Line2D(
         [0], [0], marker='o', color='w', label=f'Cluster {c}', markerfacecolor=sns.color_palette()[c%6]))
@@ -312,7 +329,7 @@ plt.show()
 
 # %%
 pca = PCA()
-X_pca = pca.fit_transform(incidents_df[features_to_cluster])
+X_pca = pca.fit_transform(indicators_df[clustering_features])
 
 # %%
 exp_var_pca = pca.explained_variance_ratio_
@@ -351,7 +368,7 @@ for i in range(n_components):
     pca_data[f'Component {i+1}'] = X_pca[:,i]
 pca_data['Cluster'] = incidents_df['cluster']
 df_pca = pd.DataFrame(data=pca_data)
-sns.pairplot(df_pca, hue='Cluster', palette=[sns.color_palette()[i] for i in range(n_components+1)], corner=True)
+sns.pairplot(df_pca, hue='Cluster', plot_kws=dict(edgecolor="k"), palette=[sns.color_palette()[i] for i in range(k)], corner=True)
 
 # %%
 plt.scatter(X_pca[:, 0], X_pca[:, 1], edgecolor='k', s=40, c=colors)
@@ -372,58 +389,16 @@ for i, s in enumerate(silhouette_scores):
     if s >= 0:
         new_labels[i] = labels[i]
 
-unique_lbl, idx = np.unique(new_labels, return_index=True)
-unique_lbl = unique_lbl[np.argsort(idx)]
-cmap=[]
-for i, lbl in enumerate(unique_lbl):
-    if lbl != -1:
-        cmap.append('rgb'+str(sns.color_palette()[lbl]))
-    else:
-        cmap.append('rgb(0,0,0)')
-
-fig = px.scatter_matrix(
-    X_pca,
-    labels=pca_labels,
-    dimensions=range(5),
-    color_discrete_sequence=cmap,
-    color=new_labels.astype(str),
-    height=800
+pca_data['Cluster'] = new_labels
+df_pca = pd.DataFrame(data=pca_data)
+sns.pairplot(
+    df_pca,
+    hue='Cluster',
+    plot_kws=dict(edgecolor="k"),
+    palette=([(0,0,0)]+[sns.color_palette()[i] for i in range(k)]),
+    corner=True,
+    hue_order=[i for i in range(k)]+[-1]
 )
-fig.update_traces(diagonal_visible=False, showupperhalf=False)
-fig.update_layout(
-        legend_title_text="Cluster"
-    )
-fig.show()
-
-# %%
-new_labels = np.full(labels.shape[0], -1)
-for i, s in enumerate(silhouette_scores):
-    if s >= 0:
-        new_labels[i] = labels[i]
-
-pca_data['Cluster'] = new_labels
-df_pca = pd.DataFrame(data=pca_data)
-sns.pairplot(df_pca, hue='Cluster', palette=([(0,0,0)]+[sns.color_palette()[i] for i in range(n_components+1)]), corner=True)
-
-# %%
-new_labels = np.full(labels.shape[0], 5)
-for i, s in enumerate(silhouette_scores):
-    if s >= 0:
-        new_labels[i] = labels[i]
-
-pca_data['Cluster'] = new_labels
-df_pca = pd.DataFrame(data=pca_data)
-sns.pairplot(df_pca, hue='Cluster', palette=([sns.color_palette()[i] for i in range(n_components+1)]+[(0,0,0)]), corner=True)
-
-# %%
-new_labels = np.full(labels.shape[0], 5)
-for i, s in enumerate(silhouette_scores):
-    if s >= 0:
-        new_labels[i] = labels[i]
-
-pca_data['Cluster'] = new_labels
-df_pca = pd.DataFrame(data=pca_data)
-sns.pairplot(df_pca, hue='Cluster', hue_order=[0,1,2,3,4,5], palette=([sns.color_palette()[i] for i in range(n_components+1)]+[(0,0,0)]), corner=True)
 
 # %%
 visualizer = InterclusterDistance(kmeans)
@@ -431,7 +406,7 @@ visualizer.fit(X)
 visualizer.show()
 
 # %%
-# TODO: assicurasi sia corretto...
+# TODO: subsample con stratificazione in base a numero di punti per cluster
 subsampled_incidents_df = incidents_df.groupby('cluster', group_keys=False).apply(lambda x: x.sample(frac=0.05, random_state=0))
 subsampled_incidents_df.reset_index(inplace=True)
 subsampled_incidents_df.sort_values(by=['cluster'], inplace=True)
@@ -457,27 +432,25 @@ plt.matshow(im)
 plt.matshow(dm)
 
 # %%
-corr_matrix = np.corrcoef(dm, im, rowvar=False)
-
-plt.matshow(corr_matrix)
+sns.heatmap(dm)
 
 # %%
 ncols = 3
-nplots = len(features_to_cluster)
+nplots = len(clustering_features)
 nrows = int(nplots/ncols)
 if nplots % ncols != 0:
     nrows += 1
 f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(36,36))
 id = 0
-for feature in features_to_cluster:
-    incidents_df.boxplot(column=feature, by='cluster', ax=axs[int(id/ncols)][id%ncols])
+for feature in clustering_features:
+    indicators_df.boxplot(column=feature, by='cluster', ax=axs[int(id/ncols)][id%ncols])
     id += 1
 for ax in axs[nrows-1, id%ncols:]:
     ax.remove()
 
 # %%
-for feature in features_to_cluster:
-    axes = incidents_df[feature].hist(by=incidents_df['cluster'], bins=20, layout=(1,k), figsize=(20, 5))
+for feature in clustering_features:
+    axes = indicators_df[feature].hist(by=incidents_df['cluster'], bins=20, layout=(1,k), figsize=(20, 5))
     plt.suptitle(f'Distribution of {feature} in each cluster', fontweight='bold')
     for i, ax in enumerate(axes):
         ax.set_title(f'Cluster {i}')
@@ -492,7 +465,7 @@ homogeneity_scores = []
 completeness_scores = []
 mutual_info_scores = []
 
-for column in incidents_df[categorical_features].columns: # all permutation invariant
+for column in categorical_features: # all permutation invariant
     adj_rand_scores.append(adjusted_rand_score(incidents_df[column], incidents_df['cluster']))
     mutual_info_scores.append(normalized_mutual_info_score(incidents_df[column], incidents_df['cluster'], average_method='arithmetic'))
     homogeneity_scores.append(homogeneity_score(incidents_df[column], incidents_df['cluster']))
@@ -534,18 +507,22 @@ accuracy = []
 f1 = []
 precision = []
 recall = []
-#roc_auc = []
+roc_auc = []
 # TODO: entropy and purity
+k_categorical_features = []
 
-for column in incidents_df[categorical_features[:-1]].columns: # FIXME: -1 to avoid exception
+for column in categorical_features: # TODO: bisognerebbe mergiare cluster vicini e trovare matching?
+    if incidents_df['party'].unique().shape[0] != k:
+        continue
+    k_categorical_features.append(column)
     _, cluster_labels = align_labels(incidents_df[column], incidents_df['cluster'])
     accuracy.append(accuracy_score(incidents_df[column], cluster_labels))
     f1.append(f1_score(incidents_df[column], cluster_labels, average='weighted'))
     precision.append(precision_score(incidents_df[column], cluster_labels, average='weighted', zero_division=0))
     recall.append(recall_score(incidents_df[column], cluster_labels, average='weighted', zero_division=0))
-    #roc_auc.append(roc_auc_score(incidents_df[column], cluster_labels, multi_class='ovr', average='weighted')) # FIXME: not working
+    roc_auc.append(roc_auc_score(incidents_df[column], cluster_labels, multi_class='ovr', average='weighted'))
 
-cat_clf_metrics_df['feature'] = categorical_features[:-1]
+cat_clf_metrics_df['feature'] = k_categorical_features
 cat_clf_metrics_df['accuracy'] = accuracy
 cat_clf_metrics_df['f1'] = f1
 cat_clf_metrics_df['precision'] = precision
