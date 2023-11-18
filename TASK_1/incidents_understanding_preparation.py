@@ -341,9 +341,9 @@ incidents_df.drop(columns=['date_minus10', 'date_minus11', 'date_mean', 'date_me
 incidents_df['date_original'] = incidents_df['date']
 incidents_df['date'] = incidents_df['date'].apply(lambda x : pd.NaT if x.year>2018 else x)
 incidents_df['year'] = incidents_df['date'].dt.year.astype('UInt64')
-incidents_df['month'] = incidents_df['date'].dt.month.astype('int64')
+incidents_df['month'] = incidents_df['date'].dt.month.astype('UInt64')
 incidents_df['month_name'] = incidents_df['date'].dt.month_name()
-incidents_df['day'] = incidents_df['date'].dt.day.astype('int64')
+incidents_df['day'] = incidents_df['date'].dt.day.astype('UInt64')
 incidents_df['day_of_week'] = incidents_df['date'].dt.dayofweek.astype('UInt64')
 incidents_df['day_of_week_name'] = incidents_df['date'].dt.day_name()
 
@@ -1018,10 +1018,6 @@ print( 'Samples with null values for lat/lon    \t', geo_null_counts[4]+geo_null
 # %%
 plot_scattermap_plotly(incidents_df.loc[(incidents_df['latitude'].notna()) & 
     (incidents_df['county'].notna()) & (incidents_df['city'].isna())], 'state', zoom=2, title='Missing city')
-
-# %%
-plot_scattermap_plotly(incidents_df.loc[(incidents_df['latitude'].notna()) & 
-    (incidents_df['county'].notna()) & (incidents_df['city'].isna())], 'city', zoom=2, title='city')
 
 # %%
 #TODO: plottare le città inferite e i centroidi dello stesso colore e quelle che rimangono nan di nero

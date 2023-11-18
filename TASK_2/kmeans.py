@@ -6,11 +6,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 import plotly.express as px
-import plotly.offline as pyo
 import warnings
 np.warnings = warnings # altrimenti numpy da problemi con pyclustering, TODO: è un problema solo mio?
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score, silhouette_score, silhouette_samples, adjusted_rand_score
+from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score, silhouette_score, adjusted_rand_score
 from sklearn.metrics import homogeneity_score, completeness_score, normalized_mutual_info_score
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 from sklearn.cluster import KMeans, BisectingKMeans
@@ -27,7 +26,6 @@ from clustering_utils import *
 # %matplotlib inline
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
-RANDOM_STATE = 42 # to get reproducible results
 
 # %%
 # TODO: si leggerà un solo file che contiene tutto
@@ -68,9 +66,6 @@ indicators_df['longitude_proj'] = latlong[:,1]
 # scaler= StandardScaler() # TODO: fare in questo notebook
 # X = scaler.fit_transform(indicators_df.values) # TODO: come scegliere?
 X = indicators_df[features_to_cluster].values
-
-# %% [markdown]
-# ## Identification of the best value of k
 
 # %%
 def plot_score_varying_k(X, kmeans_params, metric, start_k, max_k):
@@ -114,7 +109,7 @@ def plot_score_varying_k(X, kmeans_params, metric, start_k, max_k):
 MAX_ITER = 300
 N_INIT = 10
 INIT_METHOD = 'k-means++'
-kmeans_params = {'init': INIT_METHOD, 'n_init': N_INIT, 'max_iter': MAX_ITER, 'random_state': RANDOM_STATE}
+kmeans_params = {'init': INIT_METHOD, 'n_init': N_INIT, 'max_iter': MAX_ITER}
 max_k = 30
 best_k = []
 
@@ -138,14 +133,8 @@ best_k += ks
 # best_k += ks
 
 # %%
-initial_centers = kmeans_plusplus_initializer(data=X, amount_centers=1, random_state=RANDOM_STATE).initialize()
-xmeans_MDL_instance = xmeans( # TODO: assicurarsi di starlo usando nel modo in cui vogliamo, si arresta prima in base al BIC?
-    data=X,
-    initial_centers=initial_centers,
-    kmax=max_k,
-    splitting_type=splitting_type.BAYESIAN_INFORMATION_CRITERION,
-    random_state=RANDOM_STATE
-)
+initial_centers = kmeans_plusplus_initializer(data=X, amount_centers=1).initialize()
+xmeans_MDL_instance = xmeans(data=X, initial_centers=initial_centers, kmax=max_k, splitting_type=splitting_type.BAYESIAN_INFORMATION_CRITERION)
 xmeans_MDL_instance.process()
 n_xmeans_BIC_clusters = len(xmeans_MDL_instance.get_clusters())
 print('Number of clusters found by xmeans using BIC score: ', n_xmeans_BIC_clusters)
@@ -153,13 +142,7 @@ if n_xmeans_BIC_clusters < max_k and n_xmeans_BIC_clusters not in best_k:
     best_k.append(n_xmeans_BIC_clusters)
 
 # %%
-xmeans_MDL_instance = xmeans( # TODO: idem come sopra
-    data=X,
-    initial_centers=initial_centers,
-    kmax=max_k,
-    splitting_type=splitting_type.MINIMUM_NOISELESS_DESCRIPTION_LENGTH,
-    random_state=RANDOM_STATE
-)
+xmeans_MDL_instance = xmeans(data=X, initial_centers=initial_centers, kmax=max_k, splitting_type=splitting_type.MINIMUM_NOISELESS_DESCRIPTION_LENGTH)
 xmeans_MDL_instance.process()
 n_xmeans_MDL_clusters = len(xmeans_MDL_instance.get_clusters())
 print('Number of clusters found by xmeans using MDL score: ', n_xmeans_MDL_clusters)
@@ -186,7 +169,6 @@ best_k=[4]
 # %%
 results = {}
 kmeans_params = {}
-kmeans_params['random_state'] = RANDOM_STATE
 kmeans_params['max_iter'] = MAX_ITER
 for k in best_k:
     kmeans_params['n_init'] = N_INIT
@@ -195,7 +177,7 @@ for k in best_k:
     result = fit_kmeans(X=X, params=kmeans_params)
     results[str(k)+'means'] = result
 
-    bisect_kmeans = BisectingKMeans(n_clusters=k, n_init=5, random_state=RANDOM_STATE).fit(X) # TODO: salvare i risultati anche di questo?
+    bisect_kmeans = BisectingKMeans(n_clusters=k, n_init=5).fit(X) # TODO: salvare i risultati anche di questo?
     kmeans_params['n_init'] = 1
     kmeans_params['init'] = bisect_kmeans.cluster_centers_
     result = fit_kmeans(X=X, params=kmeans_params)
@@ -210,72 +192,78 @@ k = 4
 kmeans = results[f'{k}means']['model']
 clusters = results[f'{k}means']['model'].labels_
 centroids = results[f'{k}means']['model'].cluster_centers_
+#centroids_inverse = scaler.inverse_transform(centroids)
 indicators_df['cluster'] = clusters
 
-
-# %% [markdown]
-# ## Characterization of the clusters
-
-# %% [markdown]
-# ### Analysis of the centroids
+# %%
+# plt.figure(figsize=(8, 4))
+# for i in range(0, len(centroids_inverse)):
+#     plt.plot(centroids_inverse[i], marker='o', label='Cluster %s' % i)
+# plt.tick_params(axis='both', which='major', labelsize=10)
+# plt.xticks(range(0, len(features_to_cluster)), features_to_cluster, rotation=90)
+# plt.legend(fontsize=10)
+# plt.title('Centroids (original features)')
+# plt.show()
 
 # %%
-def plot_parallel_coordinates(points, features, figsize=(8, 4), title=None): # TODO: va fatto sulle feature trasformate giusto? per algoritmi non centroid based non ha senso?
-    plt.figure(figsize=figsize)
-    for i in range(0, len(points)):
-        plt.plot(points[i], marker='o', label='Cluster %s' % i)
-    plt.tick_params(axis='both', which='major', labelsize=10)
-    plt.xticks(range(0, len(features)), features, rotation=90)
-    plt.legend(fontsize=10)
-    plt.title(title)
-    plt.show()
+plt.figure(figsize=(8, 4))
+for i in range(0, len(centroids)):
+    plt.plot(centroids[i], marker='o', label='Cluster %s' % i)
+plt.tick_params(axis='both', which='major', labelsize=10)
+plt.xticks(range(0, len(features_to_cluster)), features_to_cluster, rotation=90)
+plt.legend(fontsize=10)
+plt.title('Centroids (scaled features)')
+plt.show()
 
-
-# %%
-plot_parallel_coordinates(points=centroids, features=features_to_cluster, title=f'Centroids of {k}-means clusters')
-
+# TODO: 
 
 # %%
-def plot_spider(points, features, title=None, palette=sns.color_palette()):
-    df = pd.DataFrame()
-    for i, center in enumerate(points):
-        tmp_df = pd.DataFrame(dict(r=center, theta=features))
-        tmp_df['Centroid'] = f'Centroid {i}'
-        df = pd.concat([df,tmp_df], axis=0)
+df = pd.DataFrame()
+for i, center in enumerate(centroids):
+    tmp_df = pd.DataFrame(dict(r=center, theta=features_to_cluster))
+    tmp_df['Centroid'] = f'Centroid {i}'
+    df = pd.concat([df,tmp_df], axis=0)
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", FutureWarning)
-        fig = px.line_polar(df, r='r', theta='theta', line_close=True, color='Centroid', color_discrete_sequence=palette.as_hex())
-    fig.update_layout(title=title)
-    fig.show()
-    pyo.plot(fig, filename=f'../html/centroids_spider.html', auto_open=False)
-
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", FutureWarning)
+    fig = px.line_polar(df, r='r', theta='theta', line_close=True, color='Centroid', color_discrete_sequence=sns.color_palette().as_hex())
+fig.show()
 
 # %%
-plot_spider(points=centroids, features=features_to_cluster, title=f'Centroids of {k}-means clusters')
+sse_feature = []
+for i in range(X.shape[1]):
+    sse_feature.append(sse_per_point(X=X[:,i], clusters=clusters, centroids=kmeans.cluster_centers_[:,i]).sum())
 
-# %% [markdown]
-# ## Distribution of variables within the clusters (and in the whole dataset)
+# %%
+plt.figure(figsize=(15, 5))
+sse_feature_sorted, clustering_features_sorted = zip(*sorted(zip(sse_feature, features_to_cluster)))
+plt.bar(range(len(sse_feature_sorted)), sse_feature_sorted)
+plt.xticks(range(len(sse_feature_sorted)), clustering_features_sorted)
+plt.xticks(rotation=90)
+plt.ylabel('SSE')
+plt.xlabel('Feature')
+plt.title('SSE per feature')
+
+# %%
+counts = np.bincount(clusters)
+plt.bar(range(len(counts)), counts)
+plt.xticks(range(len(counts)))
+plt.ylabel('Number of points')
+plt.xlabel('Cluster')
+plt.title('Number of points per cluster');
+
+# %%
+# print top 5 points with highest SSE
+sse_points = sse_per_point(X=X, clusters=clusters, centroids=centroids)
+indices_of_top_contributors = np.argsort(sse_points)[-5:]
+incidents_df.iloc[indices_of_top_contributors]
+
+# %%
+plot_scattermap_plotly(indicators_df, 'cluster', zoom=2, title='Incidents clustered by Kmeans')
 
 # %%
 incidents_df = incidents_df.loc[indicators_df.index]
 incidents_df['cluster'] = clusters
-
-# %%
-plot_scattermap_plotly(incidents_df, 'cluster', zoom=2, title='Incidents clustered by Kmeans')
-
-# %%
-for i in range(k): # TODO: fare subplot (è più complicato di quello che sembra, plotly non supporta subplots con mappe)
-    plot_scattermap_plotly(
-        incidents_df[incidents_df['cluster']==i],
-        'cluster',
-        zoom=2.5,
-        height=400,
-        title=f'Cluster {i}',
-        color_sequence=sns.color_palette().as_hex()[i:],
-        black_nan=False,
-        showlegend=False
-    )
 
 # %%
 for feature in categorical_features:
@@ -320,67 +308,14 @@ scatter_pca_features_by_cluster(
 )
 
 # %%
-plot_boxes_by_cluster(
-    df=indicators_df,
-    features=features_to_cluster,
-    cluster_column='cluster',
-    figsize=(15, 35)
-)
-
-# %%
-for feature in features_to_cluster:
-    plot_hists_by_cluster(
-        df=indicators_df,
-        feature=feature,
-        cluster_column='cluster'
-    )
-
-# %% [markdown]
-# ## Evaluation of the clustering results
-
-# %%
-sse_feature = []
-for i in range(X.shape[1]):
-    sse_feature.append(se_per_point(X=X[:,i], clusters=clusters, centroids=centroids[:,i]).sum())
-
-# %%
-plt.figure(figsize=(15, 5))
-sse_feature_sorted, clustering_features_sorted = zip(*sorted(zip(sse_feature, features_to_cluster)))
-plt.bar(range(len(sse_feature_sorted)), sse_feature_sorted)
-plt.xticks(range(len(sse_feature_sorted)), clustering_features_sorted)
-plt.xticks(rotation=90)
-plt.ylabel('SSE')
-plt.xlabel('Feature')
-plt.title('SSE per feature')
-
-# %%
-plot_clusters_size(clusters)
-
-# %%
-# print top 5 points with highest SSE
-se_per_point = se_per_point(X=X, clusters=clusters, centroids=centroids)
-indices_of_top_contributors = np.argsort(se_per_point)[-5:]
-incidents_df.iloc[indices_of_top_contributors]
-
-# %%
-plot_scores_per_point(score_per_point=se_per_point, clusters=clusters, score_name='SE')
-
-# %%
-silhouette_per_point = silhouette_samples(X=X, labels=clusters)
-
-# %%
-plot_scores_per_point(score_per_point=silhouette_per_point, clusters=clusters, score_name='Silhouette score')
-
-# %%
-# NOTE: c'è una libreria che lo fa solo per la silhouette (forse meglio usare la nostra funzione generica)
-# silhouette_vis = SilhouetteVisualizer(kmeans, title='Silhouette plot', colors=sns.color_palette().as_hex())
-# silhouette_vis.fit(X)
-# silhouette_per_point = silhouette_vis.silhouette_samples_
-# silhouette_vis.show()
+silhouette_vis = SilhouetteVisualizer(kmeans, title='Silhouette plot', colors=sns.color_palette().as_hex())
+silhouette_vis.fit(X)
+silhouette_scores = silhouette_vis.silhouette_samples_
+silhouette_vis.show()
 
 # %%
 clusters_silh = np.full(clusters.shape[0], -1)
-for i, s in enumerate(silhouette_per_point):
+for i, s in enumerate(silhouette_scores):
     if s >= 0:
         clusters_silh[i] = clusters[i]
 
@@ -399,6 +334,22 @@ scatter_pca_features_by_cluster(
 visualizer = InterclusterDistance(kmeans)
 visualizer.fit(X)
 visualizer.show()
+
+# %%
+plot_boxes_by_cluster(
+    df=indicators_df,
+    features=features_to_cluster,
+    cluster_column='cluster',
+    figsize=(15, 35)
+)
+
+# %%
+for feature in features_to_cluster:
+    plot_hists_by_cluster(
+        df=indicators_df,
+        feature=feature,
+        cluster_column='cluster'
+    )
 
 # %%
 cat_metrics_df = pd.DataFrame()

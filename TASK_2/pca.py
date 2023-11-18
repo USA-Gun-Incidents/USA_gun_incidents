@@ -175,6 +175,6 @@ incidents_df['pca_reconstruction_error'] = square_error
 plt.boxplot(incidents_df['pca_reconstruction_error'])
 
 # %%
-incidents_df[incidents_df['reconstruction_error']>60000]
+incidents_df[incidents_df['pca_reconstruction_error']>60000]
 
 

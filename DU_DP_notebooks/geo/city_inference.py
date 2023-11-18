@@ -177,7 +177,5 @@ plot_utils.plot_scattermap_plotly(data.loc[(data['latitude'].notna()) & (data['c
 plot_utils.plot_scattermap_plotly(data.loc[(data['latitude'].notna()) & (data['state'] == 'Missouri') & (data['county'] == 'Platte County') & (data['city'] == 'Kansas City')], 'latitude')
 len(data.loc[(data['latitude'].notna()) & (data['state'] == 'Missouri') & (data['county'] == 'Platte County') & (data['city'] == 'Kansas City')])
 
-# %%
-#TODO: plottare le città che ha inserto e i centroidi??
 
 
