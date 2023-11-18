@@ -4,13 +4,11 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from matplotlib import colormaps as cmaps
-from matplotlib.lines import Line2D
 from sklearn.decomposition import PCA
 import plotly.express as px
 import warnings
 np.warnings = warnings # altrimenti numpy da problemi con pyclustering, TODO: è un problema solo mio?
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score, silhouette_score, adjusted_rand_score
 from sklearn.metrics import homogeneity_score, completeness_score, normalized_mutual_info_score
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
@@ -24,62 +22,55 @@ import os
 import sys
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
+from clustering_utils import *
 # %matplotlib inline
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 
 # %%
+# TODO: si leggerà un solo file che contiene tutto
 incidents_df = pd.read_csv(
     '../data/incidents_cleaned.csv'
 )
 indicators_df = pd.read_csv(
     '../data/incidents_cleaned_indicators.csv', index_col=0
 )
-
-# %%
-clustering_features = ['latitude_proj', 'longitude_proj', 'location_importance', 'avg_age_participants',
-                       'n_participants', 'age_range', 'n_participants_child_prop', 'n_participants_teen_prop',
-                       'n_males_pr', 'n_killed_pr', 'n_injured_pr', 'n_arrested_pr', 'n_unharmed_pr',
-                       'log_n_males_n_males_mean_semest_congd_ratio', 'log_avg_age_mean_SD',
-                       'avg_age_entropy', 'city_entropy', 'address_entropy', 'n_participants_adult_entropy',
-                       'tags_entropy']
+features_to_cluster = [
+    'latitude_proj', 'longitude_proj', 'location_importance', 'city_entropy', 'address_entropy',
+    'avg_age_participants', 'age_range', 'log_avg_age_mean_SD', 'avg_age_entropy',
+    'n_participants', 'n_participants_child_prop', 'n_participants_teen_prop', 'n_participants_adult_entropy',
+    'n_males_pr', 'log_n_males_n_males_mean_semest_congd_ratio',
+    'n_killed_pr', 'n_injured_pr', 'n_arrested_pr', 'n_unharmed_pr',
+    'tags_entropy'
+]
 categorical_features = [
-    'year', 'month', 'day_of_week', #'state', 'address_type', 
+    'year', 'month', 'day_of_week', 'party', #'state', 'address_type', 
     'firearm', 'air_gun', 'shots', 'aggression', 'suicide',
     'injuries', 'death', 'road', 'illegal_holding', 'house',
     'school', 'children', 'drugs', 'officers', 'organized', 'social_reasons',
-    'defensive', 'workplace', 'abduction', 'unintentional', 'party']
+    'defensive', 'workplace', 'abduction', 'unintentional'
+    ]
 
 # %%
 indicators_df = indicators_df.dropna()
 
 # %%
-latlong_projs = utm.from_latlon(indicators_df['latitude'].to_numpy(), indicators_df['longitude'].to_numpy()) # TODO: da spostare nel file che fa gli indicatori
-
+# TODO: da spostare nel file che fa gli indicatori
+latlong_projs = utm.from_latlon(indicators_df['latitude'].to_numpy(), indicators_df['longitude'].to_numpy())
 scaler= MinMaxScaler()
-
 latlong = scaler.fit_transform(np.stack([latlong_projs[0], latlong_projs[1]]).reshape(-1, 2))
-
 indicators_df['latitude_proj'] = latlong[:,0]
 indicators_df['longitude_proj'] = latlong[:,1]
 
-
 # %%
-#incidents_df.replace([np.inf, -np.inf], 0, inplace=True)
-
-# %%
-plt.figure(figsize=(15, 12))
-corr_matrix = indicators_df.corr() # TODO: different coor coefficients
-sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
-
-# %%
-# scaler= StandardScaler() # TODO: non farlo nel file che calcola gli indicatori
+# scaler= StandardScaler() # TODO: fare in questo notebook
 # X = scaler.fit_transform(indicators_df.values) # TODO: come scegliere?
-X = indicators_df[clustering_features].values
+X = indicators_df[features_to_cluster].values
 
 # %%
-def plot_k_elbow(X, kmeans_params, metric, start_k, max_k): # TODO: plottare nello stesso plot curva che parte da 1 e da 2 se sono diverse
-    if metric == 'distortion':
+def plot_score_varying_k(X, kmeans_params, metric, start_k, max_k):
+    if metric == 'SSE':
+        metric = 'distortion'
         metric_descr = 'SSE'
     elif metric == 'calinski_harabasz':
         metric_descr = 'Calinski Harabasz Score'
@@ -88,99 +79,108 @@ def plot_k_elbow(X, kmeans_params, metric, start_k, max_k): # TODO: plottare nel
     else:
         raise ValueError('Metric not supported')
     
-    _, axs = plt.subplots(nrows=1, ncols=len(max_k), figsize=(30,5))
+    _, axs = plt.subplots(nrows=1, ncols=len(max_k) if len(max_k)!= 1 else 2, figsize=(30,5))
 
     best_k = []
 
     for i in range(len(max_k)):
         kmeans_params['n_clusters'] = i
         kmeans = KMeans(**kmeans_params)
+
         elbow_vis = KElbowVisualizer(kmeans, k=(start_k, max_k[i]), metric=metric, timings=False, ax=axs[i])
         elbow_vis.fit(X)
-        axs[i].set_title(f'{metric_descr} elbow for K-Means clustering (K = [{str(start_k)}, {str(max_k[i])}])')
+        if elbow_vis.elbow_value_ != None and elbow_vis.elbow_value_ not in best_k:
+            best_k.append(elbow_vis.elbow_value_)
+        axs[i].set_title(f'{metric_descr} elbow for K-Means clustering (K in [{str(start_k)}, {str(max_k[i])}])')
         axs[i].set_ylabel(metric_descr)
         axs[i].set_xlabel('K')
         axs[i].legend([
-            f'{metric_descr} for K',
+            f'{metric_descr}',
             f'elbow at K = {str(elbow_vis.elbow_value_)}, {metric_descr} = {elbow_vis.elbow_score_:0.2f}'
         ])
-        if elbow_vis.elbow_value_ != None and elbow_vis.elbow_value_ not in best_k:
-            best_k.append(elbow_vis.elbow_value_)
+
+        if len(max_k)==1:
+            axs[1].remove()
     
     plt.show()
     return best_k
 
 # %%
-kmeans_params = {'n_init': 10, 'max_iter': 100}
-max_k = [10, 20, 30] # + di 30 è difficile da interpretare
+MAX_ITER = 300
+N_INIT = 10
+INIT_METHOD = 'k-means++'
+kmeans_params = {'init': INIT_METHOD, 'n_init': N_INIT, 'max_iter': MAX_ITER}
+max_k = 30
 best_k = []
 
+# %% [markdown]
+# Ci permette anche di valutare la sensibilità all'inizializzazione dei centroidi. Più di 30 difficile da interpretare. Sia partendo da 1 che da 2. Come interpola.
+
 # %%
-ks = plot_k_elbow(X, kmeans_params, 'distortion', 1, max_k) # start_k=1 or start_k=2 ?
+ks = plot_score_varying_k(X=X, kmeans_params=kmeans_params, metric='SSE', start_k=1, max_k=[10, 20, 30])
 best_k += ks
 
 # %%
-# k = plot_k_elbow(X, kmeans_params, 'silhouette', 1, max_k)
+# k = plot_k_elbow(X=X, kmeans_params=kmeans_params, metric='SSE', start_k=2, max_k=[10, 20, 30])
 # best_k += ks
 
 # %%
-# k = plot_k_elbow(X, kmeans, 'calinski_harabasz', 1, max_k)
+# k = plot_k_elbow(X=X, kmeans_params=kmeans_params, metric='silhouette', start_k=1, max_k=[20])
 # best_k += ks
 
 # %%
-initial_centers = kmeans_plusplus_initializer(X, 1).initialize()
-xmeans_obj = xmeans(X, initial_centers, kmax=max_k[-1])
-xmeans_obj.process()
-n_xmeans_BIC_clusters = len(xmeans_obj.get_clusters())
+# k = plot_k_elbow(X=X, kmeans_params=kmeans_params, metric='calinski_harabasz', start_k=1, max_k=[20])
+# best_k += ks
+
+# %%
+initial_centers = kmeans_plusplus_initializer(data=X, amount_centers=1).initialize()
+xmeans_MDL_instance = xmeans(data=X, initial_centers=initial_centers, kmax=max_k, splitting_type=splitting_type.BAYESIAN_INFORMATION_CRITERION)
+xmeans_MDL_instance.process()
+n_xmeans_BIC_clusters = len(xmeans_MDL_instance.get_clusters())
 print('Number of clusters found by xmeans using BIC score: ', n_xmeans_BIC_clusters)
-if n_xmeans_BIC_clusters < max_k[-1] and n_xmeans_BIC_clusters not in best_k:
+if n_xmeans_BIC_clusters < max_k and n_xmeans_BIC_clusters not in best_k:
     best_k.append(n_xmeans_BIC_clusters)
 
 # %%
-xmeans_obj = xmeans(X, initial_centers, kmax=max_k[-1], splitting_type=splitting_type.MINIMUM_NOISELESS_DESCRIPTION_LENGTH)
-xmeans_obj.process()
-n_xmeans_MDL_clusters = len(xmeans_obj.get_clusters())
+xmeans_MDL_instance = xmeans(data=X, initial_centers=initial_centers, kmax=max_k, splitting_type=splitting_type.MINIMUM_NOISELESS_DESCRIPTION_LENGTH)
+xmeans_MDL_instance.process()
+n_xmeans_MDL_clusters = len(xmeans_MDL_instance.get_clusters())
 print('Number of clusters found by xmeans using MDL score: ', n_xmeans_MDL_clusters)
-if n_xmeans_MDL_clusters < max_k[-1] and n_xmeans_MDL_clusters not in best_k:
+if n_xmeans_MDL_clusters < max_k and n_xmeans_MDL_clusters not in best_k:
     best_k.append(n_xmeans_MDL_clusters)
 
 # %%
-def bss(X, labels, centroids):
-    centroid = X.mean(axis=0)
-    sizes = np.bincount(labels)
-    return np.sum(np.sum(np.square((centroids - centroid)), axis=1)*sizes)
-
-def sse_per_point(X, labels, centroids):
-    return np.sum(np.square((X - centroids[labels])), axis=(1 if X.ndim > 1 else 0))
-
 def fit_kmeans(X, params):
     kmeans = KMeans(**params)
     kmeans.fit(X)
     results = {}
     results['model'] = kmeans
     results['SSE'] = kmeans.inertia_
-    results['davies_bouldin_score'] = davies_bouldin_score(X, kmeans.labels_)
-    results['calinski_harabasz_score'] = calinski_harabasz_score(X, kmeans.labels_)
-    #results['silhouette_score'] = silhouette_score(X, kmeans.labels_) 
-    results['BSS'] = bss(X, kmeans.labels_, kmeans.cluster_centers_)
+    results['davies_bouldin_score'] = davies_bouldin_score(X=X, labels=kmeans.labels_)
+    results['calinski_harabasz_score'] = calinski_harabasz_score(X=X, labels=kmeans.labels_)
+    #results['silhouette_score'] = silhouette_score(X=X, labels=kmeans.labels_) 
+    results['BSS'] = bss(X=X, clusters=kmeans.labels_, centroids=kmeans.cluster_centers_)
     results['n_iter'] = kmeans.n_iter_
     return results
 
 # %%
+best_k=[4]
+
+# %%
 results = {}
 kmeans_params = {}
-kmeans_params['max_iter'] = 100
+kmeans_params['max_iter'] = MAX_ITER
 for k in best_k:
-    kmeans_params['n_init'] = 10
+    kmeans_params['n_init'] = N_INIT
     kmeans_params['n_clusters'] = k
-    kmeans_params['init'] = 'k-means++'
-    result = fit_kmeans(X, kmeans_params)
+    kmeans_params['init'] = INIT_METHOD
+    result = fit_kmeans(X=X, params=kmeans_params)
     results[str(k)+'means'] = result
 
     bisect_kmeans = BisectingKMeans(n_clusters=k, n_init=5).fit(X) # TODO: salvare i risultati anche di questo?
     kmeans_params['n_init'] = 1
     kmeans_params['init'] = bisect_kmeans.cluster_centers_
-    result = fit_kmeans(X, kmeans_params)
+    result = fit_kmeans(X=X, params=kmeans_params)
     results[str(k)+'means_bis_init'] = result
 
 # %%
@@ -188,12 +188,12 @@ results_df = pd.DataFrame(results).T
 results_df.drop(columns=['model'])
 
 # %%
-k = 3
+k = 4
 kmeans = results[f'{k}means']['model']
-labels = results[f'{k}means']['model'].labels_
+clusters = results[f'{k}means']['model'].labels_
 centroids = results[f'{k}means']['model'].cluster_centers_
 #centroids_inverse = scaler.inverse_transform(centroids)
-indicators_df['cluster'] = labels
+indicators_df['cluster'] = clusters
 
 # %%
 # plt.figure(figsize=(8, 4))
@@ -210,15 +210,17 @@ plt.figure(figsize=(8, 4))
 for i in range(0, len(centroids)):
     plt.plot(centroids[i], marker='o', label='Cluster %s' % i)
 plt.tick_params(axis='both', which='major', labelsize=10)
-plt.xticks(range(0, len(clustering_features)), clustering_features, rotation=90)
+plt.xticks(range(0, len(features_to_cluster)), features_to_cluster, rotation=90)
 plt.legend(fontsize=10)
 plt.title('Centroids (scaled features)')
 plt.show()
 
+# TODO: 
+
 # %%
 df = pd.DataFrame()
 for i, center in enumerate(centroids):
-    tmp_df = pd.DataFrame(dict(r=center, theta=clustering_features))
+    tmp_df = pd.DataFrame(dict(r=center, theta=features_to_cluster))
     tmp_df['Centroid'] = f'Centroid {i}'
     df = pd.concat([df,tmp_df], axis=0)
 
@@ -230,20 +232,20 @@ fig.show()
 # %%
 sse_feature = []
 for i in range(X.shape[1]):
-    sse_feature.append(sse_per_point(X[:,i], kmeans.labels_, kmeans.cluster_centers_[:,i]).sum())
+    sse_feature.append(sse_per_point(X=X[:,i], clusters=clusters, centroids=kmeans.cluster_centers_[:,i]).sum())
 
 # %%
 plt.figure(figsize=(15, 5))
-sse_feature, clustering_features_sorted = zip(*sorted(zip(sse_feature, clustering_features)))
-plt.bar(range(len(sse_feature)), sse_feature)
-plt.xticks(range(len(sse_feature)), clustering_features_sorted)
+sse_feature_sorted, clustering_features_sorted = zip(*sorted(zip(sse_feature, features_to_cluster)))
+plt.bar(range(len(sse_feature_sorted)), sse_feature_sorted)
+plt.xticks(range(len(sse_feature_sorted)), clustering_features_sorted)
 plt.xticks(rotation=90)
 plt.ylabel('SSE')
 plt.xlabel('Feature')
-plt.title('SSE for each feature')
+plt.title('SSE per feature')
 
 # %%
-counts = np.bincount(labels)
+counts = np.bincount(clusters)
 plt.bar(range(len(counts)), counts)
 plt.xticks(range(len(counts)))
 plt.ylabel('Number of points')
@@ -252,84 +254,39 @@ plt.title('Number of points per cluster');
 
 # %%
 # print top 5 points with highest SSE
-sse_points = sse_per_point(X, labels, centroids)
+sse_points = sse_per_point(X=X, clusters=clusters, centroids=centroids)
 indices_of_top_contributors = np.argsort(sse_points)[-5:]
 incidents_df.iloc[indices_of_top_contributors]
 
 # %%
-plot_scattermap_plotly(indicators_df, 'cluster', zoom=2, title='Kmeans clustering (with standardized data)')
-
-# %%
-def plot_distribution_categorical_attribute(df, attribute):
-    attribute_str = attribute.replace('_', ' ').capitalize()
-    _, axs = plt.subplots(1, 2, figsize=(15, 5), gridspec_kw={'width_ratios': [1, 2]})
-    df[attribute].value_counts().sort_index().plot(kind='bar', ax=axs[0], color='gray')
-    axs[0].set_title(f'{attribute_str} distribution in the whole dataset')
-    axs[0].set_xlabel(attribute_str)
-    axs[0].set_ylabel('Number of incidents')
-    day_xt = pd.crosstab(labels, df[attribute])
-    day_xt.plot(
-        kind='bar',
-        stacked=False,
-        figsize=(15, 7),
-        ax=axs[1],
-        color=sns.color_palette('hls').as_hex()
-        )
-    axs[1].set_title(f'{attribute_str} distribution in each cluster')
-    axs[1].set_xlabel('Cluster')
-    axs[1].set_ylabel('Number of incidents')
-    plt.show()
+plot_scattermap_plotly(indicators_df, 'cluster', zoom=2, title='Incidents clustered by Kmeans')
 
 # %%
 incidents_df = incidents_df.loc[indicators_df.index]
-incidents_df['cluster'] = labels
+incidents_df['cluster'] = clusters
 
 # %%
-for attribute in categorical_features:
-    plot_distribution_categorical_attribute(incidents_df, attribute)
+for feature in categorical_features:
+    plot_bars_by_cluster(df=incidents_df, feature=feature, cluster_column='cluster')
 
 # %%
-ncols = 3
-nplots = len(clustering_features)*(len(clustering_features)-1)/2
-nrows = int(nplots / ncols)
-if nplots % ncols != 0:
-    nrows += 1
-
-colors = [sns.color_palette()[c%6] for c in indicators_df['cluster']] # FIXME: assumes having max 6 clusters
-f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(36,50))
-id = 0
-for i in range(len(clustering_features)):
-    for j in range(i+1, len(clustering_features)):
-        x, y = indicators_df[clustering_features].columns[i], indicators_df[clustering_features].columns[j]
-        axs[int(id/ncols)][id%ncols].scatter(indicators_df[x], indicators_df[y], s=20, c=colors)
-        for c in range(len(centroids)):
-            axs[int(id/ncols)][id%ncols].scatter(
-                centroids[c][indicators_df[clustering_features].columns.get_loc(x)],
-                centroids[c][indicators_df[clustering_features].columns.get_loc(y)],
-                marker='o', c='white', alpha=1, s=200, edgecolor='k')
-            axs[int(id/ncols)][id%ncols].scatter(
-                centroids[c][indicators_df[clustering_features].columns.get_loc(x)],
-                centroids[c][indicators_df[clustering_features].columns.get_loc(y)],
-                marker='$%d$' % c, c='black', alpha=1, s=50, edgecolor='k')
-        axs[int(id/ncols)][id%ncols].set_xlabel(x)
-        axs[int(id/ncols)][id%ncols].set_ylabel(y)
-        id += 1
-for ax in axs[nrows-1, id%ncols:]:
-    ax.remove()
-
-legend_elements = []
-clusters_ids = indicators_df['cluster'].unique()
-for c in sorted(clusters_ids):
-    legend_elements.append(Line2D(
-        [0], [0], marker='o', color='w', label=f'Cluster {c}', markerfacecolor=sns.color_palette()[c%6]))
-f.legend(handles=legend_elements, loc='lower center', ncols=len(clusters_ids))
-
-plt.suptitle(("Clusters in different feature spaces"), fontsize=20)
-plt.show()
+scatter_by_cluster(
+    df=indicators_df,
+    features=[
+        'latitude_proj',
+        'longitude_proj',
+        'avg_age_participants',
+        'age_range',
+        'n_participants'
+    ],
+    cluster_column='cluster',
+    centroids=centroids,
+    figsize=(15, 10)
+)
 
 # %%
 pca = PCA()
-X_pca = pca.fit_transform(indicators_df[clustering_features])
+X_pca = pca.fit_transform(X)
 
 # %%
 exp_var_pca = pca.explained_variance_ratio_
@@ -340,42 +297,15 @@ plt.title('Explained variance by principal component')
 plt.xticks(np.arange(0,len(exp_var_pca),1.0));
 
 # %%
-pca_labels = {
-    str(i): f"PC {i+1} ({var:.1f}%)"
-    for i, var in enumerate(pca.explained_variance_ratio_ * 100)
-}
-
-cmap = ['rgb'+str(sns.color_palette()[c%6]) for c in clusters_ids]
-
-fig = px.scatter_matrix(
-    X_pca,
-    labels=pca_labels,
-    dimensions=range(5),
-    color_discrete_sequence=cmap,
-    color=labels.astype(str),
-    height=800
+palette = [sns.color_palette()[i] for i in range(k)]
+scatter_pca_features_by_cluster(
+    X_pca=X_pca,
+    n_components=4,
+    clusters=clusters,
+    palette=palette,
+    hue_order=None,
+    title='Clusters in PCA space'
 )
-fig.update_traces(diagonal_visible=False, showupperhalf=False)
-fig.update_layout(
-        legend_title_text="Cluster"
-    )
-fig.show()
-
-# %%
-n_components = 4
-pca_data = {}
-for i in range(n_components):
-    pca_data[f'Component {i+1}'] = X_pca[:,i]
-pca_data['Cluster'] = incidents_df['cluster']
-df_pca = pd.DataFrame(data=pca_data)
-sns.pairplot(df_pca, hue='Cluster', plot_kws=dict(edgecolor="k"), palette=[sns.color_palette()[i] for i in range(k)], corner=True)
-
-# %%
-plt.scatter(X_pca[:, 0], X_pca[:, 1], edgecolor='k', s=40, c=colors)
-plt.xlabel('Component 1')
-plt.ylabel('Component 2')
-plt.title('PCA')
-plt.legend(handles=legend_elements)
 
 # %%
 silhouette_vis = SilhouetteVisualizer(kmeans, title='Silhouette plot', colors=sns.color_palette().as_hex())
@@ -384,20 +314,20 @@ silhouette_scores = silhouette_vis.silhouette_samples_
 silhouette_vis.show()
 
 # %%
-new_labels = np.full(labels.shape[0], -1)
+clusters_silh = np.full(clusters.shape[0], -1)
 for i, s in enumerate(silhouette_scores):
     if s >= 0:
-        new_labels[i] = labels[i]
+        clusters_silh[i] = clusters[i]
 
-pca_data['Cluster'] = new_labels
-df_pca = pd.DataFrame(data=pca_data)
-sns.pairplot(
-    df_pca,
-    hue='Cluster',
-    plot_kws=dict(edgecolor="k"),
-    palette=([(0,0,0)]+[sns.color_palette()[i] for i in range(k)]),
-    corner=True,
-    hue_order=[i for i in range(k)]+[-1]
+palette=([(0,0,0)]+[sns.color_palette()[i] for i in range(k)])
+hue_order=[i for i in range(k)]+[-1]
+scatter_pca_features_by_cluster(
+    X_pca=X_pca,
+    n_components=4,
+    clusters=clusters_silh,
+    palette=palette,
+    hue_order=hue_order,
+    title='Clusters in PCA space (points with silhouette < 0 marked with -1)'
 )
 
 # %%
@@ -406,56 +336,20 @@ visualizer.fit(X)
 visualizer.show()
 
 # %%
-# TODO: subsample con stratificazione in base a numero di punti per cluster
-subsampled_incidents_df = incidents_df.groupby('cluster', group_keys=False).apply(lambda x: x.sample(frac=0.05, random_state=0))
-subsampled_incidents_df.reset_index(inplace=True)
-subsampled_incidents_df.sort_values(by=['cluster'], inplace=True)
-
-dm = squareform(pdist(X[subsampled_incidents_df.index]))
-
-n_subsampled_points = subsampled_incidents_df.shape[0]
-im = np.zeros((n_subsampled_points, n_subsampled_points))
-sub_labels = subsampled_incidents_df['cluster'].values
-for i in range(n_subsampled_points):
-    for j in range(n_subsampled_points):
-        if sub_labels[i] == sub_labels[j]:
-            im[i, j] = 1
-
-corr_matrix = np.corrcoef(dm, im)
-
-plt.matshow(corr_matrix)
+plot_boxes_by_cluster(
+    df=indicators_df,
+    features=features_to_cluster,
+    cluster_column='cluster',
+    figsize=(15, 35)
+)
 
 # %%
-plt.matshow(im)
-
-# %%
-plt.matshow(dm)
-
-# %%
-sns.heatmap(dm)
-
-# %%
-ncols = 3
-nplots = len(clustering_features)
-nrows = int(nplots/ncols)
-if nplots % ncols != 0:
-    nrows += 1
-f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(36,36))
-id = 0
-for feature in clustering_features:
-    indicators_df.boxplot(column=feature, by='cluster', ax=axs[int(id/ncols)][id%ncols])
-    id += 1
-for ax in axs[nrows-1, id%ncols:]:
-    ax.remove()
-
-# %%
-for feature in clustering_features:
-    axes = indicators_df[feature].hist(by=incidents_df['cluster'], bins=20, layout=(1,k), figsize=(20, 5))
-    plt.suptitle(f'Distribution of {feature} in each cluster', fontweight='bold')
-    for i, ax in enumerate(axes):
-        ax.set_title(f'Cluster {i}')
-        ax.set_xlabel(feature)
-        ax.set_ylabel('Number of incidents')
+for feature in features_to_cluster:
+    plot_hists_by_cluster(
+        df=indicators_df,
+        feature=feature,
+        cluster_column='cluster'
+    )
 
 # %%
 cat_metrics_df = pd.DataFrame()
@@ -531,3 +425,42 @@ cat_clf_metrics_df.set_index(['feature'], inplace=True)
 cat_clf_metrics_df
 
 
+
+# %%
+# TODO: subsample con stratificazione in base a numero di punti per cluster
+subsampled_incidents_df = incidents_df.groupby('cluster', group_keys=False).apply(lambda x: x.sample(frac=0.05, random_state=0))
+subsampled_incidents_df.reset_index(inplace=True)
+subsampled_incidents_df.sort_values(by=['cluster'], inplace=True)
+
+dm = squareform(pdist(X[subsampled_incidents_df.index]))
+
+n_subsampled_points = subsampled_incidents_df.shape[0]
+im = np.zeros((n_subsampled_points, n_subsampled_points))
+sub_labels = subsampled_incidents_df['cluster'].values
+for i in range(n_subsampled_points):
+    for j in range(n_subsampled_points):
+        if sub_labels[i] == sub_labels[j]:
+            im[i, j] = 1
+
+corr_matrix = np.corrcoef(dm, im)
+
+plt.matshow(corr_matrix)
+
+# %%
+plt.matshow(im)
+
+# %%
+plt.matshow(dm)
+
+# %%
+sns.heatmap(dm)
+
+# %%
+# from scipy.stats import pearsonr
+# corrm = np.zeros_like(dm)
+# for i in range(n_subsampled_points):
+#     for j in range(n_subsampled_points):
+#         corrm[i][j] = pearsonr(dm[i], im[:,j])[0]
+
+# %%
+# plt.matshow(corrm)
