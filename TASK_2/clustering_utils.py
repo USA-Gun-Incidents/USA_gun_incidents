@@ -3,22 +3,27 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.lines import Line2D
+import plotly.graph_objects as go
+import plotly.offline as pyo
 
-def bss(X, clusters, centroids): # TODO: è specifica per centroid based (?)
+def compute_bss_per_cluster(X, clusters, centroids, weighted=True): # TODO: capire se è corretto chiamarla bss se relativa a ciascun cluster
     '''
-    This function computes the between-cluster sum of squares.
+    This function computes the between-cluster sum of squares for each cluster.
 
     :param X: matrix of data points
     :param clusters: cluster labels
     :param centroids: cluster centroids
-    :return: between-cluster sum of squares
+    :param weighted: if True, the between-cluster sum of squares is weighted by the number of points in each cluster
+    :return: between-cluster sum of squares for each cluster
     '''
 
     centroid = X.mean(axis=0)
-    sizes = np.bincount(clusters)
-    return np.sum(np.sum(np.square((centroids - centroid)), axis=1)*sizes)
+    sizes = np.ones(centroids.shape[0])
+    if weighted:
+        sizes = np.bincount(clusters)
+    return np.sum(np.square((centroids - centroid)), axis=1)*sizes
 
-def se_per_point(X, clusters, centroids): # TODO: è specifica per centroid based (?)
+def compute_se_per_point(X, clusters, centroids):
     '''
     This function computes the squared error for each point.
 
@@ -165,7 +170,8 @@ def plot_boxes_by_cluster(
         features,
         cluster_column,
         ncols=3,
-        figsize=(36, 36)
+        figsize=(36, 36),
+        title=None
     ):
     '''
     This function plots a box plot of the given features in the given dataframe, grouped by cluster.
@@ -174,22 +180,54 @@ def plot_boxes_by_cluster(
     :param features: list of features to plot
     :param cluster_column: name of the dataframe column containing the cluster labels
     :param ncols: number of columns of the plot
-    :param figsize: size of the figure    
+    :param figsize: size of the figure
     '''
 
     nplots = len(features)
     nrows = int(nplots/ncols)
     if nplots % ncols != 0:
         nrows += 1
-    _, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
     id = 0
     for feature in features:
         df.boxplot(column=feature, by=cluster_column, ax=axs[int(id/ncols)][id%ncols])
         id += 1
     for ax in axs[nrows-1, id%ncols:]:
         ax.remove()
+    fig.suptitle(title, fontweight='bold')
 
-def plot_hists_by_cluster(
+def plot_violin_by_cluster(
+        df,
+        features,
+        cluster_column,
+        ncols=3,
+        figsize=(36, 36),
+        title=None
+    ):
+    '''
+    This function plots a violin plot of the given features in the given dataframe, grouped by cluster.
+
+    :param df: dataframe containing the data
+    :param features: list of features to plot
+    :param cluster_column: name of the dataframe column containing the cluster labels
+    :param ncols: number of columns of the plot
+    :param figsize: size of the figure
+    '''
+
+    nplots = len(features)
+    nrows = int(nplots/ncols)
+    if nplots % ncols != 0:
+        nrows += 1
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
+    id = 0
+    for feature in features:
+        sns.violinplot(x=cluster_column, y=feature, data=df, ax=axs[int(id/ncols)][id%ncols])
+        id += 1
+    for ax in axs[nrows-1, id%ncols:]:
+        ax.remove()
+    fig.suptitle(title)
+
+def plot_hists_by_cluster2( # TODO: colorare per cluster
         df,
         feature,
         cluster_column,
@@ -204,25 +242,35 @@ def plot_hists_by_cluster(
     :param cluster_column: name of the dataframe column containing the cluster labels
     :param bins: number of bins for the histogram
     :param figsize: size of the figure
+    :param color_palette: color palette to use
     '''
-    
+
     n_clusters = df['cluster'].unique().shape[0]
-    axes = df[feature].hist(by=df[cluster_column], bins=bins, layout=(1,n_clusters), figsize=figsize)
-    plt.suptitle(f'Distribution of {feature} in each cluster', fontweight='bold')
+    fig, axes = plt.subplots(nrows=1, ncols=n_clusters, figsize=figsize)
+    df[feature].hist(
+        by=df[cluster_column],
+        bins=bins,
+        ax=axes
+    )
     for i, ax in enumerate(axes):
         ax.set_title(f'Cluster {i}')
         ax.set_xlabel(feature)
         ax.set_ylabel('Number of incidents')
+    fig.suptitle(f'Histogram of {feature} by cluster', fontsize=16, fontweight='bold')
 
-def plot_clusters_size(clusters):
+def plot_clusters_size(
+        clusters,
+        color_palette=sns.color_palette()
+    ):
     '''
     This function plots a bar chart of the number of points in each cluster.
 
     :param clusters: cluster labels
+    :param color_palette: color palette to use
     '''
 
     counts = np.bincount(clusters)
-    plt.bar(range(len(counts)), counts)
+    plt.bar(range(len(counts)), counts, color=color_palette)
     plt.xticks(range(len(counts)))
     plt.ylabel('Number of points')
     plt.xlabel('Cluster')
@@ -261,3 +309,104 @@ def plot_scores_per_point(score_per_point, clusters, score_name):
     plt.ylabel("Cluster label")
     plt.legend(loc='best')
     plt.yticks([])
+
+def scatter_pca_features_by_score(
+    X_pca,
+    clusters,
+    x_component,
+    y_component,
+    score_per_point,
+    score_name,
+    cmaps=['Blues', 'Greens', 'Reds', 'PuRd', 'YIOrBr', 'GnBu'],
+    figsize=(25,5)
+    ):
+    '''
+    This function plots the clusters in the PCA space, coloring the points by the score given in input.
+
+    :param X_pca: PCA matrix
+    :param clusters: cluster labels
+    :param x_component: x component of the PCA matrix to plot
+    :param y_component: y component of the PCA matrix to plot
+    :param score_per_point: clustering score for each point
+    :param score_name: name of the score
+    :param cmaps: list of colormaps to use for each cluster
+    :param figsize: size of the figure
+    '''
+    
+    n_clusters = len(np.unique(clusters))
+    fig, axs = plt.subplots(nrows=1, ncols=n_clusters, figsize=figsize)
+    for i in range(n_clusters):
+        ith_cluster_indices = np.where(clusters == i)[0]
+        plot = axs[i].scatter(
+            X_pca[ith_cluster_indices,x_component],
+            X_pca[ith_cluster_indices,y_component],
+            c=score_per_point[ith_cluster_indices],
+            cmap=cmaps[i]
+        )
+        cbar = fig.colorbar(plot, ax=axs[i])
+        cbar.set_label(score_name)
+        axs[i].set_title(f'Cluster {i}')
+        axs[i].set_xlabel(f'PC {x_component}')
+        axs[i].set_ylabel(f'PC {y_component}')
+    fig.suptitle(f'Clusters in PCA space colored by {score_name}', fontweight='bold')
+
+def sankey_plot(
+        labels1,
+        labels2,
+        title=None,
+        color_palette=sns.color_palette()
+    ):
+    '''
+    This function plots a Sankey diagram of the two sets of labels passed as arguments.
+
+    :param labels1: first list of labels
+    :param labels2: second list of labels
+    :param title: title of the plot
+    '''
+
+    n_clusters1 = len(set(labels1))
+    n_clusters2 = len(set(labels2))
+
+    plot_labels = []
+    for i in range(n_clusters1):
+        plot_labels.append(str(i))
+    for i in range(n_clusters2):
+        plot_labels.append(str(i))
+
+    confusion_matrix = pd.crosstab(labels1, labels2)
+    source = []
+    target = []
+    value = []
+    for i in range(n_clusters1):
+        for j in range(n_clusters2):
+            if confusion_matrix.iloc[i, j] != 0:
+                source.append(i)
+                target.append(n_clusters1 + j)
+                value.append(confusion_matrix.iloc[i, j])
+
+    fig = go.Figure(
+        data=[
+            go.Sankey(
+                node = dict(
+                    pad = 15,
+                    thickness = 20,
+                    line = dict(color = "black", width = 0.5),
+                    label = plot_labels,
+                    color = color_palette.as_hex()[:n_clusters1] + color_palette.as_hex()[:n_clusters2]
+                ),
+                link = dict(
+                    source = source,
+                    target = target,
+                    value = value
+                )
+            )
+        ]
+    )
+    fig.update_layout(title_text=title, font_size=10)
+    file_name = f'../html/sankey'
+    if title is not None:
+        camel_title = title.replace(' ', '_')
+        file_name += f'_{camel_title}'
+    file_name += '.html'
+    pyo.plot(fig, filename=file_name, auto_open=False)
+    fig.show()
