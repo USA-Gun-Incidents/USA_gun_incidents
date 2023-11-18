@@ -164,7 +164,9 @@ def plot_scattermap_plotly(
     y_column='longitude',
     hover_name=True,
     black_nan=True,
-    size=None
+    size=None,
+    color_sequence=None,
+    showlegend=True
     ):
     '''
     This function plots a scattermap using plotly.
@@ -192,6 +194,7 @@ def plot_scattermap_plotly(
     fig = px.scatter_mapbox(
         hover_name=data.index if hover_name else None,
         color=data[attribute].astype(str) if attribute is not None else None,
+        color_discrete_sequence=color_sequence,
         color_discrete_map=color_map,
         lat=data[x_column], 
         lon=data[y_column],
@@ -207,6 +210,7 @@ def plot_scattermap_plotly(
     fig.update_layout(
         mapbox_style="open-street-map",
         margin={"r":0,"t":100,"l":0,"b":0},
+        showlegend=showlegend,
         legend_title_text=legend_title
     )
     fig.show()

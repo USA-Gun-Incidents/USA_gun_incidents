@@ -18,14 +18,14 @@ def bss(X, clusters, centroids): # TODO: è specifica per centroid based (?)
     sizes = np.bincount(clusters)
     return np.sum(np.sum(np.square((centroids - centroid)), axis=1)*sizes)
 
-def sse_per_point(X, clusters, centroids): # TODO: è specifica per centroid based (?)
+def se_per_point(X, clusters, centroids): # TODO: è specifica per centroid based (?)
     '''
-    This function computes the sum of squares error for each point.
+    This function computes the squared error for each point.
 
     :param X: matrix of data points
     :param clusters: cluster labels
     :param centroids: cluster centroids
-    :return: sum of squares error for each point
+    :return: squared error for each point
     '''
 
     return np.sum(np.square((X - centroids[clusters])), axis=(1 if X.ndim > 1 else 0))
@@ -98,7 +98,7 @@ def scatter_by_cluster(
     for i in range(len(features)):
         for j in range(i+1, len(features)):
             x, y = df[features].columns[i], df[features].columns[j]
-            axs[int(id/ncols)][id%ncols].scatter(df[x], df[y], s=20, c=colors)
+            axs[int(id/ncols)][id%ncols].scatter(df[x], df[y], s=20, c=colors, edgecolor="k")
             if centroids is not None:
                 for c in range(len(centroids)):
                     axs[int(id/ncols)][id%ncols].scatter(
@@ -213,3 +213,51 @@ def plot_hists_by_cluster(
         ax.set_title(f'Cluster {i}')
         ax.set_xlabel(feature)
         ax.set_ylabel('Number of incidents')
+
+def plot_clusters_size(clusters):
+    '''
+    This function plots a bar chart of the number of points in each cluster.
+
+    :param clusters: cluster labels
+    '''
+
+    counts = np.bincount(clusters)
+    plt.bar(range(len(counts)), counts)
+    plt.xticks(range(len(counts)))
+    plt.ylabel('Number of points')
+    plt.xlabel('Cluster')
+    plt.title('Number of points per cluster')
+
+def plot_scores_per_point(score_per_point, clusters, score_name):
+    '''
+    This function plots the clustering score for each point, grouped by cluster.
+
+    :param score_per_point: clustering score for each point
+    :param clusters: cluster labels
+    :param score_name: name of the clustering score
+    '''
+
+    n_clusters = len(np.unique(clusters))
+    y_lower = 0
+    for i in range(n_clusters):
+        ith_cluster_sse = score_per_point[np.where(clusters == i)[0]]
+        ith_cluster_sse.sort()
+        size_cluster_i = ith_cluster_sse.shape[0]
+        y_upper = y_lower + size_cluster_i
+        plt.fill_betweenx(
+            np.arange(y_lower, y_upper),
+            0,
+            ith_cluster_sse,
+            facecolor=sns.color_palette()[i],
+            edgecolor=sns.color_palette()[i],
+            alpha=0.7,
+        )
+        plt.text(-0.07, y_lower + 0.5 * size_cluster_i, str(i))
+        y_lower = y_upper
+
+    plt.axvline(x=score_per_point.mean(), color="k", linestyle="--", label='Average')
+    plt.title(f"{score_name} for each point in each cluster")
+    plt.xlabel(score_name)
+    plt.ylabel("Cluster label")
+    plt.legend(loc='best')
+    plt.yticks([])
