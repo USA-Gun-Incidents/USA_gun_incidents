@@ -14,7 +14,7 @@ import plot_utils
 import plotly.express as px
 import sys
 import seaborn as sns
-sys.path.append(os.path.abspath('..\\')) # TODO: c'è un modo per farlo meglio?
+sys.path.append(os.path.abspath('..\\')) 
 
 # %%
 # read data
@@ -34,7 +34,7 @@ def load_checkpoint(checkpoint_name, casting={}):
     #d_p = pd.datetools.to_datetime
     if casting:
         return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0, parse_dates=['date'], dtype=casting)
-    else: #TODO: sistemare il casting quando ci sono tutte le colonne 
+    else: 
         return pd.read_csv(CHECKPOINT_FOLDER_PATH + checkpoint_name + '.csv', low_memory=False, index_col=0)#, parse_dates=['date'])
 
 # %% [markdown]
@@ -501,9 +501,6 @@ print( 'Samples with null values for lat/lon    \t', e+f+g+h)
 # %%
 plot_utils.plot_scattermap_plotly(final_geo_data.loc[(final_geo_data['latitude'].notna()) & 
     (final_geo_data['county'].notna()) & (final_geo_data['city'].isna())], 'state', zoom=2, title='Missing city')
-
-# %%
-#TODO: plottare le città che ha inserto e i centroidi??
 
 # %%
 final_geo_data.head(3)
