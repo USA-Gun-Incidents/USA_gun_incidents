@@ -1,12 +1,14 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 from matplotlib.lines import Line2D
+import seaborn as sns
 import plotly.graph_objects as go
 import plotly.offline as pyo
 from sklearn.utils import resample
 from scipy.spatial.distance import pdist, squareform
+from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import adjusted_rand_score, homogeneity_score, completeness_score, normalized_mutual_info_score
 
 def compute_bss_per_cluster(X, clusters, centroids, weighted=True): # TODO: capire se è corretto chiamarla bss se relativa a ciascun cluster
     '''
@@ -36,6 +38,160 @@ def compute_se_per_point(X, clusters, centroids):
     '''
 
     return np.sum(np.square((X - centroids[clusters])), axis=(1 if X.ndim > 1 else 0))
+
+def compute_purity_per_cluster(pred_labels, true_labels): # if set of labels have different cardinalities not well defined (0/0)
+    '''
+    This function computes the purity of each cluster.
+
+    :param pred_labels: the predicted labels
+    :param true_labels: the true labels
+    :return: the purity of each cluster
+    '''
+    
+    cm = confusion_matrix(pred_labels, true_labels) # FIXME: etichette invertire per seguire definizione libro
+    return np.max(cm, axis=1) / np.sum(cm, axis=1)
+
+def compute_overall_purity(pred_labels, true_labels):
+    '''
+    This function computes the overall purity of the clustering.
+
+    :param pred_labels: the predicted labels
+    :param true_labels: the true labels
+    :return: the overall purity of the clustering
+    '''
+    
+    purity_per_cluster = compute_purity_per_cluster(pred_labels, true_labels)
+    cm = confusion_matrix(pred_labels, true_labels) # FIXME: etichette invertire per seguire definizione libro
+    return np.sum((purity_per_cluster * np.sum(cm, axis=1)) / np.sum(cm))
+
+def compute_entropy_per_cluster(pred_labels, true_labels):
+    '''
+    This function computes the entropy of each cluster.
+
+    :param pred_labels: the predicted labels
+    :param true_labels: the true labels
+    :return: the entropy of each cluster
+    '''
+    
+    cm = confusion_matrix(pred_labels, true_labels) # FIXME: etichette invertire per seguire definizione libro
+    probs = cm / np.sum(cm, axis=1)
+    log_probs = np.log2(probs, out=np.zeros_like(probs), where=(probs!=0)) # 0 if prob=0
+    return -np.sum(np.multiply(probs, log_probs), axis=1)
+
+def compute_overall_entropy(pred_labels, true_labels):
+    '''
+    This function computes the overall entropy of the clustering.
+
+    :param pred_labels: the predicted labels
+    :param true_labels: the true labels
+    :return: the overall entropy of the clustering
+    '''
+    
+    cm = confusion_matrix(pred_labels, true_labels) # FIXME: etichette invertire per seguire definizione libro
+    entropy_per_cluster = compute_entropy_per_cluster(pred_labels, true_labels)
+    return np.sum((entropy_per_cluster * np.sum(cm, axis=1)) / np.sum(cm))
+
+def align_labels(label1, label2):
+    '''
+    This function applies pivoting to the confusion matrix between the two sets of labels
+    to maximize the sum of the entries on the diagonal.
+
+    :param label1: first set of labels
+    :param label2: second set of labels
+    :return: label1 (invariant) and aligned label2
+    '''
+
+    cm = confusion_matrix(label1, label2)
+    cm_argmax = cm.argmax(axis=0)
+    label2 = np.array([cm_argmax[i] for i in label2])
+    return label1, label2
+
+def compute_external_metrics(
+        df,
+        cluster_column,
+        external_features
+    ):
+    '''
+    This function computes metrics to compare the cluster labels with external features.
+
+    :param df: dataframe containing the external features and the cluster labels
+    :param cluster_column: name of the column containing the cluster labels
+    :param external_features: list of names of the columns containing the external features
+    :return: dataframe containing the metrics
+    '''
+    
+    metrics_df = pd.DataFrame()
+    equal_size_features = []
+    accuracy = []
+    f1 = []
+    precision = []
+    recall = []
+    #roc_auc = []
+    purity = []
+    entropy = []
+
+    n_clusters = df[cluster_column].unique().shape[0]
+
+    for feature in external_features:
+        if df[feature].unique().shape[0] != n_clusters: # TODO: ha senso solo se il numero di classi è lo stesso?
+            continue
+        equal_size_features.append(feature)
+        classes = df[feature].astype('category').cat.codes
+        _, cluster_labels = align_labels(classes, df['cluster'])
+        accuracy.append(accuracy_score(y_true=classes, y_pred=cluster_labels))
+        f1.append(f1_score(y_true=classes, y_pred=cluster_labels, average='weighted'))
+        precision.append(precision_score(y_true=classes, y_pred=cluster_labels, average='weighted', zero_division=0))
+        recall.append(recall_score(y_true=classes, y_pred=cluster_labels, average='weighted', zero_division=0))
+        #roc_auc.append(roc_auc_score(y_true=classes, y_score=cluster_labels, multi_class='ovr', average='weighted')) # TODO: non funziona...
+        purity.append(compute_overall_purity(true_labels=classes, pred_labels=cluster_labels))
+        entropy.append(compute_overall_entropy(true_labels=classes, pred_labels=cluster_labels))
+
+    metrics_df['feature'] = equal_size_features
+    metrics_df['accuracy'] = accuracy
+    metrics_df['f1'] = f1
+    metrics_df['precision'] = precision
+    metrics_df['recall'] = recall
+    #cat_clf_metrics_df['roc_auc'] = roc_auc
+    metrics_df['purity'] = purity
+    metrics_df['entropy'] = entropy
+    metrics_df.set_index(['feature'], inplace=True)
+    return metrics_df
+
+def compute_permutation_invariant_external_metrics(
+        df,
+        cluster_column,
+        external_features
+    ): # definite anche se il numero di classi è diverso
+    '''
+    This function computes permutation invariant metrics to compare the cluster labels with external features.
+
+    :param df: dataframe containing the external features and the cluster labels
+    :param cluster_column: name of the column containing the cluster labels
+    :param external_features: list of names of the columns containing the external features
+    :return: dataframe containing the metrics
+    '''
+    
+    metrics_df = pd.DataFrame()
+    adj_rand_scores = []
+    homogeneity_scores = []
+    completeness_scores = []
+    mutual_info_scores = []
+
+    for feature in external_features:
+        adj_rand_scores.append(adjusted_rand_score(df[feature], df[cluster_column]))
+        mutual_info_scores.append(normalized_mutual_info_score(df[feature], df[cluster_column], average_method='arithmetic'))
+        homogeneity_scores.append(homogeneity_score(df[feature], df[cluster_column])) # != purity, this is permutation invariant
+        completeness_scores.append(completeness_score(df[feature], df[cluster_column]))
+
+    metrics_df['feature'] = external_features
+    metrics_df['adjusted rand score'] = adj_rand_scores
+    metrics_df['normalized mutual information'] = mutual_info_scores
+    metrics_df['homogeneity'] = homogeneity_scores
+    metrics_df['completeness'] = completeness_scores
+
+
+    metrics_df.set_index(['feature'], inplace=True)
+    return metrics_df
 
 def plot_bars_by_cluster(
         df,
