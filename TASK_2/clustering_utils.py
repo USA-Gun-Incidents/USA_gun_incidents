@@ -644,7 +644,7 @@ def plot_distance_matrices(X, n_samples, clusters, random_state=None):
     sns.heatmap(idm, ax=axs[1])
     axs[1].set_title('Ideal distance matrix sorted by cluster')
     
-    corr_coef = np.corrcoef(dm.flatten(), idm.flatten()) # TODO: okay fare flatten?
+    corr_coef = np.corrcoef(dm.flatten(), idm.flatten()) # TODO: okay fare flatten? forse analogo a non farlo e prendere [0][1]
     fig.suptitle(f'Pearson Correlation Coefficient = {corr_coef[0,1]:0.2f}', fontweight='bold', y=-0.01) # TODO: è proprio il pearson?
     
     return dm, idm
