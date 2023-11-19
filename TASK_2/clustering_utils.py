@@ -51,7 +51,7 @@ def plot_bars_by_cluster(
     :param figsize: size of the figure
     '''
 
-    _, axs = plt.subplots(1, 2, figsize=figsize, gridspec_kw={'width_ratios': [1, 2]})
+    _, axs = plt.subplots(1, 2, figsize=figsize, gridspec_kw={'width_ratios': [1, 2]}, sharey=True)
     df[feature].value_counts().sort_index().plot(kind='bar', ax=axs[0], color='gray')
     axs[0].set_title(f'{feature} distribution in the whole dataset')
     axs[0].set_xlabel(feature)
@@ -165,7 +165,7 @@ def scatter_pca_features_by_cluster(
     )
     f.fig.suptitle(title)
 
-def plot_boxes_by_cluster(
+def plot_boxes_by_cluster( # TODO: lo vogliamo anche in tutto il dataset?
         df,
         features,
         cluster_column,
@@ -196,12 +196,12 @@ def plot_boxes_by_cluster(
         ax.remove()
     fig.suptitle(title, fontweight='bold')
 
-def plot_violin_by_cluster(
+def plot_violin_by_cluster( # TODO: lo vogliamo anche in tutto il dataset?
         df,
         features,
         cluster_column,
         ncols=3,
-        figsize=(36, 36),
+        figsize=(36,36),
         title=None
     ):
     '''
@@ -227,36 +227,40 @@ def plot_violin_by_cluster(
         ax.remove()
     fig.suptitle(title)
 
-def plot_hists_by_cluster2( # TODO: colorare per cluster
+def plot_hists_by_cluster(
         df,
         feature,
         cluster_column,
         bins=20,
-        figsize=(20, 5)
+        figsize=(20, 5),
+        title=None,
+        color_palette=sns.color_palette()
     ):
     '''
-    This function plots a histogram of the given feature in the given dataframe, grouped by cluster.
+    This function plots a histogram of the given feature in the given dataframe grouped by cluster,
+    as well as in the whole dataset.
 
     :param df: dataframe containing the data
     :param feature: feature to plot
     :param cluster_column: name of the dataframe column containing the cluster labels
     :param bins: number of bins for the histogram
     :param figsize: size of the figure
+    :param title: title of the figure
     :param color_palette: color palette to use
     '''
 
     n_clusters = df['cluster'].unique().shape[0]
-    fig, axes = plt.subplots(nrows=1, ncols=n_clusters, figsize=figsize)
-    df[feature].hist(
-        by=df[cluster_column],
-        bins=bins,
-        ax=axes
-    )
-    for i, ax in enumerate(axes):
-        ax.set_title(f'Cluster {i}')
-        ax.set_xlabel(feature)
-        ax.set_ylabel('Number of incidents')
-    fig.suptitle(f'Histogram of {feature} by cluster', fontsize=16, fontweight='bold')
+    fig, axs = plt.subplots(nrows=1, ncols=n_clusters+1, figsize=figsize, sharex=True, sharey=True)
+    sns.histplot(df[feature], ax=axs[0], bins=bins, color='gray', kde=True)
+    axs[0].set_title('Whole dataset')
+    axs[0].set_xlabel(feature)
+    axs[0].set_ylabel('Number of incidents')
+    for i in range(1, n_clusters+1):
+        sns.histplot(df[feature][df[cluster_column] == i], ax=axs[i], bins=bins, color=color_palette[i], kde=True)
+        axs[i].set_title(f'Cluster {i}')
+        axs[i].set_xlabel(feature)
+        axs[i].set_ylabel('Number of incidents')
+    fig.suptitle(title, fontweight='bold')
 
 def plot_clusters_size(
         clusters,
