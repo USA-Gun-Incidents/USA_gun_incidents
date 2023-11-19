@@ -458,3 +458,41 @@ def plot_distance_matrices(X, n_samples, clusters, random_state=None):
     fig.suptitle(f'Pearson Correlation Coefficient = {corr_coef[0,1]:0.2f}', fontweight='bold', y=-0.01) # TODO: è proprio il pearson?
     
     return dm, idm
+
+def compute_score_between_clusterings(
+        clusterings,
+        labels,
+        score_fun,
+        score_name,
+        figsize=(8, 5)
+    ):
+    '''
+    This function applies score_fun to all the possible pairs of clusterings
+    and returns and plot the matrix with the results.
+
+    :param clusterings: list of clusterings
+    :param labels: list of labels for each clustering
+    :param score_fun: score function to apply to each pair of clusterings
+    :param score_name: name of the score
+    :param figsize: size of the figure
+    :return: matrix with the scores
+    '''
+
+    scores = np.ones((len(clusterings), len(clusterings)))
+    for i in range(len(clusterings)):
+        for j in range(0, i):
+            scores[i][j] = score_fun(clusterings[i], clusterings[j])
+
+    fig, axs = plt.subplots(1, figsize=figsize)
+    sns.heatmap(
+        scores,
+        annot=True,
+        xticklabels=labels,
+        yticklabels=labels,
+        mask=np.triu(scores),
+        ax=axs
+    )
+    plt.grid(False)
+    plt.suptitle(f'{score_name} between different clusterings', fontweight='bold')
+
+    return scores
