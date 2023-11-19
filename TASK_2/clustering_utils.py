@@ -357,38 +357,55 @@ def scatter_pca_features_by_score(
     fig.suptitle(f'Clusters in PCA space colored by {score_name}', fontweight='bold')
 
 def sankey_plot(
-        labels1,
-        labels2,
+        labels,
+        labels_titles=None,
         title=None,
         color_palette=sns.color_palette()
     ):
     '''
-    This function plots a Sankey diagram of the two sets of labels passed as arguments.
+    This function plots a Sankey diagram of the sets of labels passed as arguments.
 
-    :param labels1: first list of labels
-    :param labels2: second list of labels
+    :param labels1: list of labels list
+    :param labels2: lables titles
     :param title: title of the plot
+    :param color_palette: color palette to use
     '''
 
-    n_clusters1 = len(set(labels1))
-    n_clusters2 = len(set(labels2))
+    n_clusters = [len(set(label_list)) for label_list in labels]
 
     plot_labels = []
-    for i in range(n_clusters1):
-        plot_labels.append(str(i))
-    for i in range(n_clusters2):
-        plot_labels.append(str(i))
+    for i in range(len(labels)):
+        for j in range(n_clusters[i]):
+            plot_labels.append(str(j))
 
-    confusion_matrix = pd.crosstab(labels1, labels2)
     source = []
     target = []
     value = []
-    for i in range(n_clusters1):
-        for j in range(n_clusters2):
-            if confusion_matrix.iloc[i, j] != 0:
-                source.append(i)
-                target.append(n_clusters1 + j)
-                value.append(confusion_matrix.iloc[i, j])
+    for i in range(len(labels)-1):
+        confusion_matrix = pd.crosstab(labels[i], labels[i+1])
+        curr_source = []
+        curr_target = []
+        curr_value = []
+
+        source_add = 0
+        for j in range(0, i):
+            source_add += n_clusters[j]
+        target_add = source_add + n_clusters[i]
+
+        for j in range(n_clusters[i]):
+            for k in range(n_clusters[i+1]):
+                if confusion_matrix.iloc[j, k] != 0:
+                    curr_source.append(j+source_add)
+                    curr_target.append(k+target_add)
+                    curr_value.append(confusion_matrix.iloc[j, k])
+
+        source += curr_source
+        target += curr_target
+        value += curr_value
+
+    colors = []
+    for i in range(len(labels)):
+        colors += color_palette.as_hex()[:n_clusters[i]]
 
     fig = go.Figure(
         data=[
@@ -398,7 +415,7 @@ def sankey_plot(
                     thickness = 20,
                     line = dict(color = "black", width = 0.5),
                     label = plot_labels,
-                    color = color_palette.as_hex()[:n_clusters1] + color_palette.as_hex()[:n_clusters2]
+                    color = colors
                 ),
                 link = dict(
                     source = source,
@@ -408,7 +425,24 @@ def sankey_plot(
             )
         ]
     )
-    fig.update_layout(title_text=title, font_size=10)
+
+    for x_coordinate, column_name in enumerate(labels_titles):
+        fig.add_annotation(
+            x=x_coordinate,
+            y=1.05,
+            xref="x",
+            yref="paper",
+            text=column_name,
+            showarrow=False
+        )
+    fig.update_layout(
+        title_text=title, 
+        xaxis={'showgrid': False, 'zeroline': False, 'visible': False},
+        yaxis={'showgrid': False, 'zeroline': False, 'visible': False},
+        plot_bgcolor='rgba(0,0,0,0)',
+        font_size=10
+    )
+
     file_name = f'../html/sankey'
     if title is not None:
         camel_title = title.replace(' ', '_')
