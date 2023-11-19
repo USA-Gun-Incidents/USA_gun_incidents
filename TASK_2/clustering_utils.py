@@ -5,6 +5,8 @@ import seaborn as sns
 from matplotlib.lines import Line2D
 import plotly.graph_objects as go
 import plotly.offline as pyo
+from sklearn.utils import resample
+from scipy.spatial.distance import pdist, squareform
 
 def compute_bss_per_cluster(X, clusters, centroids, weighted=True): # TODO: capire se è corretto chiamarla bss se relativa a ciascun cluster
     '''
@@ -414,3 +416,45 @@ def sankey_plot(
     file_name += '.html'
     pyo.plot(fig, filename=file_name, auto_open=False)
     fig.show()
+
+def plot_distance_matrices(X, n_samples, clusters, random_state=None):
+    '''
+    This function plots the distance matrix and the ideal distance matrix (where points are sorted by cluster).
+
+    :param X: the data points
+    :param n_samples: the number of samples to randomly select from X stratifying by clusters
+    :param clusters: the cluster labels
+    :return: the distance matrix and the ideal distance matrix
+    '''
+    
+    if n_samples < X.shape[0]:
+        X_sub, clusters_sub = resample(
+            X,
+            clusters,
+            random_state=random_state,
+            stratify=clusters,
+            n_samples=n_samples
+        )
+    else:
+        X_sub = X
+        clusters_sub = clusters
+    
+    X_sub_sorted = X_sub[np.argsort(clusters_sub)]
+    clusters_sub_sorted = clusters_sub[np.argsort(clusters_sub)]
+
+    dm = squareform(pdist(X_sub_sorted))
+
+    mask = (clusters_sub_sorted[:, None] == clusters_sub_sorted[None, :])
+    idm = np.ones_like(dm)
+    idm[mask] = 0
+
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(15,5))
+    sns.heatmap(dm, ax=axs[0])
+    axs[0].set_title('Distance matrix sorted by cluster')
+    sns.heatmap(idm, ax=axs[1])
+    axs[1].set_title('Ideal distance matrix sorted by cluster')
+    
+    corr_coef = np.corrcoef(dm.flatten(), idm.flatten()) # TODO: okay fare flatten?
+    fig.suptitle(f'Pearson Correlation Coefficient = {corr_coef[0,1]:0.2f}', fontweight='bold', y=-0.01) # TODO: è proprio il pearson?
+    
+    return dm, idm
