@@ -686,3 +686,14 @@ def compute_score_between_clusterings(
     plt.suptitle(f'{score_name} between different clusterings', fontweight='bold')
 
     return scores
+
+def write_clusters_to_csv(clusters, file_path):
+    '''
+    This function writes the clusters to a csv file.
+
+    :param clusters: the clusters to write
+    :param file_path: the path of the file to write
+    '''
+
+    clusters_df = pd.DataFrame(clusters, columns=['cluster'])
+    clusters_df.to_csv(file_path)
