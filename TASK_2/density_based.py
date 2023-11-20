@@ -581,12 +581,10 @@ for i in range(8):
         
 
 # %%
-illinois_df = pd.concat([illinois_df, pd.DataFrame(db.labels_, columns=['cluster'])], axis=1)
-illinois_df = pd.concat([illinois_df, incidents_df[incidents_df['state']=='ILLINOIS'][['latitude', 
-    'longitude', 'county', 'city' ]]], axis=1).dropna(subset=[
-        'location_importance', 'avg_age_participants', 'age_range',
-        'n_participants_child_prop', 'n_participants_teen_prop', 'n_males_pr',
-        'n_killed_pr', 'n_arrested_pr'])
+illinois_df['cluster'] = db.labels_
+illinois_df[['latitude', 'longitude', 'county', 'city' ]] = incidents_df[incidents_df['state']=='ILLINOIS'][['latitude', 
+    'longitude', 'county', 'city' ]]
+
 illinois_df.head(2)
 
 # %% [markdown]
@@ -624,12 +622,10 @@ for column in ['location_importance', 'avg_age_participants', 'age_range', 'n_pa
     plt.show()
 
 # %%
-for column in ['location_importance', 'avg_age_participants', 'age_range', 'n_participants_child_prop',
-    'n_participants_teen_prop', 'n_males_pr', 'n_killed_pr', 'n_arrested_pr']:
-    vmin, vmax = illinois_merged[column].agg(['min', 'max'])
-    illinois_merged.plot(column=column, cmap='plasma', figsize=(5, 6), vmin=vmin, vmax=vmax,
-        legend=True, legend_kwds={'shrink': 1}, edgecolor='black', linewidth=0.5)
-    plt.title(f'Illinois counties - {column}')
-    plt.xticks([])
-    plt.yticks([])
-    plt.show()
+from plot_utils import plot_scattermap_plotly
+
+plot_scattermap_plotly(illinois_df, 'cluster', zoom=5, title='Incidents clustered by DBSCAN')
+
+# %%
+plot_scattermap_plotly(illinois_df[illinois_df['county']=='Cook'], 'cluster', zoom=8, 
+    title='Incidents clustered by DBSCAN in Cook county')
