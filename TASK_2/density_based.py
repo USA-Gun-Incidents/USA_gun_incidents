@@ -617,8 +617,8 @@ for column in ['location_importance', 'avg_age_participants', 'age_range', 'n_pa
     'n_participants_teen_prop', 'n_males_pr', 'n_killed_pr', 'n_arrested_pr']:
     vmin, vmax = illinois_merged[column].agg(['min', 'max'])
     illinois_merged.plot(column=column, cmap='plasma', figsize=(10, 6), vmin=vmin, vmax=vmax,
-        legend=True, legend_kwds={'shrink': 1}, edgecolor='black', linewidth=0.5)
-    plt.title(f'Illinois - {column}')
+        legend=True, legend_kwds={'label': column, 'shrink': 1}, edgecolor='black', linewidth=0.5)
+    plt.title(f'Illinois counties')
     plt.xticks([])
     plt.yticks([])
     plt.show()
