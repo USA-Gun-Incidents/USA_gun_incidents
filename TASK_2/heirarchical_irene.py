@@ -94,7 +94,6 @@ for ax in axs[nrows-1, id%ncols:]:
 
 
 # %%
-dm = pdist(X)
 cophenetic_coefs = []
 for i, method in enumerate(methods):
     cophenetic_matrix = cophenet(linkages[i])
@@ -132,12 +131,42 @@ def plot_cluster_map(
 plot_cluster_map(X, 'single', indicators_df.columns)
 
 # %%
+start_iteration = 13000
+nrows = 2
+ncols = 4
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(28, 16))
+id = 0
+for i, method in enumerate(methods):
+    axs[int(id/ncols)][id%ncols].plot(range(start_iteration, linkages[i].shape[0]), linkages[i][start_iteration:, 2], 'o')
+    axs[int(id/ncols)][id%ncols].axhline(default_distance_thresholds[i], ls='--', color='k', label='default threshold')
+    axs[int(id/ncols)][id%ncols].legend()
+    axs[int(id/ncols)][id%ncols].set_title(f'{method} linkage')
+    axs[int(id/ncols)][id%ncols].set_xlabel('Iteration')
+    axs[int(id/ncols)][id%ncols].set_ylabel('Merge Distance')
+    id += 1
+fig.suptitle('Distance between merged clusters', fontweight='bold')
+for ax in axs[nrows-1, id%ncols:]:
+    ax.remove()
+
+# %%
+for i, method in enumerate(methods):
+    merge_dist = linkages[i][:,2]
+    merge_dist_diff = np.array([merge_dist[j + 1] - merge_dist[j] for j in range(len(merge_dist) - 1)])
+    sorted_diff = np.argsort(-merge_dist_diff)
+    print(f'{method} method')
+    print('Higher merge distances')
+    print(merge_dist_diff[sorted_diff][:10])
+    print('Iteration')
+    print(sorted_diff[:10]+2) # +2 right?
+    print('-----')
+
+# %%
 clusters_default_threshold = []
 clusters_inconsistent = []
 for i, method in enumerate(methods):
     clusters_default_threshold.append(cut_tree(linkages[i], height=default_distance_thresholds[i])) # TODO: try other thresholds
     clusters_inconsistent.append(fcluster(linkages[i], t=default_distance_thresholds[i], criterion='inconsistent'))
-    # TODO: try (and understand) other fcluster criterion
+    # TODO: try (and understand) other fcluster criterion, can also set the number of desired clusters
 
 # thresholds are typically identified via: silhouette plot, Dunn’s validity index, Hubert's gamma, G2/G3 coefficient, corrected Rand index, cophenetic distance
 
@@ -150,5 +179,10 @@ singleton_clusters = unique[counts==1]
 # %%
 for i in singleton_clusters:
     display(incidents_df.loc[clusters_default_threshold[0]==i])
+
+# %%
+# TODO: sul libro si parla di heirarchical f-measure (nell'ambito di supervised validation)
+# di internal metrics SSE rispetto al centroide non ha senso, forse silhouette è l'unico sensato
+# compare singleton clusters found by heirarchical with noise points found by DBSCAN
 
 
