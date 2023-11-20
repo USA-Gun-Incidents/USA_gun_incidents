@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 
 # %%
-df = pd.read_csv(
+incidents_df = pd.read_csv(
     '../data/incidents_cleaned.csv',
     index_col=False,
     parse_dates=['date', 'date_original'],
@@ -25,10 +25,10 @@ indicators_df = pd.read_csv(
 indicators_df.head(2)
 
 # %%
-df.head(2)
+incidents_df.head(2)
 
 # %%
-indicators_df = pd.concat([indicators_df, df[['state', 'city', 'county']]], axis=1)
+indicators_df = pd.concat([indicators_df, incidents_df[['state', 'city', 'county']]], axis=1)
 indicators_df.head(2)
 
 # %% [markdown]
@@ -616,35 +616,20 @@ plt.show()
 for column in ['location_importance', 'avg_age_participants', 'age_range', 'n_participants_child_prop',
     'n_participants_teen_prop', 'n_males_pr', 'n_killed_pr', 'n_arrested_pr']:
     vmin, vmax = illinois_merged[column].agg(['min', 'max'])
+    illinois_merged.plot(column=column, cmap='plasma', figsize=(10, 6), vmin=vmin, vmax=vmax,
+        legend=True, legend_kwds={'shrink': 1}, edgecolor='black', linewidth=0.5)
+    plt.title(f'Illinois - {column}')
+    plt.xticks([])
+    plt.yticks([])
+    plt.show()
+
+# %%
+for column in ['location_importance', 'avg_age_participants', 'age_range', 'n_participants_child_prop',
+    'n_participants_teen_prop', 'n_males_pr', 'n_killed_pr', 'n_arrested_pr']:
+    vmin, vmax = illinois_merged[column].agg(['min', 'max'])
     illinois_merged.plot(column=column, cmap='plasma', figsize=(5, 6), vmin=vmin, vmax=vmax,
         legend=True, legend_kwds={'shrink': 1}, edgecolor='black', linewidth=0.5)
     plt.title(f'Illinois counties - {column}')
     plt.xticks([])
     plt.yticks([])
     plt.show()
-
-# %% [markdown]
-# ### Dati non normalizzati
-#
-# fa schifo
-
-# %%
-X_illinois = illinois_df[columns].values
-
-db = DBSCAN(eps=0.45, min_samples=3).fit(X_illinois)
-print(metrics.silhouette_score(X_illinois, db.labels_))
-plot_dbscan(X_illinois, db)
-
-# %%
-fig, ax = plt.subplots(7, 4, figsize=(20, 30))
-index = 0
-for i in range(8):
-    for j in range(i+1, 8):
-        ax[int(index/4), index%4].scatter(X_illinois[:, i], X_illinois[:, j], c=db.labels_, cmap='plasma_r', s=6)
-        ax[int(index/4), index%4].set_xlabel(illinois_df.columns[i], fontsize=8)
-        ax[int(index/4), index%4].set_ylabel(illinois_df.columns[j], fontsize=8)
-        ax[int(index/4), index%4].tick_params(axis='both', which='major', labelsize=6)
-        ax[int(index/4), index%4].grid(linestyle='--', linewidth=0.5, alpha=0.6)
-        index = index + 1
-#plt.suptitle('DBSCAN Clustering', fontsize=16)
-plt.show()
