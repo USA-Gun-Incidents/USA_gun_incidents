@@ -27,13 +27,6 @@ features_to_cluster = [
     'n_killed_pr', 'n_injured_pr', 'n_arrested_pr', 'n_unharmed_pr',
     'tags_entropy'
 ]
-categorical_features = [
-    'year', 'month', 'day_of_week', 'party', #'state', 'address_type', 
-    'firearm', 'air_gun', 'shots', 'aggression', 'suicide',
-    'injuries', 'death', 'road', 'illegal_holding', 'house',
-    'school', 'children', 'drugs', 'officers', 'organized', 'social_reasons',
-    'defensive', 'workplace', 'abduction', 'unintentional'
-]
 
 # %%
 # drop nan
@@ -89,7 +82,7 @@ for method in methods:
     axs[int(id/ncols)][id%ncols].set_title(f'{method} linkage\n default threshold at {distance_threshold:.2f}')
     id += 1
 fig.suptitle('Dendrograms with different linkage methods', fontweight='bold')
-for ax in axs[nrows-1, id%ncols:]:
+for ax in axs[nrows-1, id%ncols+1:]:
     ax.remove()
 
 
@@ -145,7 +138,7 @@ for i, method in enumerate(methods):
     axs[int(id/ncols)][id%ncols].set_ylabel('Merge Distance')
     id += 1
 fig.suptitle('Distance between merged clusters', fontweight='bold')
-for ax in axs[nrows-1, id%ncols:]:
+for ax in axs[nrows-1, id%ncols+1:]:
     ax.remove()
 
 # %%

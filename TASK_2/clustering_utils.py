@@ -275,7 +275,7 @@ def scatter_by_cluster(
             axs[int(id/ncols)][id%ncols].set_xlabel(x)
             axs[int(id/ncols)][id%ncols].set_ylabel(y)
             id += 1
-    for ax in axs[nrows-1, id%ncols:]:
+    for ax in axs[nrows-1, id%ncols+1:]: # TODO: ricontrollare!
         ax.remove()
 
     legend_elements = []
@@ -350,7 +350,7 @@ def plot_boxes_by_cluster( # TODO: lo vogliamo anche in tutto il dataset?
     for feature in features:
         df.boxplot(column=feature, by=cluster_column, ax=axs[int(id/ncols)][id%ncols])
         id += 1
-    for ax in axs[nrows-1, id%ncols:]:
+    for ax in axs[nrows-1, id%ncols+1:]:
         ax.remove()
     fig.suptitle(title, fontweight='bold')
 
@@ -381,7 +381,7 @@ def plot_violin_by_cluster( # TODO: lo vogliamo anche in tutto il dataset?
     for feature in features:
         sns.violinplot(x=cluster_column, y=feature, data=df, ax=axs[int(id/ncols)][id%ncols])
         id += 1
-    for ax in axs[nrows-1, id%ncols:]:
+    for ax in axs[nrows-1, id%ncols+1:]:
         ax.remove()
     fig.suptitle(title)
 
