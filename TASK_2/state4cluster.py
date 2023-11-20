@@ -1,10 +1,17 @@
 # -*- coding: utf-8 -*-
 # %% [markdown]
-# # Import library and dataset
+# **Data mining Project - University of Pisa, acedemic year 2023/24**
+#  
+# **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
+#  
+# # Data and indicators understanding by state for clustering
+#
+
+# %% [markdown]
+# We import the libraries:
 
 # %%
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import plotly.express as px
 
@@ -299,14 +306,15 @@ plt.show()
 # # Prepare dataset and indices for choosen state
 
 # %%
-columns = ['location_importance', 'avg_age_participants', 'age_range', 
-    'n_participants_child_prop', 'n_participants_teen_prop', 'n_males_pr', 
-    'n_killed_pr', 'n_arrested_pr']
+columns = ['location_importance', 'avg_age_participants', 'n_participants', 'age_range', 
+    'n_participants_child_prop', 'n_participants_teen_prop', 'n_males_pr', 'n_killed_pr', 'n_injured_pr',
+    'n_arrested_pr', 'n_unharmed_pr', 'log_n_males_n_males_mean_semest_congd_ratio', 'log_avg_age_mean_SD',
+    'avg_age_entropy', 'city_entropy', 'address_entropy', 'n_participants_adult_entropy', 'tags_entropy']
 
 # %%
 illinois_df = indicators_df[indicators_df['state']=='ILLINOIS'][columns].dropna()
-illinois_df[['latitude', 'longitude', 'county', 'city' ]] = incidents_df.loc[illinois_df.index, [
-    'latitude', 'longitude', 'county', 'city' ]]
+illinois_df[['latitude', 'longitude', 'county', 'city']] = incidents_df.loc[illinois_df.index, [
+    'latitude', 'longitude', 'county', 'city']]
 
 illinois_df.info()
 illinois_df.head(2)
@@ -332,8 +340,7 @@ plt.yticks([])
 plt.show()
 
 # %%
-for column in ['location_importance', 'avg_age_participants', 'age_range', 'n_participants_child_prop',
-    'n_participants_teen_prop', 'n_males_pr', 'n_killed_pr', 'n_arrested_pr']:
+for column in columns:
     vmin, vmax = illinois_merged[column].agg(['min', 'max'])
     illinois_merged.plot(column=column, cmap='plasma', figsize=(10, 6), vmin=vmin, vmax=vmax,
         legend=True, legend_kwds={'label': column, 'shrink': 1}, edgecolor='black', linewidth=0.5)
