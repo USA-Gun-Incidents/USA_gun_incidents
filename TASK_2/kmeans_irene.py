@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 import plotly.express as px
 import plotly.offline as pyo
+import networkx as nx
 import warnings
 np.warnings = warnings # altrimenti numpy da problemi con pyclustering, TODO: è un problema solo mio?
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
@@ -445,6 +446,19 @@ for i in range(3):
 plt.suptitle('Cohesion and separation measures for each cluster', fontweight='bold')
 
 # %%
+centroids_dm = pd.DataFrame(squareform(pdist(centroids)), columns=range(k), index=range(k))
+centroids_dm
+
+# %%
+G = nx.from_numpy_array(centroids_dm.values)
+clusterings = centroids_dm.columns.values
+G = nx.relabel_nodes(G, dict(zip(range(len(clusterings)), clusterings)))
+edge_labels = {(i, j): "{:.2f}".format(centroids_dm[i][j]) for i, j in G.edges()}
+pos = nx.spring_layout(G)
+nx.draw(G, pos, with_labels=True, node_color=sns.color_palette().as_hex()[:len(clusterings)])
+nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+
+# %%
 scatter_pca_features_by_score(
     X_pca=X_pca,
     clusters=clusters,
@@ -455,141 +469,77 @@ scatter_pca_features_by_score(
 )
 
 # %%
+dm, idm = plot_distance_matrices(X=X, n_samples=500, clusters=clusters, random_state=RANDOM_STATE)
+
+# %%
 labels1 = [0,0,0,1,1,1,2,2,2,3,3,3]
 labels2 = [1,1,1,0,0,2,2,2,2,3,3,4]
-sankey_plot(labels1, labels2, title='KMeans clustering vs Other clustering')
+labels3 = [1,1,1,1,0,2,2,3,2,3,3,4]
+sankey_plot([labels1, labels2, labels3], labels_titles=['Kmeans', 'DBSCAN', 'Heirarchical'], title='Clusterings comparison')
 
 # %%
-# NOTE
-# external:
-# - entropy
-# - purity
-
-# internal:
-# - sse, only for centroid based
-# - promixity matrix (not good for density based clusteing)
-# - cohesion (somma delle distanze interne a ciascun cluster, media per unico score)
-# - separation (somma delle distanza tra un punto in un cluster e tutti gli altri punti in altri cluster, media per unico score)
-
-# proximity weighted e non interna
-# sep and coh weighted
-# approccio statistico: estrai lo stesso numero di punti costruendo le feature pescando dalle distribuzioni di ciascuna
-# applica k-means HOPKINS: pyclustertend
-# cophenetic
-# fare knee anche con altri algoritmi
-# fai proximity (come invertire distanza), correlation as a single score
-
+compute_permutation_invariant_external_metrics(incidents_df, 'cluster', categorical_features)
 
 # %%
-cat_metrics_df = pd.DataFrame()
-
-adj_rand_scores = []
-homogeneity_scores = []
-completeness_scores = []
-mutual_info_scores = []
-
-for column in categorical_features: # all permutation invariant
-    adj_rand_scores.append(adjusted_rand_score(incidents_df[column], incidents_df['cluster']))
-    mutual_info_scores.append(normalized_mutual_info_score(incidents_df[column], incidents_df['cluster'], average_method='arithmetic'))
-    homogeneity_scores.append(homogeneity_score(incidents_df[column], incidents_df['cluster']))
-    completeness_scores.append(completeness_score(incidents_df[column], incidents_df['cluster']))
-
-cat_metrics_df['feature'] = categorical_features
-cat_metrics_df['adjusted rand score'] = adj_rand_scores
-cat_metrics_df['normalized mutual information'] = mutual_info_scores
-cat_metrics_df['homogeneity'] = homogeneity_scores
-cat_metrics_df['completeness'] = completeness_scores
-
-
-cat_metrics_df.set_index(['feature'], inplace=True)
-cat_metrics_df
-
-# %%
-from sklearn.metrics import confusion_matrix
-
-def align_labels(label1, label2):
-    cm = confusion_matrix(label1, label2)
-    cm_argmax = cm.argmax(axis=0)
-    label2 = np.array([cm_argmax[i] for i in label2])
-    return label1, label2
+clusterings=[
+    [0,0,0,1,1,1,2,2,2,3,3,3],
+    [1,1,1,0,0,2,2,2,2,3,3,4],
+    [1,1,1,0,0,2,2,2,2,3,3,3]
+]
+labels = [
+    'KMeans',
+    'DBSCAN',
+    'Heirarchical'
+]
+adj_rand_scores = compute_score_between_clusterings(
+    clusterings=clusterings,
+    labels=labels,
+    score_fun=adjusted_rand_score,
+    score_name='Adjusted Rand Score',
+    figsize=(5,4)
+)
 
 # %%
 label1 = [0,0,0,1,1,1,2,2,2]
 label2 = [1,1,1,0,0,2,2,2,2]
 
-label1, label2 = align_labels(label1, label2)
+label1, label2 = align_labels(label1, label2) # TODO: questa cosa è okay?
 label2
 
 # %%
 confusion_matrix(label1, label2)
 
 # %%
-cat_clf_metrics_df = pd.DataFrame()
-
-accuracy = []
-f1 = []
-precision = []
-recall = []
-roc_auc = []
-# TODO: entropy and purity
-k_categorical_features = []
-
-for column in categorical_features: # TODO: bisognerebbe mergiare cluster vicini e trovare matching?
-    if incidents_df['party'].unique().shape[0] != k:
-        continue
-    k_categorical_features.append(column)
-    _, cluster_labels = align_labels(incidents_df[column], incidents_df['cluster'])
-    accuracy.append(accuracy_score(incidents_df[column], cluster_labels))
-    f1.append(f1_score(incidents_df[column], cluster_labels, average='weighted'))
-    precision.append(precision_score(incidents_df[column], cluster_labels, average='weighted', zero_division=0))
-    recall.append(recall_score(incidents_df[column], cluster_labels, average='weighted', zero_division=0))
-    roc_auc.append(roc_auc_score(incidents_df[column], cluster_labels, multi_class='ovr', average='weighted'))
-
-cat_clf_metrics_df['feature'] = k_categorical_features
-cat_clf_metrics_df['accuracy'] = accuracy
-cat_clf_metrics_df['f1'] = f1
-cat_clf_metrics_df['precision'] = precision
-cat_clf_metrics_df['recall'] = recall
-cat_clf_metrics_df.set_index(['feature'], inplace=True)
-cat_clf_metrics_df
-
-
+cm = np.array( # TODO: l'entropia calcolata sul libro è sbagliata?
+    [
+        [3,5,40,506,96,27],
+        [4,7,280,29,39,2],
+        [1,1,1,7,4,671],
+        [10,162,3,119,73,2],
+        [331,22,5,70,13,23],
+        [5,358,12,212,48,13]
+    ]
+)
 
 # %%
-# TODO: subsample con stratificazione in base a numero di punti per cluster
-subsampled_incidents_df = incidents_df.groupby('cluster', group_keys=False).apply(lambda x: x.sample(frac=0.05, random_state=0))
-subsampled_incidents_df.reset_index(inplace=True)
-subsampled_incidents_df.sort_values(by=['cluster'], inplace=True)
-
-dm = squareform(pdist(X[subsampled_incidents_df.index]))
-
-n_subsampled_points = subsampled_incidents_df.shape[0]
-im = np.zeros((n_subsampled_points, n_subsampled_points))
-sub_labels = subsampled_incidents_df['cluster'].values
-for i in range(n_subsampled_points):
-    for j in range(n_subsampled_points):
-        if sub_labels[i] == sub_labels[j]:
-            im[i, j] = 1
-
-corr_matrix = np.corrcoef(dm, im)
-
-plt.matshow(corr_matrix)
+purities = np.max(cm, axis=1) / np.sum(cm, axis=1)
+print('Purity per cluster:')
+print(purities)
 
 # %%
-plt.matshow(im)
+purity = np.sum((purities * np.sum(cm, axis=1)) / np.sum(cm))
+print(f'Overall purity: {purity}')
 
 # %%
-plt.matshow(dm)
+probs = cm / np.sum(cm, axis=1)
+log_probs = np.log2(probs, out=np.zeros_like(probs), where=(probs!=0)) # 0 if prob=0
+entropies = -np.sum(np.multiply(probs, log_probs), axis=1)
+print('Entropy per cluster:')
+print(entropies)
 
 # %%
-sns.heatmap(dm)
+entropy = np.sum((entropies * np.sum(cm, axis=1)) / np.sum(cm))
+print(f'Overall entropy: {entropy}')
 
 # %%
-# from scipy.stats import pearsonr
-# corrm = np.zeros_like(dm)
-# for i in range(n_subsampled_points):
-#     for j in range(n_subsampled_points):
-#         corrm[i][j] = pearsonr(dm[i], im[:,j])[0]
-
-# %%
-# plt.matshow(corrm)
+compute_external_metrics(df=incidents_df, cluster_column='cluster', external_features=categorical_features) # TODO: nan purity and entropy? only on classes with same size?
