@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
@@ -7,7 +8,7 @@ from scipy.cluster.hierarchy import linkage, fcluster, dendrogram, cut_tree, cop
 from sklearn.preprocessing import MinMaxScaler
 import utm
 from clustering_utils import *
-%matplotlib inline
+# %matplotlib inline
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 
@@ -20,7 +21,8 @@ indicators_df = pd.read_csv(
     '../data/incidents_cleaned_indicators.csv', index_col=0
 )
 features_to_cluster = [
-    'latitude_proj', 'longitude_proj', 'location_importance', 'city_entropy', 'address_entropy',
+    'latitude_proj', 'longitude_proj', # TODO: escludendole cambia molto...
+    'location_importance', 'city_entropy', 'address_entropy',
     'avg_age_participants', 'age_range', 'log_avg_age_mean_SD', 'avg_age_entropy',
     'n_participants', 'n_participants_child_prop', 'n_participants_teen_prop', 'n_participants_adult_entropy',
     'n_males_pr', 'log_n_males_n_males_mean_semest_congd_ratio',
@@ -57,8 +59,8 @@ methods = [
     'complete',
     'average',
     'weighted', # as average but does not take into account the number of points in each cluster to decide how to merge
-    'centroid', # could lead to strange results: https://stats.stackexchange.com/questions/26769/cluster-analysis-in-r-produces-reversals-on-dendrogram
-    'median', # could lead to strange results (see above)
+    'centroid',
+    'median',
     'ward'
 ]
 linkages = []
@@ -68,23 +70,25 @@ default_distance_thresholds = []
 nrows = 2
 ncols = 4
 fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(28, 16))
-id = 0
-for method in methods:
+for i, method in enumerate(methods):
     dl = linkage(dm, method=method, metric='euclidean', optimal_ordering=False) # optimal_ordering=False otherwise it takes too long
     linkages.append(dl)
     distance_threshold = 0.7*max(dl[:,2]) # 70% of the maximum distance between two clusters that are merged
     default_distance_thresholds.append(distance_threshold)
-    dendrogram(dl, truncate_mode='lastp', p=50, ax=axs[int(id/ncols)][id%ncols])
-    axs[int(id/ncols)][id%ncols].axhline(distance_threshold, ls='--', color='k', label='threshold')
-    axs[int(id/ncols)][id%ncols].legend()
-    axs[int(id/ncols)][id%ncols].set_xlabel('Number of samples if between parenthesis, sample index otherwise', fontsize=6)
-    axs[int(id/ncols)][id%ncols].set_ylabel('Euclidean Distance')
-    axs[int(id/ncols)][id%ncols].set_title(f'{method} linkage\n default threshold at {distance_threshold:.2f}')
-    id += 1
+    dendrogram(dl, truncate_mode='lastp', p=50, ax=axs[int(i/ncols)][i%ncols])
+    axs[int(i/ncols)][i%ncols].axhline(distance_threshold, ls='--', color='k', label='threshold')
+    axs[int(i/ncols)][i%ncols].legend()
+    axs[int(i/ncols)][i%ncols].set_xlabel('Number of samples if between parenthesis, sample index otherwise', fontsize=6)
+    axs[int(i/ncols)][i%ncols].set_ylabel('Euclidean Distance')
+    axs[int(i/ncols)][i%ncols].set_title(f'{method} linkage\n default threshold at {distance_threshold:.2f}')
+    i += 1
 fig.suptitle('Dendrograms with different linkage methods', fontweight='bold')
-for ax in axs[nrows-1, id%ncols+1:]:
+for ax in axs[nrows-1, i%ncols+1:]:
     ax.remove()
 
+
+# %% [markdown]
+# Inversions in the centroid linkage and median linkage dendograms are due to the fact that the distance between cluster centroids or medoids can diminish in later agglomeration steps.
 
 # %%
 cophenetic_coefs = []
@@ -121,61 +125,107 @@ def plot_cluster_map(
     g.ax_heatmap.set_yticks([]);
 
 # %%
-plot_cluster_map(X, 'single', indicators_df.columns)
+plot_cluster_map(X, 'average', indicators_df.columns)
 
 # %%
-start_iteration = 13000
+start_iteration = 13100
 nrows = 2
 ncols = 4
 fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(28, 16))
-id = 0
 for i, method in enumerate(methods):
-    axs[int(id/ncols)][id%ncols].plot(range(start_iteration, linkages[i].shape[0]), linkages[i][start_iteration:, 2], 'o')
-    axs[int(id/ncols)][id%ncols].axhline(default_distance_thresholds[i], ls='--', color='k', label='default threshold')
-    axs[int(id/ncols)][id%ncols].legend()
-    axs[int(id/ncols)][id%ncols].set_title(f'{method} linkage')
-    axs[int(id/ncols)][id%ncols].set_xlabel('Iteration')
-    axs[int(id/ncols)][id%ncols].set_ylabel('Merge Distance')
-    id += 1
+    axs[int(i/ncols)][i%ncols].plot(range(start_iteration, linkages[i].shape[0]), linkages[i][start_iteration:, 2], 'o')
+    axs[int(i/ncols)][i%ncols].axhline(default_distance_thresholds[i], ls='--', color='k', label='default threshold')
+    axs[int(i/ncols)][i%ncols].legend()
+    axs[int(i/ncols)][i%ncols].set_title(f'{method} linkage')
+    axs[int(i/ncols)][i%ncols].set_xlabel('Iteration')
+    axs[int(i/ncols)][i%ncols].set_ylabel('Merge Distance')
+    i += 1
 fig.suptitle('Distance between merged clusters', fontweight='bold')
-for ax in axs[nrows-1, id%ncols+1:]:
+for ax in axs[nrows-1, i%ncols:]:
     ax.remove()
 
 # %%
+ncuts = 5
+clusters_info = {}
 for i, method in enumerate(methods):
     merge_dist = linkages[i][:,2]
     merge_dist_diff = np.array([merge_dist[j + 1] - merge_dist[j] for j in range(len(merge_dist) - 1)])
-    sorted_diff = np.argsort(-merge_dist_diff)
-    print(f'{method} method')
-    print('Higher merge distances')
-    print(merge_dist_diff[sorted_diff][:10])
-    print('Iteration')
-    print(sorted_diff[:10]+2) # +2 right?
-    print('-----')
+    sorted_merge_dist_diff_it = np.argsort(-merge_dist_diff)
+    clusters_info[method] = {}
+    clusters_info[method]['thresholds'] = []
+    clusters_info[method]['distance_diff'] = []
+    clusters_info[method]['clusters'] = []
+    clusters_info[method]['n_clusters'] = []
+    clusters_info[method]['clusters_sizes'] = []
+    for j in range(ncuts):
+        clusters_info[method]['thresholds'].append(merge_dist[sorted_merge_dist_diff_it[j]])
+        clusters_info[method]['distance_diff'].append(merge_dist_diff[sorted_merge_dist_diff_it[j]])
+        clusters = np.array(cut_tree(linkages[i], height=merge_dist[sorted_merge_dist_diff_it[j]]+np.finfo(float).eps)).reshape(-1)
+        clusters_info[method]['clusters'].append(clusters)
+        clusters_info[method]['n_clusters'].append(np.unique(clusters).shape[0])
+        counts = np.bincount(clusters) # TODO: serve per centroid e medoid che assegnano come label id non contigui
+        clusters_info[method]['clusters_sizes'].append(counts[counts!=0])
 
 # %%
-clusters_default_threshold = []
-clusters_inconsistent = []
+for method in methods:
+    print(method)
+    display(pd.DataFrame(clusters_info[method])[['thresholds', 'distance_diff', 'n_clusters', 'clusters_sizes']])
+
+# %% [markdown]
+# Gli 0 in centroi-median forse sono dovuti alle inversioni...
+
+# %%
+threshold_num = 0
+nrows = 2
+ncols = 4
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(28, 16))
+clusters = []
+avg_c = []
 for i, method in enumerate(methods):
-    clusters_default_threshold.append(cut_tree(linkages[i], height=default_distance_thresholds[i])) # TODO: try other thresholds
-    clusters_inconsistent.append(fcluster(linkages[i], t=default_distance_thresholds[i], criterion='inconsistent'))
-    # TODO: try (and understand) other fcluster criterion, can also set the number of desired clusters
-
-# thresholds are typically identified via: silhouette plot, Dunn’s validity index, Hubert's gamma, G2/G3 coefficient, corrected Rand index, cophenetic distance
+    plot_clusters_size(clusters_info[method]['clusters'][threshold_num], axs[int(i/ncols)][i%ncols], color_palette=sns.color_palette('deep'), title=method)
+fig.suptitle('Number of points in each cluster (first threshold)', fontweight='bold')
+plt.show()
 
 # %%
-# inspect singleton clusters from single linkage method
-unique, counts = np.unique(clusters_default_threshold[0], return_counts=True)
-singleton_clusters = unique[counts==1]
-
+start_iteration = 13100
+nrows = 2
+ncols = 4
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(28, 16))
+for i, method in enumerate(methods):
+    axs[int(i/ncols)][i%ncols].plot(range(start_iteration, linkages[i].shape[0]), linkages[i][start_iteration:, 2], 'o')
+    for j, th in enumerate(clusters_info[method]['thresholds']):
+        axs[int(i/ncols)][i%ncols].axhline(th, ls='--', color='C'+str(j), label=f'threshold {j}')
+    axs[int(i/ncols)][i%ncols].legend()
+    axs[int(i/ncols)][i%ncols].set_title(f'{method} linkage')
+    axs[int(i/ncols)][i%ncols].set_xlabel('Iteration')
+    axs[int(i/ncols)][i%ncols].set_ylabel('Merge Distance')
+    i += 1
+fig.suptitle('Distance between merged clusters', fontweight='bold')
+for ax in axs[nrows-1, i%ncols:]:
+    ax.remove()
 
 # %%
-for i in singleton_clusters:
-    display(incidents_df.loc[clusters_default_threshold[0]==i])
+threshold_num=2
+nrows = 2
+ncols = 4
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(28, 16))
+for i, method in enumerate(methods):
+    dendrogram(linkages[i], truncate_mode='lastp', p=50, ax=axs[int(i/ncols)][i%ncols], color_threshold=clusters_info[method]['thresholds'][threshold_num]+np.finfo(float).eps)
+    axs[int(i/ncols)][i%ncols].axhline(clusters_info[method]['thresholds'][threshold_num], ls='--', color='k', label='chosen threshold')
+    axs[int(i/ncols)][i%ncols].legend()
+    axs[int(i/ncols)][i%ncols].set_xlabel('Number of samples if between parenthesis, sample index otherwise', fontsize=6)
+    axs[int(i/ncols)][i%ncols].set_ylabel('Euclidean Distance')
+    axs[int(i/ncols)][i%ncols].set_title(f'{method} linkage')
+    i += 1
+fig.suptitle('Dendrograms with different linkage methods', fontweight='bold')
+for ax in axs[nrows-1, i%ncols+1:]:
+    ax.remove()
 
 # %%
 # TODO: sul libro si parla di heirarchical f-measure (nell'ambito di supervised validation)
 # di internal metrics SSE rispetto al centroide non ha senso, forse silhouette è l'unico sensato
 # compare singleton clusters found by heirarchical with noise points found by DBSCAN
+# inspect singleton clusters?
+# clusters
 
 

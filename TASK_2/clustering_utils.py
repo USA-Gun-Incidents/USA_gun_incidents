@@ -422,7 +422,9 @@ def plot_hists_by_cluster(
 
 def plot_clusters_size(
         clusters,
-        color_palette=sns.color_palette()
+        ax,
+        color_palette=sns.color_palette(),
+        title=None
     ):
     '''
     This function plots a bar chart of the number of points in each cluster.
@@ -432,11 +434,11 @@ def plot_clusters_size(
     '''
 
     counts = np.bincount(clusters)
-    plt.bar(range(len(counts)), counts, color=color_palette)
-    plt.xticks(range(len(counts)))
-    plt.ylabel('Number of points')
-    plt.xlabel('Cluster')
-    plt.title('Number of points per cluster')
+    ax.bar(range(len(counts)), counts, color=color_palette)
+    ax.set_xticks(range(len(counts)))
+    ax.set_ylabel('Number of points')
+    ax.set_xlabel('Cluster')
+    ax.set_title(title)
 
 def plot_scores_per_point(score_per_point, clusters, score_name):
     '''
