@@ -603,12 +603,12 @@ final_indicators.rename(columns={'n_males_prop': 'n_males_pr',
  'entropy_avg_age_participants_fixed_year_semester_state_congressional_district': 'avg_age_entropy',
  'entropy_city_fixed_year_semester_state_congressional_district': 'city_entropy',
  'entropy_address_type_fixed_year_semester_state_congressional_district': 'address_entropy',
- 'entropy_n_participants_adult_fixed_year_semester_state_congressional_district': 'n_participants_adult_entropy',
+ 'entropy_n_participants_adult_fixed_year_semester_state_congressional_district': 'n_adults_entropy',
  'mix_tag': 'tags_entropy'}, inplace=True)
 
 # %%
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
-scaler_obj = MinMaxScaler()#, MinMaxScaler(), RobustScaler()]
+scaler_obj = MinMaxScaler()
 normalized_indicators = pd.DataFrame(data=scaler_obj.fit_transform(final_indicators.values), columns=final_indicators.columns)
 
 # %%
@@ -629,6 +629,7 @@ plt.xticks(rotation=90, ha='right');
 # %%
 DATA_FOLDER_PATH = '../data/'
 normalized_indicators.to_csv(DATA_FOLDER_PATH +'incidents_cleaned_indicators.csv')
+final_indicators.to_csv(DATA_FOLDER_PATH +'incidents_cleaned_indicators_not_norm.csv')
 
 # %%
 normalized_indicators.describe()
@@ -786,6 +787,7 @@ hist_box_plot(
 
 # %%
 pca_normalized_indicators.to_csv(DATA_FOLDER_PATH +'incidents_cleaned_indicators_PCA.csv')
+pca_indicators.to_csv(DATA_FOLDER_PATH +'incidents_cleaned_indicators_PCA_not_norm.csv')
 
 # %% [markdown]
 # ['date', 'date_original', 'year', 'month', 'day', 'day_of_week', 'state',
