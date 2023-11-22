@@ -17,126 +17,44 @@ incidents_df.drop("Unnamed: 0", axis=1, inplace=True)
 # %%
 incidents_df.info()
 
-# %%
-incidents_df.isna().sum()
-
 # %% [markdown]
 # ## Dataset preparation
 # We already have normalized data, so we just select the better state for clustering analysis
 
 # %%
-# FIXME: provvisiorio
-
 incidents_df_full = pd.read_csv('../data/incidents_cleaned.csv')
 incidents_df_full.head(2)
 
 # %%
-# FIXME: provvisiorio
-
+# select a subset of records regarding a certain state
 incidents_df['state'] = incidents_df_full['state']
 
 state = "ILLINOIS"
 incidents_df = incidents_df[incidents_df['state'] == state]
-incidents_df.drop('state', axis=1)
-
-# %% [markdown]
-# ## Dataset preparation
-
-# %% [markdown]
-# ### Indexes
+incidents_df.drop('state', axis=1, inplace=True)
 
 # %%
-def compute_ratio_indicator(df, ext_df, gby, num, den, suffix, agg_fun):
-    grouped_df = ext_df.groupby(gby)[den].agg(agg_fun)
-    df = df.merge(grouped_df, on=gby, how='left', suffixes=[None, suffix])
-    df[num + '_' + den + suffix + '_ratio'] = np.divide(df[num], df[den + suffix], out=np.zeros_like(df[num]), where=(df[den + suffix] != 0))
-    df.drop(columns=[den + suffix], inplace=True)
-    return df
+incidents_df.isna().sum()
 
 # %%
-state = "ILLINOIS"
-incidents_df['city'] = incidents_df['city'].fillna('UNK')
-incidents_df['county'] = incidents_df['county'].fillna('UNK')
+incidents_df.dropna(inplace=True)
 
-incidents_df = incidents_df[incidents_df['state'] == state].copy()
-incidents_df['city'] = incidents_df['city'].fillna('UNK')
-incidents_df['county'] = incidents_df['county'].fillna('UNK')
+incidents_df.shape
 
 # %%
-# 1st indicator
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'state', 'city'], 'n_males', 'n_males', '_tot_year_city', 'sum')
-
-# 2nd indicator
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'congressional_district'], 'n_killed', 'n_killed', '_tot_year_congdist', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df, incidents_df, ['year', 'congressional_district'], 'n_injured', 'n_injured', '_tot_year_congdist', 'sum')
-
-# 3rd indicator
-incidents_df['n_killed_n_participants_ratio'] = np.divide(incidents_df['n_killed'], incidents_df['n_participants'], out=np.zeros_like(incidents_df['n_killed']), where=(incidents_df['n_participants'] != 0))
-incidents_df['n_injured_n_participants_ratio'] = np.divide(incidents_df['n_injured'], incidents_df['n_participants'], out=np.zeros_like(incidents_df['n_injured']), where=(incidents_df['n_participants'] != 0))
-
-# 4th indicator
-incidents_df['n_unharmed_n_participants_ratio'] = np.divide(incidents_df['n_unharmed'], incidents_df['n_participants'], out=np.zeros_like(incidents_df['n_unharmed']), where=(incidents_df['n_participants'] != 0))
-incidents_df['n_arrested_n_participants_ratio'] = np.divide(incidents_df['n_arrested'], incidents_df['n_participants'], out=np.zeros_like(incidents_df['n_arrested']), where=(incidents_df['n_participants'] != 0))
-
-# other indicators
-incidents_df = compute_ratio_indicator(incidents_df[incidents_df['state'] == state], incidents_df[incidents_df['state'] == state], ['year', 'city'], 'n_participants', 'n_participants', '_tot_year_city', 'sum')
-incidents_df = compute_ratio_indicator(incidents_df[incidents_df['state'] == state], incidents_df[incidents_df['state'] == state], ['year', 'congressional_district'], 'n_participants', 'n_participants', '_tot_year_district', 'sum')
-incidents_df['n_participants_female_over_male_ratio'] = np.divide(incidents_df['n_males'], incidents_df['n_females'])
-incidents_df['n_participants_child_n_participants_ratio'] = np.divide(incidents_df['n_participants_child'], incidents_df['n_participants'])
-incidents_df['n_participants_teen_n_participants_ratio'] = np.divide(incidents_df['n_participants_teen'], incidents_df['n_participants'])
-incidents_df['n_participants_adult_n_participants_ratio'] = np.divide(incidents_df['n_participants_adult'], incidents_df['n_participants'])
-
-# %%
-incidents_df
-
-# %%
-incidents_df_clustering = incidents_df.select_dtypes(include='number')
-incidents_df_clustering.isna().sum()
+# print all indexes for clustering
+incidents_df.columns
 
 # %% [markdown]
 # ## Clustering
 
 # %%
-clustering_columns = ['n_participants', 'avg_age_participants', 'max_age_participants',
-    'n_males', 'n_females', 
-    'n_killed', 'n_injured', 'n_arrested', 'n_unharmed',
-    'n_males_n_males_tot_year_city_ratio',
-    'n_killed_n_killed_tot_year_congdist_ratio',
-    'n_injured_n_injured_tot_year_congdist_ratio',
-    'n_killed_n_participants_ratio', 'n_injured_n_participants_ratio',
-    'n_unharmed_n_participants_ratio', 'n_arrested_n_participants_ratio',
-    'n_participants_n_participants_tot_year_city_ratio',
-    'n_participants_n_participants_tot_year_district_ratio',
-    'n_participants_female_over_male_ratio',
-    'n_participants_child_n_participants_ratio',
-    'n_participants_teen_n_participants_ratio',
-    'n_participants_adult_n_participants_ratio']
-
-standardization_columns = ['n_participants', 'avg_age_participants', 'max_age_participants',
-    'n_killed', 'n_injured', 'n_arrested', 'n_unharmed']
-
-dropna_columns = ['latitude', 'longitude', 'n_participants', 'min_age_participants', 'avg_age_participants', 'max_age_participants', 'n_participants_child', 
-    'n_participants_teen', 'n_participants_adult', 'n_males', 'n_females', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 
-    'n_participants']
-
-# %%
-incidents_df_clustering = incidents_df_clustering.dropna(subset=dropna_columns)
-incidents_df = incidents_df.dropna(subset=dropna_columns)
-incidents_df_clustering[clustering_columns].isna().sum()
-
-# %%
-# standardization
-std_scaler = StandardScaler()
-std_scaler.fit(incidents_df_clustering[standardization_columns].values)
-X = std_scaler.fit_transform(incidents_df_clustering[standardization_columns].values)
-
-# %%
 # clustering
-n_clusters = 134
-single_link = AgglomerativeClustering(linkage="single", compute_distances=True, n_clusters=n_clusters).fit(X)
-complete_link = AgglomerativeClustering(linkage="complete", compute_distances=True, n_clusters=n_clusters).fit(X)
-average = AgglomerativeClustering(linkage="average", compute_distances=True, n_clusters=n_clusters).fit(X)
-ward = AgglomerativeClustering(linkage="ward", compute_distances=True, n_clusters=n_clusters).fit(X)
+algorithms = ["single", "complete", "average", "ward"]
+models = []
+
+for algorithm in algorithms:
+    models.append(AgglomerativeClustering(linkage=algorithm, compute_distances=True).fit(incidents_df))
 
 # %%
 # results
@@ -146,7 +64,10 @@ print("average: " + str(average.labels_))
 print("ward: " + str(ward.labels_))
 
 # %%
-def plot_dendrogram(model, p):
+models[3].n_clusters_
+
+# %%
+def plot_dendrogram(model, p, ax):
     # Create linkage matrix and then plot the dendrogram
 
     # create the counts of samples under each node
@@ -166,35 +87,23 @@ def plot_dendrogram(model, p):
     ).astype(float)
 
     # Plot the corresponding dendrogram
-    dendrogram(linkage_matrix, truncate_mode="level", p=p)
+    dendrogram(linkage_matrix, truncate_mode="lastp", p=p, leaf_rotation=60, leaf_font_size = 8, show_contracted=True, ax=ax)
 
 # %%
-plt.figure(figsize=(15, 12))
-plt.title("Hierarchical Clustering Dendrogram - Ward")
-plot_dendrogram(ward, 5)
-plt.xlabel("Number of points in node (or index of point if no parenthesis)")
+f, axs = plt.subplots(ncols=4, figsize=(32,7))
+
+for i in range(len(models)):
+    axs[i].set_title(algorithms[i])
+    axs[i].set_xlabel('IncidentID or (Cluster Size)')
+    axs[i].set_ylabel('Distance')
+
+    plot_dendrogram(models[i], 30, axs[i])
+
+plt.suptitle(('Hierarchical Clustering Dendograms'), fontsize=18, fontweight='bold')
 plt.show()
 
 # %%
-plt.figure(figsize=(15, 12))
-plt.title("Hierarchical Clustering Dendrogram - Single Link")
-plot_dendrogram(single_link, 8)
-plt.xlabel("Number of points in node (or index of point if no parenthesis)")
-plt.show()
 
-# %%
-plt.figure(figsize=(15, 12))
-plt.title("Hierarchical Clustering Dendrogram - Complete Link")
-plot_dendrogram(complete_link, 5)
-plt.xlabel("Number of points in node (or index of point if no parenthesis)")
-plt.show()
-
-# %%
-plt.figure(figsize=(15, 12))
-plt.title("Hierarchical Clustering Dendrogram - Average Link")
-plot_dendrogram(average, 10)
-plt.xlabel("Number of points in node (or index of point if no parenthesis)")
-plt.show()
 
 # %%
 from enum import Enum
@@ -223,7 +132,7 @@ class IncidentTag(Enum):
 
 tags = [v.name for v in IncidentTag]
 
-group_values = incidents_df.groupby(tags, group_keys=True, as_index=False).count()
+group_values = incidents_df_full[incidents_df_full['state'] == state].dropna().groupby(tags, group_keys=True, as_index=False).count()
 tag_groups = group_values.filter(tags)
 group_values = group_values.drop(tags, axis=1)
 
@@ -237,6 +146,7 @@ len(incidents_df) - tag_groups['n_incidents'].sum() # must be 0
 
 # %%
 incidents_per_different_tagmap = tag_groups.sort_values('n_incidents')['n_incidents'].values
+n_clusters = len(incidents_per_different_tagmap)
 
 incidents_per_different_tagmap
 

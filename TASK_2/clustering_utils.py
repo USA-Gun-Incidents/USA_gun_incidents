@@ -261,7 +261,13 @@ def scatter_by_cluster(
     for i in range(len(features)):
         for j in range(i+1, len(features)):
             x, y = df[features].columns[i], df[features].columns[j]
+            
+            #FIXME: quando nrows = 1 da questo errore:
+            # 'Axes' object is not subscriptable
+            # non so se vale la pensa perderci tempo ora come ora
+            # al massimo ci sforzeremo di passare almeno 4 colonne fra le features :)
             axs[int(id/ncols)][id%ncols].scatter(df[x], df[y], s=20, c=colors, edgecolor="k")
+
             if centroids is not None:
                 for c in range(len(centroids)):
                     axs[int(id/ncols)][id%ncols].scatter(
