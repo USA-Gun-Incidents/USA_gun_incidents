@@ -41,7 +41,7 @@ indicators_df = pd.read_csv(
 features_to_cluster = [
     'latitude_proj', 'longitude_proj', 'location_importance', 'city_entropy', 'address_entropy',
     'avg_age_participants', 'age_range', 'log_avg_age_mean_SD', 'avg_age_entropy',
-    'n_participants', 'n_participants_child_prop', 'n_participants_teen_prop', 'n_participants_adult_entropy',
+    'n_participants', 'n_participants_child_prop', 'n_participants_teen_prop', #'adults_entropy',
     'n_males_pr', 'log_n_males_n_males_mean_semest_congd_ratio',
     'n_killed_pr', 'n_injured_pr', 'n_arrested_pr', 'n_unharmed_pr',
     'tags_entropy'
@@ -288,13 +288,12 @@ scatter_by_cluster(
     features=[
         'latitude_proj',
         'longitude_proj',
-        'avg_age_participants',
-        'age_range',
-        'n_participants'
+        'avg_age_participants'
     ],
     cluster_column='cluster',
     centroids=centroids,
-    figsize=(15, 10)
+    figsize=(15, 10),
+    ncols=3
 )
 
 # %%
@@ -366,7 +365,9 @@ plt.xlabel('Feature')
 plt.title('SSE per feature')
 
 # %%
-plot_clusters_size(clusters)
+fig, axs = plt.subplots(1)
+plot_clusters_size(clusters=clusters, ax=axs, title='Clusters size')
+fig.sow()
 
 # %%
 # print top 5 points with highest SSE
@@ -472,10 +473,9 @@ scatter_pca_features_by_score(
 dm, idm = plot_distance_matrices(X=X, n_samples=500, clusters=clusters, random_state=RANDOM_STATE)
 
 # %%
-labels1 = [0,0,0,1,1,1,2,2,2,3,3,3]
-labels2 = [1,1,1,0,0,2,2,2,2,3,3,4]
-labels3 = [1,1,1,1,0,2,2,3,2,3,3,4]
-sankey_plot([labels1, labels2, labels3], labels_titles=['Kmeans', 'DBSCAN', 'Heirarchical'], title='Clusterings comparison')
+write_clusters_to_csv(clusters, './kmeans_clusters.csv')
+write_clusters_to_csv(clusters, './DBSCAN_clusters.csv')
+write_clusters_to_csv(clusters, './heirarchical_clusters.csv')
 
 # %%
 compute_permutation_invariant_external_metrics(incidents_df, 'cluster', categorical_features)

@@ -256,7 +256,7 @@ def scatter_by_cluster(
         nrows += 1
 
     colors = [color_palette[c] for c in df[cluster_column]]
-    f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
+    f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize,squeeze=False)
     id = 0
     for i in range(len(features)):
         for j in range(i+1, len(features)):
@@ -275,8 +275,9 @@ def scatter_by_cluster(
             axs[int(id/ncols)][id%ncols].set_xlabel(x)
             axs[int(id/ncols)][id%ncols].set_ylabel(y)
             id += 1
-    for ax in axs[nrows-1, id%ncols+1:]: # TODO: ricontrollare!
-        ax.remove()
+    if nrows > 1:
+        for ax in axs[nrows-1, id%ncols+1:]: # TODO: ricontrollare!
+            ax.remove()
 
     legend_elements = []
     clusters_ids = df['cluster'].unique()
