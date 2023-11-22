@@ -414,7 +414,7 @@ def plot_hists_by_cluster(
     :param color_palette: color palette to use
     '''
 
-    n_clusters = df['cluster'].unique().shape[0]
+    n_clusters = df[cluster_column].unique().shape[0]
     fig, axs = plt.subplots(nrows=1, ncols=n_clusters+1, figsize=figsize, sharex=True, sharey=True)
     sns.histplot(df[feature], ax=axs[0], bins=bins, color='gray', kde=True)
     axs[0].set_title('Whole dataset')

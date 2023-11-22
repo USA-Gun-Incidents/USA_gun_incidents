@@ -67,29 +67,6 @@ for algorithm in algorithms:
     distance_thresholds.append(0.7 * max(linkage_res[:,2]))
 
 # %%
-def plot_dendrogram(model, **kargs):
-    # Create linkage matrix and then plot the dendrogram
-
-    # create the counts of samples under each node
-    counts = np.zeros(model.children_.shape[0])
-    n_samples = len(model.labels_)
-    for i, merge in enumerate(model.children_):
-        current_count = 0
-        for child_idx in merge:
-            if child_idx < n_samples:
-                current_count += 1  # leaf node
-            else:
-                current_count += counts[child_idx - n_samples]
-        counts[i] = current_count
-
-    linkage_matrix = np.column_stack(
-        [model.children_, model.distances_, counts]
-    ).astype(float)
-
-    # Plot the corresponding dendrogram
-    dendrogram(linkage_matrix, **kargs)
-
-# %%
 f, axs = plt.subplots(ncols=len(linkages), figsize=(32,7))
 
 for i in range(len(linkages)):    
@@ -102,55 +79,9 @@ for i in range(len(linkages)):
     # Plot the corresponding dendrogram
     dendrogram(linkages[i], truncate_mode="lastp", p=30, leaf_rotation=60, leaf_font_size=8,
                show_contracted=True, ax=axs[i], color_threshold=color_threshold)
-    #plot_dendrogram(linkages[i], truncate_mode="lastp", p=30, leaf_rotation=60, leaf_font_size=8,
-    #                show_contracted=True, ax=axs[i], color_threshold=color_threshold)
 
 plt.suptitle(('Hierarchical Clustering Dendograms'), fontsize=18, fontweight='bold')
 plt.show()
-
-# %%
-dm = pdist(incidents_df)
-steps = [0.01, 0.025, 0.018, 0.7] # based on distances
-base = [0.5, 1.25, 0.85, 5]
-
-optimal_n_clusters = []
-optimal_heights = []
-optimal_models = []
-optimal_silhouette_scores = []
-for i in range(len(linkages)):
-    n_clusters = 0
-    j = 0
-
-    best_distance = 0
-    best_n_clusters = 0
-    best_model = None
-    best_silhouette_score = 0
-    distance_threshold = base[i]
-    while n_clusters != 1: # grid search to find best number of clusters
-        model = AgglomerativeClustering(distance_threshold=distance_threshold, n_clusters=None, metric='euclidean', linkage=algorithms[i]).fit(incidents_df)
-        j = j + 1
-        n_clusters = model.n_clusters_
-
-        # check silhouette score
-        if(n_clusters > 1):
-            silhouette_avg = silhouette_score(incidents_df, model.labels_)
-            if silhouette_avg > best_silhouette_score:
-                best_distance = distance_threshold
-                best_n_clusters = model.n_clusters_
-                best_model = model
-                best_silhouette_score = silhouette_avg
-        
-        if j == 10:
-            j = 0
-            print(algorithms[i] + ": explored distances until " + str(distance_threshold) + ", best n_clusters = " + str(best_n_clusters) + " at height " + str(best_distance))
-        
-        distance_threshold += steps[i]
-    print(algorithms[i] + ": explored distances until " + str(distance_threshold) + ", best n_clusters = " + str(best_n_clusters) + " at height " + str(best_distance) + "\n")
-
-    optimal_n_clusters.append(best_n_clusters)
-    optimal_heights.append(best_distance)
-    optimal_models.append(best_model)
-    optimal_silhouette_scores.append(best_silhouette_score)
 
 # %%
 ncuts = 10 # valutare se aumentarli, possiamo ottenere migliori prestazioni su complete
@@ -283,22 +214,23 @@ for i in range(len(algorithms)):
                         title=('Box plots of features by cluster - ' + algorithms[i]))
 
 # %%
-plot_violin_by_cluster(
-    incidents_df_cluster,
-    incidents_df.columns,
-    cluster_column_name,
-    figsize=(15, 20),
-    title='Violin plots of features by cluster'
-)
+for i in range(len(algorithms)):
+    plot_violin_by_cluster(
+        incidents_df_cluster,
+        incidents_df.columns,
+        algorithms[i],
+        figsize=(15, 20),
+        title=('Violin plots of features by cluster- ' + algorithms[i])
+    )
 
 # %%
 for feature in incidents_df.columns:
     plot_hists_by_cluster(
         df=incidents_df_cluster,
         feature=feature,
-        cluster_column=cluster_column_name,
+        cluster_column='ward',
         title=f'Distribution of {feature} in each cluster',
-        color_palette=sns.color_palette(n_colors=ward.n_clusters_ + 1)
+        color_palette=sns.color_palette(n_colors=int(results_df.loc['ward']['optimal n_clusters']) + 1)
     )
 
 
