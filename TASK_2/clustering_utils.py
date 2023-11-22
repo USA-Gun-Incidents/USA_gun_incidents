@@ -286,7 +286,7 @@ def scatter_by_cluster(
             ax.remove()
 
     legend_elements = []
-    clusters_ids = df['cluster'].unique()
+    clusters_ids = df[cluster_column].unique()
     for c in sorted(clusters_ids):
         legend_elements.append(Line2D(
             [0], [0], marker='o', color='w', label=f'Cluster {c}', markerfacecolor=color_palette[c]))
