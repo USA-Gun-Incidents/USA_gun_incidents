@@ -294,13 +294,28 @@ hist_box_plot(
 incidents_df.loc[(incidents_df['avg_age_participants']==0)]
 
 # %%
+alpha = 0.8
+severity = ((alpha * incidents_df['n_killed'] + (1 - alpha) * incidents_df['n_injured']) /
+            (incidents_df['n_participants'] - incidents_df['n_unharmed']))
+
+indicators['severity'] = severity
+
+# %%
+indicators['severity'].replace([np.inf, -np.inf], 0, inplace=True) # if all partecipants are unharmed the severity is 0
+
+indicators['severity'].min()
+
+# %%
+indicators.head(10)
+
+# %%
 indicators.dropna().describe()
 
 # %%
 sns.heatmap(indicators.corr(), vmin=-1, vmax=1)
 
 # %%
-col_to_drop = ['n_participants_adult_prop',  'n_females_prop', 'log_n_killed_n_killed_mean_semest_congd_ratio', 'log_n_injured_n_injured_mean_semest_congd_ratio']
+col_to_drop = ['n_participants_adult_prop',  'n_females_prop', 'log_n_killed_n_killed_mean_semest_congd_ratio', 'log_n_injured_n_injured_mean_semest_congd_ratio', 'n_males_prop']
 final_indicators = indicators.drop(columns=col_to_drop)
 
 # %%
@@ -309,7 +324,7 @@ sns.heatmap(final_indicators.corr(), vmin=-1, vmax=1)
 # %%
 fig, ax = plt.subplots(figsize=(15, 5))
 sns.violinplot(data=final_indicators,ax=ax)
-plt.xticks(rotation=90, ha='right');
+plt.xticks(rotation=90, ha='right')
 
 # %%
 a = {}
