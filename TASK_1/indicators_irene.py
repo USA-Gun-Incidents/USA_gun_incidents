@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Definition and study of indicators
 
@@ -13,13 +14,13 @@ import os
 import seaborn as sns
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-%matplotlib inline
+# %matplotlib inline
 
 # %% [markdown]
 # We load the dataset and reaname some columns:
 
 # %%
-incidents_df = pd.read_csv('../data/incidents_cleaned.csv', index_col=0)
+incidents_df = pd.read_csv('../data/incidents_cleaned.csv')
 dataset_original_columns = incidents_df.columns
 incidents_df['date'] = pd.to_datetime(incidents_df['date'], format='%Y-%m-%d')
 incidents_df.rename(
@@ -42,8 +43,8 @@ incidents_df.rename(
 incidents_df['sem'] = (incidents_df['date'].dt.month // 7) + 1
 
 # %% [markdown]
-# For each record we copmute the ratio between the value of a specific feature in that record with the value of an aggregation function (e.g. sum or median) applied to the feature in a certain time and space window.
-# The functions define below perform this computation:
+# For each record we compute the ratio between the value of a specific feature in that record and the value of an aggregation function (e.g. sum or median) applied to the feature in a certain time and space window.
+# The functions define below performs this computation:
 
 # %%
 def compute_window_ratio_indicator(df, gby, feature, agg_fun, suffix):
@@ -57,8 +58,8 @@ def compute_window_ratio_indicator(df, gby, feature, agg_fun, suffix):
 # %% [markdown]
 # We apply that function to most of the numerical features of the dataset, using:
 # - as aggregation functions the sum and the mean
-# - as time window the semester
-# - as space window both the congressional district
+# - as time window the semester and the year
+# - as space window both the congressional district and the state
 
 # %%
 # numerical columns to use to compute local ratios
@@ -277,7 +278,7 @@ sns.violinplot(data=incidents_df[['age_range']])
 # %%
 import utm
 
-def compute_utm_coordinates(latidude, longitude):
+def project_lat_long(latidude, longitude):
     # check if the coordinates are valid
     if latidude >= -90 and latidude <= 90 and longitude >= -180 and longitude <= 180:
         utm_coordinates = utm.from_latlon(latidude, longitude)
@@ -286,89 +287,46 @@ def compute_utm_coordinates(latidude, longitude):
         return np.nan, np.nan
 
 incidents_df['lat_proj'], incidents_df['lon_proj'] = zip(*incidents_df.apply(
-    lambda row: compute_utm_coordinates(row['latitude'], row['longitude']), axis=1))
+    lambda row: project_lat_long(row['latitude'], row['longitude']), axis=1))
 
 # %%
-old_indicators_df = pd.read_csv('../data/incidents_cleaned_indicators_not_norm.csv', index_col=0)
-old_indicators_columns = ['location_importance', 'avg_age_participants',
-    'n_participants','n_participants_child_prop',
-    'n_participants_teen_prop', 'n_males_pr', 'n_killed_pr', 'n_injured_pr',
-    'n_arrested_pr', 'n_unharmed_pr', 'log_n_males_n_males_mean_semest_congd_ratio',
-    'avg_age_entropy', 'city_entropy', 'address_entropy', 'n_adults_entropy', 'tags_entropy']
+indicators = {
+    # spatial data
+    'lat_proj': 'lat_proj',
+    'lon_proj': 'lon_proj',
+    'entropy_address_type_fixing_year_sem_state_congd': 'entropy_address_type',
+    # age data
+    'age_range': 'age_range',
+    'entropy_min_age_fixing_year_sem_state_congd': 'entropy_min_age',
+    'log_min_age_mean_sem_congd_ratio': 'log_min_age_mean_ratio',
+    'n_child_n_participants_ratio': 'n_child_prop',
+    'n_teen_n_participants_ratio': 'n_teen_prop',
+    'entropy_n_child_n_teen_n_adult_fixing_year_sem_state_congd': 'entropy_age_groups',
+    # severity
+    'severity': 'severity',
+    'n_killed_n_participants_ratio': 'n_killed_prop',
+    'log_n_killed_mean_sem_congd_ratio': 'log_n_killed_mean_ratio',
+    'n_injured_n_participants_ratio': 'n_injured_prop',
+    'log_n_injured_mean_sem_congd_ratio': 'log_n_injured_mean_ratio',
+    'n_unharmed_n_participants_ratio': 'n_unharmed_prop',
+    # gender
+    'n_males_n_participants_ratio': 'n_males_prop',
+    'log_n_males_n_males_mean_semest_congd_ratio': 'log_n_males_mean_ratio',
+    # characteristics
+    'entropy_tag_congd': 'entropy_tag',
+    'n_arrested_n_participants_ratio': 'n_arrested_prop',
+    'log_n_participants_mean_sem_congd_ratio': 'log_n_participants_mean_ratio',
+    # temporal data
+    'entropy_month_day_fixing_year_sem_state_congd': 'entropy_day'
+}
 
-# %%
-indicators_columns = incidents_df.columns[66:]
-
-# %%
-dataset_columns = [
-    #'state', 'county', 'city', 'congd', 'latitude', 'longitude',
-    'lat_proj', 'lon_proj',
-    'min_age', 'avg_age', 'max_age', 
-    'n_child', 'n_teen', 'n_adult',
-    'n_males', 'n_females',
-    'n_killed', 'n_injured', 'n_arrested', 'n_unharmed']
-
-# %%
-final_indicators_df = incidents_df[dataset_columns]
-final_indicators_df = final_indicators_df.merge(incidents_df[indicators_columns], left_index=True, right_index=True)
-final_indicators_df = final_indicators_df.merge(old_indicators_df[old_indicators_columns], left_index=True, right_index=True)
-final_indicators_df.head(2)
-
-# %%
-final_indicators_df.to_csv('../data/all_indicators.csv')
-
-# %% [markdown]
-# severity # da aggiungere
-# 
-# **Precedentemente**
-# 
-# age_range
-# 
-# n_participants_child_prop
-# 
-# n_participants_teen_prop
-# 
-# n_males_pr
-# 
-# n_killed_pr
-# 
-# n_injured_pr
-# 
-# n_arrested_pr
-# 
-# n_unharmed_pr
-# 
-# log_n_males_n_males_mean_semest_congd_ratio
-# 
-# log_avg_age_mean_SD # da togliere
-# 
-# avg_age_entropy
-# 
-# city_entropy
-# 
-# address_entropy
-# 
-# n_adults_entropy
-# 
-# tags_entropy
-# 
-# 
-# ---------
-# 
-# Teniamo qualcosa in più degli indicatori con window
-# 
-# Togliere ridondanza su maschi
-# 
-# ---------
-# 
-# FROM ORIGINAL DATASET
-# 
-# latitude,longitude,location_importance,avg_age_participants,n_participants
-# 
-# Sceglierli anche in base ai nan...
+incidents_df.rename(columns=indicators, inplace=True)
+incidents_df[dataset_original_columns + indicators].to_csv('../data/incidents_indicators.csv', index=False)
+incidents_df[indicators].to_csv('../data/indicators.csv', index=False)
 
 # %%
 # TODO:
+# plot con e senza nan, correlazioni
 # analisi qualità, missing values, etc...
 # distribuzioni dei valori non nan su tutto
 # local outlier factor
@@ -378,35 +336,3 @@ final_indicators_df.to_csv('../data/all_indicators.csv')
 
 
 # applicare ad esempio semplice e verificare correttezza
-
-# %%
-def compute_local_ratio_indicator(df, gby, feature, agg_fun, suffix):
-    grouped_df = df.groupby(gby)[feature].agg(agg_fun)
-    df = df.merge(grouped_df, on=gby, how='left', suffixes=[None, suffix])
-    df[feature+'_'+suffix+'_ratio'] = df[feature] / df[feature+suffix]
-    df.loc[np.isclose(df[feature], 0), feature+'_'+suffix+'_ratio'] = 1 # TODO: when 0/0 => 1
-    df.drop(columns=[feature+suffix], inplace=True)
-    return df
-
-# %%
-df = pd.DataFrame({
-    'n_males': [0, 10, np.nan, 5, 5, np.nan, np.nan, np.nan, 0, np.nan],
-    'n_participants': [0, 0,10,10,10, np.nan, np.nan, np.nan, 0, np.nan],
-    'year':[2013, 2013, 2013, 2014, 2014, 2014, 2014, 2014, 2015, 2015],
-    'state':['Illinois', 'Illinois', 'Illinois', 'California', 'California', 'California', 'Colorado', 'Colorado', 'New York', 'New York']
-    })
-df
-
-confinment_columns_congd = ['year', 'state']
-df = compute_local_ratio_indicator(df, confinment_columns_congd, 'n_males', 'mean', '_mean_year_state')
-df
-
-# 5/0 impossibile
-# 5/nan impossibile
-# 0/nan impossibile
-# nan/10 => nan e.g. terzo Illinois
-# nan/nan => nan e.g. Colorado
-# nan/0 => nan e.g. secondo New York
-# 0/0 => 1 PRIMO NEW YORK se media, se somma?
-
-
