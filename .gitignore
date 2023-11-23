@@ -7,3 +7,4 @@ __pycache__
 **/TASK_1/checkpoints/checkpoint_6.csv
 **/data/incidents_cleaned.csv
 **/data/incidents_cleaned.csv/_MACOSX
+data/all_indicators.csv

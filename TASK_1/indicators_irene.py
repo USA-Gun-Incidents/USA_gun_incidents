@@ -19,7 +19,7 @@ from plot_utils import *
 # We load the dataset and reaname some columns:
 
 # %%
-incidents_df = pd.read_csv('../data/incidents_cleaned.csv')
+incidents_df = pd.read_csv('../data/incidents_cleaned.csv', index_col=0)
 dataset_original_columns = incidents_df.columns
 incidents_df['date'] = pd.to_datetime(incidents_df['date'], format='%Y-%m-%d')
 incidents_df.rename(
@@ -275,14 +275,47 @@ incidents_df['age_range'] = incidents_df['max_age'] - incidents_df['min_age']
 sns.violinplot(data=incidents_df[['age_range']])
 
 # %%
-latlong_projs = utm.from_latlon(incidents_df['latitude'].to_numpy(), incidents_df['longitude'].to_numpy())
-incidents_df['latitude_proj'] = latlong[:,0]
-incidents_df['longitude_proj'] = latlong[:,1]
+import utm
+
+def compute_utm_coordinates(latidude, longitude):
+    # check if the coordinates are valid
+    if latidude >= -90 and latidude <= 90 and longitude >= -180 and longitude <= 180:
+        utm_coordinates = utm.from_latlon(latidude, longitude)
+        return utm_coordinates[0], utm_coordinates[1]
+    else:
+        return np.nan, np.nan
+
+incidents_df['lat_proj'], incidents_df['lon_proj'] = zip(*incidents_df.apply(
+    lambda row: compute_utm_coordinates(row['latitude'], row['longitude']), axis=1))
 
 # %%
-chosen_indicators = []
-incidents_df[chosen_indicators].to_csv('../data/indicators.csv')
-incidents_df[dataset_original_columns+chosen_indicators].to_csv('../data/incidents_with_indicators.csv')
+old_indicators_df = pd.read_csv('../data/incidents_cleaned_indicators_not_norm.csv', index_col=0)
+old_indicators_columns = ['location_importance', 'avg_age_participants',
+    'n_participants','n_participants_child_prop',
+    'n_participants_teen_prop', 'n_males_pr', 'n_killed_pr', 'n_injured_pr',
+    'n_arrested_pr', 'n_unharmed_pr', 'log_n_males_n_males_mean_semest_congd_ratio',
+    'avg_age_entropy', 'city_entropy', 'address_entropy', 'n_adults_entropy', 'tags_entropy']
+
+# %%
+indicators_columns = incidents_df.columns[66:]
+
+# %%
+dataset_columns = [
+    #'state', 'county', 'city', 'congd', 'latitude', 'longitude',
+    'lat_proj', 'lon_proj',
+    'min_age', 'avg_age', 'max_age', 
+    'n_child', 'n_teen', 'n_adult',
+    'n_males', 'n_females',
+    'n_killed', 'n_injured', 'n_arrested', 'n_unharmed']
+
+# %%
+final_indicators_df = incidents_df[dataset_columns]
+final_indicators_df = final_indicators_df.merge(incidents_df[indicators_columns], left_index=True, right_index=True)
+final_indicators_df = final_indicators_df.merge(old_indicators_df[old_indicators_columns], left_index=True, right_index=True)
+final_indicators_df.head(2)
+
+# %%
+final_indicators_df.to_csv('../data/all_indicators.csv')
 
 # %% [markdown]
 # severity # da aggiungere
@@ -343,7 +376,17 @@ incidents_df[dataset_original_columns+chosen_indicators].to_csv('../data/inciden
 # studio correlazione
 # definire ordinamento
 
+
 # applicare ad esempio semplice e verificare correttezza
+
+# %%
+def compute_local_ratio_indicator(df, gby, feature, agg_fun, suffix):
+    grouped_df = df.groupby(gby)[feature].agg(agg_fun)
+    df = df.merge(grouped_df, on=gby, how='left', suffixes=[None, suffix])
+    df[feature+'_'+suffix+'_ratio'] = df[feature] / df[feature+suffix]
+    df.loc[np.isclose(df[feature], 0), feature+'_'+suffix+'_ratio'] = 1 # TODO: when 0/0 => 1
+    df.drop(columns=[feature+suffix], inplace=True)
+    return df
 
 # %%
 df = pd.DataFrame({
@@ -355,7 +398,7 @@ df = pd.DataFrame({
 df
 
 confinment_columns_congd = ['year', 'state']
-df = compute_local_ratio_indicator(df, confinment_columns_congd, 'n_males', 'n_males', 'mean', '_mean_year_state', )
+df = compute_local_ratio_indicator(df, confinment_columns_congd, 'n_males', 'mean', '_mean_year_state')
 df
 
 # 5/0 impossibile
