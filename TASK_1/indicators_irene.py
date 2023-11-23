@@ -21,7 +21,6 @@ from plot_utils import *
 
 # %%
 incidents_df = pd.read_csv('../data/incidents_cleaned.csv')
-dataset_original_columns = incidents_df.columns
 incidents_df['date'] = pd.to_datetime(incidents_df['date'], format='%Y-%m-%d')
 incidents_df.rename(
     columns={
@@ -35,6 +34,7 @@ incidents_df.rename(
     },
     inplace=True
 )
+dataset_original_columns = incidents_df.columns
 
 # %% [markdown]
 # We associate to each record the semester (1 or 2) in which the incident occurred:
@@ -50,8 +50,8 @@ incidents_df['sem'] = (incidents_df['date'].dt.month // 7) + 1
 def compute_window_ratio_indicator(df, gby, feature, agg_fun, suffix):
 	grouped_df = df.groupby(gby)[feature].agg(agg_fun)
 	df = df.merge(grouped_df, on=gby, how='left', suffixes=[None, suffix])
-	df[feature+'_'+suffix+'_ratio'] = df[feature] / df[feature+suffix]
-	df.loc[np.isclose(df[feature], 0), feature+'_'+suffix+'_ratio'] = 1 # TODO: when 0/0 => 1
+	df[feature+suffix+'_ratio'] = df[feature] / df[feature+suffix]
+	df.loc[np.isclose(df[feature], 0), feature+suffix+'_ratio'] = 1 # TODO: when 0/0 => 1
 	df.drop(columns=[feature+suffix], inplace=True)
 	return df
 
@@ -290,6 +290,9 @@ incidents_df['lat_proj'], incidents_df['lon_proj'] = zip(*incidents_df.apply(
     lambda row: project_lat_long(row['latitude'], row['longitude']), axis=1))
 
 # %%
+incidents_df.columns[-50:-20]
+
+# %%
 indicators = {
     # spatial data
     'lat_proj': 'lat_proj',
@@ -297,7 +300,7 @@ indicators = {
     'entropy_address_type_fixing_year_sem_state_congd': 'entropy_address_type',
     # age data
     'age_range': 'age_range',
-    'entropy_min_age_fixing_year_sem_state_congd': 'entropy_min_age',
+    'entropy_min_age_fixing_year_sem_state_congd': 'entropy_min_age', # or the one below
     'log_min_age_mean_sem_congd_ratio': 'log_min_age_mean_ratio',
     'n_child_n_participants_ratio': 'n_child_prop',
     'n_teen_n_participants_ratio': 'n_teen_prop',
@@ -311,7 +314,7 @@ indicators = {
     'n_unharmed_n_participants_ratio': 'n_unharmed_prop',
     # gender
     'n_males_n_participants_ratio': 'n_males_prop',
-    'log_n_males_n_males_mean_semest_congd_ratio': 'log_n_males_mean_ratio',
+    'log_n_males_mean_sem_congd_ratio': 'log_n_males_mean_ratio',
     # characteristics
     'entropy_tag_congd': 'entropy_tag',
     'n_arrested_n_participants_ratio': 'n_arrested_prop',
@@ -321,8 +324,8 @@ indicators = {
 }
 
 incidents_df.rename(columns=indicators, inplace=True)
-incidents_df[dataset_original_columns + indicators].to_csv('../data/incidents_indicators.csv', index=False)
-incidents_df[indicators].to_csv('../data/indicators.csv', index=False)
+incidents_df[list(dataset_original_columns) + list(indicators.values())].to_csv('../data/incidents_indicators.csv', index=False)
+incidents_df[list(indicators.values())].to_csv('../data/indicators.csv', index=False)
 
 # %%
 # TODO:
