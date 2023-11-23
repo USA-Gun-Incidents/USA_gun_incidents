@@ -13,10 +13,11 @@ from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram
 from sklearn.metrics import silhouette_score
 import seaborn as sns
+import utm
 
 # %%
 # import dataset
-incidents_df = pd.read_csv('../data/incidents_cleaned_indicators.csv', index_col=False)
+incidents_df = pd.read_csv('../data/incidents_cleaned_indicators_not_norm.csv', index_col=False)
 incidents_df.drop("Unnamed: 0", axis=1, inplace=True)
 
 # %%
@@ -47,6 +48,24 @@ incidents_df.dropna(inplace=True)
 incidents_df.shape
 
 # %%
+latlong_projs = utm.from_latlon(incidents_df['latitude'].to_numpy(), incidents_df['longitude'].to_numpy())
+scaler= MinMaxScaler()
+latlong = scaler.fit_transform(np.stack([latlong_projs[0], latlong_projs[1]]).reshape(-1, 2))
+incidents_df['latitude_proj'] = latlong[:,0]
+incidents_df['longitude_proj'] = latlong[:,1]
+
+# %%
+incidents_df.drop(columns=['latitude', 'longitude'], axis=1, inplace=True)
+new_order = ['latitude_proj', 'longitude_proj', 'location_importance', 'avg_age_participants',
+       'n_participants', 'age_range', 'n_participants_child_prop',
+       'n_participants_teen_prop', 'n_killed_pr', 'n_injured_pr',
+       'n_arrested_pr', 'n_unharmed_pr',
+       'log_n_males_n_males_mean_semest_congd_ratio', 'log_avg_age_mean_SD',
+       'avg_age_entropy', 'city_entropy', 'address_entropy',
+       'n_adults_entropy', 'tags_entropy', 'severity']
+incidents_df = incidents_df[new_order]
+
+# %%
 # print all indexes for clustering
 incidents_df.columns
 
@@ -67,6 +86,9 @@ for algorithm in algorithms:
     distance_thresholds.append(0.7 * max(linkage_res[:,2]))
 
 # %%
+import sys
+sys.setrecursionlimit(10000)
+
 f, axs = plt.subplots(ncols=len(linkages), figsize=(32,7))
 
 for i in range(len(linkages)):    
@@ -195,8 +217,8 @@ incidents_df_cluster = incidents_df.copy()
 for i in range(len(algorithms)):
     incidents_df_cluster[algorithms[i]] = clusters_info_df.loc[i]['cluster_labels']
     scatter_by_cluster(incidents_df_cluster,
-                    ['latitude',
-                     'longitude',
+                    ['latitude_proj',
+                     'longitude_proj',
                      'avg_age_participants',
                      'age_range',
                      'n_participants'
