@@ -8,3 +8,4 @@ __pycache__
 **/data/incidents_cleaned.csv
 **/data/incidents_cleaned.csv/_MACOSX
 data/all_indicators.csv
+data/incidents_indicators.csv

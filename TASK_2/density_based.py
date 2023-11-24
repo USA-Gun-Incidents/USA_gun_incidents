@@ -6,6 +6,7 @@
 # # Import library and dataset
 
 # %%
+import json
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,28 +14,29 @@ from plot_utils import plot_scattermap_plotly
 
 # %%
 incidents_df = pd.read_csv(
-    '../data/incidents_cleaned.csv',
-    index_col=False,
+    '../data/incidents_indicators.csv',
+    index_col=0,
     parse_dates=['date', 'date_original'],
     date_parser=lambda x: pd.to_datetime(x, format='%Y-%m-%d')
 )
 
-indicators_df = pd.read_csv(
-    '../data/incidents_cleaned_indicators.csv', 
-    index_col=0
-)
+f = open('../data/indicators_names.json')
+ind_names_list = json.loads(f.read())
+# %%
+incidents_df.head(2)
+
 # %% [markdown]
 # # Prepare dataset and indices for choosen state
 
 # %%
-columns = ['location_importance', 'avg_age_participants', 'age_range', 
-    'n_participants_child_prop', 'n_participants_teen_prop', 'n_males_pr', 
-    'n_killed_pr', 'n_arrested_pr']
+ind_names_list
 
 # %%
-illinois_df = indicators_df[indicators_df['state']=='ILLINOIS'][columns].dropna()
-illinois_df.info()
-illinois_df.head(2)
+ind_names_list += ['poverty_perc']
+
+# %%
+illinois_df = incidents_df[incidents_df['state']=='ILLINOIS'][ind_names_list].dropna()
+illinois_df.describe()
 
 # %% [markdown]
 # # Density clustering
@@ -306,7 +308,7 @@ for i in range(8):
     ax[int(index/2), index%2].legend()
     ax[int(index/2), index%2].grid(linestyle='--', linewidth=0.5, alpha=0.6)
     index = index + 1
-        
+
 
 # %%
 illinois_df['cluster'] = db.labels_
