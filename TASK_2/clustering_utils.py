@@ -256,7 +256,7 @@ def scatter_by_cluster(
         nrows += 1
 
     colors = [color_palette[c] for c in df[cluster_column]]
-    f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize,squeeze=False)
+    f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize, squeeze=False)
     id = 0
     for i in range(len(features)):
         for j in range(i+1, len(features)):
@@ -447,7 +447,7 @@ def plot_clusters_size(
     ax.set_xlabel('Cluster')
     ax.set_title(title)
 
-def plot_scores_per_point(score_per_point, clusters, score_name):
+def plot_scores_per_point(score_per_point, clusters, score_name, color_palette=sns.color_palette(), title=None):
     '''
     This function plots the clustering score for each point, grouped by cluster.
 
@@ -467,15 +467,17 @@ def plot_scores_per_point(score_per_point, clusters, score_name):
             np.arange(y_lower, y_upper),
             0,
             ith_cluster_sse,
-            facecolor=sns.color_palette()[i],
-            edgecolor=sns.color_palette()[i],
+            facecolor=color_palette[i],
+            edgecolor=color_palette[i],
             alpha=0.7,
         )
         plt.text(-0.07, y_lower + 0.5 * size_cluster_i, str(i))
         y_lower = y_upper
 
     plt.axvline(x=score_per_point.mean(), color="k", linestyle="--", label='Average')
-    plt.title(f"{score_name} for each point in each cluster")
+    if title is None:
+        title = f"{score_name} for each point in each cluster"
+    plt.title(title)
     plt.xlabel(score_name)
     plt.ylabel("Cluster label")
     plt.legend(loc='best')
