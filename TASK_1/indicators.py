@@ -251,7 +251,7 @@ for feature in surpisal_single_features:
 incidents_df = compute_surprisal_indicator(df=incidents_df, fixed_cols=['year', 'sem', 'state', 'congd'], var_cols=['month', 'day'])
 incidents_df = compute_surprisal_indicator(df=incidents_df, fixed_cols=['year', 'sem', 'state', 'congd'], var_cols=['n_child', 'n_teen', 'n_adult'])
 
-incidents_tags = [
+incidents_tags = [ # TODO: leggere da enum
     'firearm', 'air_gun', 'shots', 'aggression',
     'suicide', 'injuries', 'death', 'road',
     'illegal_holding', 'house', 'school', 'children',
@@ -298,7 +298,7 @@ incidents_df['lat_proj'], incidents_df['lon_proj'] = zip(*incidents_df.apply(
     lambda row: project_lat_long(row['latitude'], row['longitude']), axis=1))
 
 # %%
-indicators = {
+indicators_abbr = {
     # spatial data
     'lat_proj': 'lat_proj',
     'lon_proj': 'lon_proj',
@@ -336,19 +336,16 @@ indicators = {
 }
 
 # %%
-incidents_df.rename(columns=indicators, inplace=True)
-
-# %%
-numeric_features = list(indicators.values())
+incidents_df.rename(columns=indicators_abbr, inplace=True)
 
 # %%
 fig, ax = plt.subplots(figsize=(25, 10))
-corr_matrix = incidents_df[numeric_features].corr('pearson')
+corr_matrix = incidents_df[list(indicators_abbr.values())].corr('pearson')
 sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coolwarm')
 
 # %%
 fig, ax = plt.subplots(figsize=(25, 10))
-corr_matrix = incidents_df[numeric_features].corr('spearman')
+corr_matrix = incidents_df[list(indicators_abbr.values())].corr('spearman')
 sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coolwarm')
 
 # %%
@@ -364,58 +361,58 @@ features_to_drop = [
     'surprisal_n_participants',
     # surprisal_age_groups
 ]
-numeric_features_subset = [feature for feature in numeric_features if feature not in features_to_drop]
+indicators = [feature for feature in list(indicators_abbr.values()) if feature not in features_to_drop]
 
 # %%
 fig, ax = plt.subplots(figsize=(20, 10))
-corr_matrix = incidents_df[numeric_features_subset].corr('pearson')
+corr_matrix = incidents_df[indicators].corr('pearson')
 sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coolwarm')
 
 # %%
 fig, ax = plt.subplots(figsize=(20, 10))
-corr_matrix = incidents_df[numeric_features_subset].corr('spearman')
+corr_matrix = incidents_df[indicators].corr('spearman')
 sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coolwarm')
 
 # %%
 print(incidents_df.shape[0])
-print(incidents_df[list(indicators.values())].dropna().shape[0])
+print(incidents_df[indicators].dropna().shape[0])
 
 # %%
 import json
 with open('../data/indicators_names.json', 'w') as f:
-    json.dump(list(indicators.values()), f)
+    json.dump(indicators, f)
 
 # %%
-origianal_features_minus_indicators = [feature for feature in dataset_original_columns if feature not in indicators.values()]
-incidents_df[origianal_features_minus_indicators + list(indicators.values())].to_csv('../data/incidents_indicators.csv')
-incidents_df[list(indicators.values())].to_csv('../data/indicators.csv')
+origianal_features_minus_indicators = [feature for feature in dataset_original_columns if feature not in indicators]
+incidents_df[origianal_features_minus_indicators + indicators].to_csv('../data/incidents_indicators.csv')
+incidents_df[indicators].to_csv('../data/indicators.csv')
 
 # %% [markdown]
 # ## Indicators semanthics
 #
-# TODO:mettere link geopy
+# TODO: mettere link geopy
 #
 # | Name | Description | Present in the original dataset |
 # | :--: | :---------: | :-----------------------------: |
 # | lat_proj | Latitude projection using Universal Transverse Mercator system | No |
 # | long_proj | Longitude projection using Universal Transverse Mercator system | No |
 # | location_imp | Location importance according to Geopy | No |
-# | address_type_surprisal | Surprisal of the address type w.r.t the address types of incidents happened in the same semester of the same year and in the congressional district of the same state | No |
+# | surprisal_address_type | Surprisal of the address type w.r.t the address types of incidents happened in the same semester of the same year and in the congressional district of the same state | No |
 # | age_range | Difference between the maximum and the minimum age of the participants involved in the incident | No |
 # | avg_age | Average age of the participants involved in the incident | Yes |
-# | min_age_surprisal | Surprisal of the minimum age of the participants involved in the incident w.r.t the minimum age of the participants of incidents happened in the same semester of the same year and in the congressional district of the same state | No |
+# | surprisal_min_age | Surprisal of the minimum age of the participants involved in the incident w.r.t the minimum age of the participants of incidents happened in the same semester of the same year and in the congressional district of the same state | No |
 # | n_child_prop | Ratio between the number of child involved in the incident and number of people involved in the incident | No |
 # | n_teen_prop | Ratio between the number of teen involved in the incident and number of people involved in the incident | No |
-# | age_groups_surprisal | Surprisal of the number of child, teen and adult involved in the incident w.r.t the number of child, teen and adult involved in incidents happened in the same semester of the same year and in the congressional district of the same state | No |
+# | surprisal_age_groups | Surprisal of the number of child, teen and adult involved in the incident w.r.t the number of child, teen and adult involved in incidents happened in the same semester of the same year and in the congressional district of the same state | No |
 # | n_killed_prop | Ratio between the number of people killed and number of people involved in the incident | No |
 # | n_injured_prop | Ratio between the number of people injured and number of people involved in the incident | No |
 # | n_unharmed_prop | Ratio between the number of people unharmed and number of people involved in the incident | No |
 # | n_males_prop | Ratio between the number of males and the number of people involed in the incident | No |
-# | n_males_surprisal | Surprisal of the number of males involved in the incident w.r.t the number of males involved in incidents happened in the same semester of the same year and in the congressional district of the same state | No |
-# | characteristics_surprisal | Surprisal of the values of the incident characteristic tags extracted from the incident characteristics w.r.t the values of the tags for incidents happened in the same semester of the same year and in the congressional district of the same state | No |
+# | surprisal_n_males | Surprisal of the number of males involved in the incident w.r.t the number of males involved in incidents happened in the same semester of the same year and in the congressional district of the same state | No |
+# | surprisal_characteristics | Surprisal of the values of the incident characteristic tags extracted from the incident characteristics w.r.t the values of the tags for incidents happened in the same semester of the same year and in the congressional district of the same state | No |
 # | n_arrested_prop | Ratio between the number of people arrested and the number of participants involved in the incident | No |
 # | n_participants | Number of participants in the incident | Yes |
-# | day_surprisal | Surprisal of the day of the month and of the month of the incident w.r.t the days of the month and the months of incidents happened in the same semester of the same year and in the congressional district of the same state | No |
+# | surprisal_day | Surprisal of the day of the month and of the month of the incident w.r.t the days of the month and the months of incidents happened in the same semester of the same year and in the congressional district of the same state | No |
 
 # %%
 # TODO: 
