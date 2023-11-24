@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Definition and study of indicators
 
@@ -14,7 +13,7 @@ import os
 import seaborn as sns
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-# %matplotlib inline
+%matplotlib inline
 
 # %% [markdown]
 # We load the dataset and reaname some columns:
@@ -30,7 +29,8 @@ incidents_df.rename(
         'max_age_participants': 'max_age',
         'n_participants_child': 'n_child',
         'n_participants_teen': 'n_teen',
-        'n_participants_adult': 'n_adult'
+        'n_participants_adult': 'n_adult',
+        'location_importance': 'location_imp'
     },
     inplace=True
 )
@@ -235,7 +235,7 @@ def compute_entropy_indicator(df, fixed_cols, var_cols):
     return df
 
 # %%
-entropy_single_features = ['month', 'day', 'address_type', 'n_child', 'n_teen', 'n_adult', 'min_age', 'avg_age', 'max_age']
+entropy_single_features = ['month', 'day', 'address_type', 'n_child', 'n_teen', 'n_adult', 'min_age', 'avg_age', 'max_age', 'n_killed', 'n_injured', 'n_males', 'n_participants']
 for feature in entropy_single_features:
     incidents_df = compute_entropy_indicator(df=incidents_df, fixed_cols=['year', 'sem', 'state', 'congd'], var_cols=[feature])
     incidents_df = compute_entropy_indicator(df=incidents_df, fixed_cols=['year', 'state'], var_cols=[feature])
@@ -290,42 +290,103 @@ incidents_df['lat_proj'], incidents_df['lon_proj'] = zip(*incidents_df.apply(
     lambda row: project_lat_long(row['latitude'], row['longitude']), axis=1))
 
 # %%
-incidents_df.columns[-50:-20]
-
-# %%
 indicators = {
     # spatial data
     'lat_proj': 'lat_proj',
     'lon_proj': 'lon_proj',
+    'location_imp': 'location_imp',
     'entropy_address_type_fixing_year_sem_state_congd': 'entropy_address_type',
     # age data
     'age_range': 'age_range',
-    'entropy_min_age_fixing_year_sem_state_congd': 'entropy_min_age', # or the one below
+    'avg_age': 'avg_age',
+    'entropy_min_age_fixing_year_sem_state_congd': 'entropy_min_age',
     'log_min_age_mean_sem_congd_ratio': 'log_min_age_mean_ratio',
     'n_child_n_participants_ratio': 'n_child_prop',
     'n_teen_n_participants_ratio': 'n_teen_prop',
     'entropy_n_child_n_teen_n_adult_fixing_year_sem_state_congd': 'entropy_age_groups',
-    # severity
+    # severity data
     'severity': 'severity',
     'n_killed_n_participants_ratio': 'n_killed_prop',
+    'entropy_n_killed_fixing_year_sem_state_congd': 'entropy_n_killed',
     'log_n_killed_mean_sem_congd_ratio': 'log_n_killed_mean_ratio',
     'n_injured_n_participants_ratio': 'n_injured_prop',
     'log_n_injured_mean_sem_congd_ratio': 'log_n_injured_mean_ratio',
+    'entropy_n_injured_fixing_year_sem_state_congd': 'entropy_n_injured',
     'n_unharmed_n_participants_ratio': 'n_unharmed_prop',
-    # gender
+    # gender data
     'n_males_n_participants_ratio': 'n_males_prop',
     'log_n_males_mean_sem_congd_ratio': 'log_n_males_mean_ratio',
-    # characteristics
+    'entropy_n_males_fixing_year_sem_state_congd': 'entropy_n_males',
+    # characteristics data
     'entropy_tag_congd': 'entropy_tag',
     'n_arrested_n_participants_ratio': 'n_arrested_prop',
     'log_n_participants_mean_sem_congd_ratio': 'log_n_participants_mean_ratio',
+    'entropy_n_participants_fixing_year_sem_state_congd': 'entropy_n_participants',
+    'n_participants': 'n_participants',
     # temporal data
     'entropy_month_day_fixing_year_sem_state_congd': 'entropy_day'
 }
 
+# %%
 incidents_df.rename(columns=indicators, inplace=True)
-incidents_df[list(dataset_original_columns) + list(indicators.values())].to_csv('../data/incidents_indicators.csv', index=False)
-incidents_df[list(indicators.values())].to_csv('../data/indicators.csv', index=False)
+
+# %%
+numeric_features = list(indicators.values())
+
+# %%
+fig, ax = plt.subplots(figsize=(25, 10))
+corr_matrix = incidents_df[numeric_features].corr('pearson')
+sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coolwarm')
+
+# %%
+fig, ax = plt.subplots(figsize=(25, 10))
+corr_matrix = incidents_df[numeric_features].corr('spearman')
+sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coolwarm')
+
+# %%
+features_to_drop = [
+    'log_min_age_mean_ratio', 
+    'severity',
+    'log_n_killed_mean_ratio',
+    'log_n_injured_mean_ratio',
+    'entropy_n_killed',
+    'entropy_n_injured', # discarded to reduce dimensionality
+    'log_n_males_mean_ratio',
+    'log_n_participants_mean_ratio',
+    'entropy_n_participants',
+    # entropy_age_groups
+]
+numeric_features_subset = [feature for feature in numeric_features if feature not in features_to_drop]
+
+# %%
+fig, ax = plt.subplots(figsize=(20, 10))
+corr_matrix = incidents_df[numeric_features_subset].corr('pearson')
+sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coolwarm')
+
+# %%
+fig, ax = plt.subplots(figsize=(20, 10))
+corr_matrix = incidents_df[numeric_features_subset].corr('spearman')
+sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coolwarm')
+
+# %%
+print(incidents_df.shape[0])
+print(incidents_df[list(indicators.values())].dropna().shape[0])
+
+# %%
+import json
+with open('../data/indicators_names.json', 'w') as f:
+    json.dump(list(indicators.values()), f)
+
+# %%
+import json
+f = open('../data/indicators_names.json')
+ind = json.loads(f.read())
+ind
+
+# %%
+origianal_features_minus_indicators = [feature for feature in dataset_original_columns if feature not in indicators.values()]
+incidents_df[origianal_features_minus_indicators + list(indicators.values())].to_csv('../data/incidents_indicators.csv')
+incidents_df[list(indicators.values())].to_csv('../data/indicators.csv')
 
 # %%
 # TODO:
@@ -339,3 +400,5 @@ incidents_df[list(indicators.values())].to_csv('../data/indicators.csv', index=F
 
 
 # applicare ad esempio semplice e verificare correttezza
+
+
