@@ -1986,9 +1986,9 @@ plt.tight_layout()
 # We plot, for a specific characteristic, the most common characteristic that is paired to it.
 
 # %%
-fig, ax = plt.subplots(figsize=(20, 15)) # FIX: questo plot possiamo toglierlo? dovrebbe contenere la stessa informazione di quello sotto
+'''fig, ax = plt.subplots(figsize=(20, 15)) # FIX: questo plot possiamo toglierlo? dovrebbe contenere la stessa informazione di quello sotto
 sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(by="Shot - Dead (murder, accidental, suicide)", inplace=False, ascending=False).tail(-1),
-            cmap='coolwarm', yticklabels=True);
+            cmap='coolwarm', yticklabels=True);'''
 
 # %%
 characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(

@@ -46,7 +46,14 @@ categorical_features = [
     ]
 # other interesting features:
 # poverty_perc, date
-indicators_df = indicators_df.dropna()
+incidents_df = incidents_df.dropna()
+
+# %%
+latlong_projs = utm.from_latlon(incidents_df['latitude'].to_numpy(), incidents_df['longitude'].to_numpy())
+scaler= MinMaxScaler()
+latlong = scaler.fit_transform(np.stack([latlong_projs[0], latlong_projs[1]]).reshape(-1, 2))
+incidents_df['latitude_proj'] = latlong[:,0]
+incidents_df['longitude_proj'] = latlong[:,1]
 
 # %%
 features_to_cluster_no_coord = features_to_cluster[2:]
@@ -71,23 +78,124 @@ sns.violinplot(data=normalized_indicators,ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %%
-normalized_indicators_notna = normalized_indicators.dropna()
 pca = PCA()
-X_pca = pca.fit_transform(normalized_indicators_notna)
+X_pca = pca.fit_transform(normalized_indicators)
 pca_df = pd.DataFrame(index=incidents_df.index)
 
 # %%
-# TODO: da spostare nel file che fa gli indicatori
-latlong_projs = utm.from_latlon(indicators_df['latitude'].to_numpy(), indicators_df['longitude'].to_numpy())
-scaler= MinMaxScaler()
-latlong = scaler.fit_transform(np.stack([latlong_projs[0], latlong_projs[1]]).reshape(-1, 2))
-indicators_df['latitude_proj'] = latlong[:,0]
-indicators_df['longitude_proj'] = latlong[:,1]
+nrows=4
+ncols=6
+row=0
+fig, axs = mplt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 20), sharex=True, sharey=True)
+for i, col in enumerate(normalized_indicators.columns):
+    if i != 0 and i % ncols == 0:
+        row += 1
+    axs[row][i % ncols].scatter(X_pca[:, 0], X_pca[:, 1], edgecolor='k', s=40, c=normalized_indicators[col], cmap='viridis')
+    axs[row][i % ncols].set_title(col)
+    axs[row][i % ncols].set_xlabel("1st eigenvector")
+    axs[row][i % ncols].set_ylabel("2nd eigenvector")
 
 # %%
-# scaler= StandardScaler() # TODO: fare in questo notebook
-# X = scaler.fit_transform(indicators_df.values) # TODO: come scegliere?
-X = indicators_df[features_to_cluster].values
+x = X_pca[:, 0]
+y = X_pca[:, 2]
+z = X_pca[:, 1]
+fig = px.scatter_3d(x=x, y=y, z=z, labels={'x': '1st eigenvector', 'y': '3rd eigenvector', 'z': '2nd eigenvector'})
+fig.show()
+
+# %%
+exp_var_pca = pca.explained_variance_ratio_
+diff_var = []
+
+for i, var in enumerate(exp_var_pca[:-1]):
+    diff_var.append( var-exp_var_pca[i+1])
+
+
+xtick = []
+gap = 0
+for i, var in enumerate(diff_var):
+    xtick.append(i+gap)
+    if i != 0 and diff_var[i-1] <= var:
+        gap += 0.5
+        if gap == 0.5:
+            plt.axvline(x = i+gap+0.25, color = 'green', linestyle = '-.', alpha=0.5, label='possible cut')
+        else:
+             plt.axvline(x = i+gap+0.25, color = 'green', linestyle = '-.', alpha=0.5)
+    
+
+#xtick = [0,1,2,3,4,5.5,6.5,7.5,8.5,9.5,10.5,12,13,14,15,16,17,18,19,20]
+#diff_var = list(zip(xtick, diff_var))
+xtick.append(23)
+
+plt.bar(xtick, exp_var_pca, align='center')
+plt.plot(xtick[1:], diff_var, label='difference from prevoius variance', color='orange')
+
+plt.ylabel('Explained variance ratio')
+plt.xlabel('Principal component')
+plt.title('Explained variance by principal component')
+plt.xticks(xtick, range(exp_var_pca.shape[0]))
+plt.legend();
+
+# %%
+def get_reconstruction_error(x_pca, x_orig, pca, n_comp):
+    dummy = np.matmul(x_pca[:,:n_comp], pca.components_[:n_comp,:]) + pca.mean_
+    return pd.DataFrame(index=x_orig.index, data=np.sum((dummy - x_orig.values)**2, axis=1))
+
+# %%
+pca_col = ['1st_comp',
+ '2nd_comp',
+ '3rd_comp',
+ '4th_comp',
+ '5th_comp',
+ '6th_comp',
+ '7th_comp',
+ '8th_comp',
+ '9th_comp',
+ '10th_comp',
+ '11th_comp',
+ '12th_comp',
+ '13th_comp',
+ '14th_comp',
+ '15th_comp',
+ '16th_comp',
+ '17th_comp',
+ '18th_comp',
+ '19th_comp']
+
+# %%
+pca_indicators = pd.DataFrame(index=normalized_indicators.index, data=X_pca, columns=pca_col)
+
+# %%
+pca_indicators['PCA_rec_error_2C'] = get_reconstruction_error(X_pca, normalized_indicators, pca, 2)
+pca_indicators['PCA_rec_error_6C'] = get_reconstruction_error(X_pca, normalized_indicators, pca, 6)
+pca_indicators['PCA_rec_error_8C'] = get_reconstruction_error(X_pca, normalized_indicators, pca, 8)
+
+# %%
+pca_indicators.sample(3)
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+sns.violinplot(data=pca_indicators,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+pca_normalized_indicators = pd.DataFrame(data=scaler_obj.fit_transform(pca_indicators.values), columns=pca_indicators.columns)
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+sns.violinplot(data=pca_normalized_indicators,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+hist_box_plot(
+    pca_normalized_indicators,
+    'PCA_rec_error_6C',
+    title='PCA_rec_error_6C',
+    bins=int(np.log(pca_normalized_indicators.shape[0])), # Sturger's rule
+    figsize=(10, 5)
+)
+
+# %%
+X = incidents_df[features_to_cluster].values
 
 # %%
 def plot_score_varying_k(X, kmeans_params, metric, start_k, max_k):
@@ -139,7 +247,7 @@ best_k = []
 # Ci permette anche di valutare la sensibilità all'inizializzazione dei centroidi. Più di 30 difficile da interpretare. Sia partendo da 1 che da 2. Come interpola.
 
 # %%
-ks = plot_score_varying_k(X=X, kmeans_params=kmeans_params, metric='SSE', start_k=1, max_k=[10, 20, 30])
+ks = plot_score_varying_k(X=X, kmeans_params=kmeans_params, metric='SSE', start_k=1, max_k=[10, 25, 50])
 best_k += ks
 
 # %%
