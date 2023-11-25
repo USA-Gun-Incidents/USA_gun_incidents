@@ -373,8 +373,6 @@ for column in ind_names_list:
     plt.yticks([])
     plt.show()
 
-
-
 # %%
 import geopandas
 def plot_illinois_map(
