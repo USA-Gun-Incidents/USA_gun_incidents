@@ -793,8 +793,8 @@ plot_scattermap_plotly(dummy_df, 'state', zoom=2, title='Missing city')
 #
 # ---------- GOOD GROUPS ----------
 # * 174,796 entries: These are the fully consistent and finalized rows in the dataset.
-# * 26,635 entries: Rows where only the city is missing, but it can be easily inferred from the location (k-nn).
-# * 15,000 entries: Rows where only the county is missing, but it can be easily inferred from the location (k-nn).
+# * 26,635 entries: Rows where only the city is missing, but it can be inferred from the location (k-nn).
+# * 15,000 entries: Rows where only the county is missing, but it can be inferred from the location (k-nn).
 # * 33 entries: Rows where both the city and county are missing. Even in this group, the missing information can be inferred from the location, as they are all closely clustered around Baltimore.
 #
 # ---------- BAD GROUPS ----------
@@ -893,7 +893,7 @@ def plot_info_city(df, lat, lon, info_circle, prop_rad=True):
     # plot circles with radius proportional to the outlier scores
     if prop_rad:
         radius = (df[info_circle].max() - df[info_circle]) / (df[info_circle].max() - df[info_circle].min())
-        radius_scale = 100
+        radius_scale = 111
     else:
         radius = df[info_circle]
     scatter = plt.scatter(
@@ -949,7 +949,7 @@ else:
     save_checkpoint(incidents_df, 'checkpoint_2')
 
 # %%
-incidents_df.head(2)
+incidents_df.sample(2, random_state=1)
 
 # %%
 print('Number of rows with null values for city before: ', incidents_df['city'].isnull().sum())
@@ -977,7 +977,7 @@ pyo.plot(fig, filename='../html/incidents_per_city.html', auto_open=False);
 # #### Visualize new data
 
 # %%
-incidents_df[['latitude', 'county', 'city']].isna().groupby(['latitude', 'county', 'city']).size().reset_index().rename(columns={0:'count'})
+incidents_df[['latitude', 'county', 'city']].isna().groupby(['latitude', 'county', 'city']).size().to_frame().rename(columns={0:'count'})
 
 # %% [markdown]
 # We check if the attribute `congressional_district` is numbered consistently (with '0' for states with only one congressional district). To do so we use the dataset containing the data about elections in the period of interest (congressional districts are redrawn when (year%10)==0):
@@ -1087,7 +1087,7 @@ incidents_df.loc[
 # We check whether given a certain value for the attributes `latitude` and a `longitude`, the attribute `congressional_district` has always the same value:
 
 # %%
-incidents_df[incidents_df['congressional_district'].notnull()].groupby(['latitude', 'longitude'])['congressional_district'].unique()[lambda x: x.str.len() > 1]
+incidents_df[incidents_df['congressional_district'].notnull()].groupby(['latitude', 'longitude'])['congressional_district'].unique()[lambda x: x.str.len() > 1].to_frame().rename(columns={0:'count'}).sample(5, random_state=1)
 
 # %% [markdown]
 # All these points are probably errors, due to the fact that they are near the border between two congressional districts. We correct them setting the most frequent value for the attribute `congressional_district` (setting that value also for the entries with missing values):
@@ -1106,7 +1106,7 @@ incidents_df.drop(columns=['congressional_district_x'], inplace=True)
 # In the same city or county there could be different values for the attribute `congressional_district` (this is not an error, is actually possible according to the USA law):
 
 # %%
-incidents_df[incidents_df['congressional_district'].notna()].groupby(['state', 'city_or_county'])['congressional_district'].unique()[lambda x: x.str.len() > 1]
+incidents_df[incidents_df['congressional_district'].notna()].groupby(['state', 'city_or_county'])['congressional_district'].unique()[lambda x: x.str.len() > 1].to_frame()
 
 # %% [markdown]
 # We print the unique values the attribute `state_house_district` can take on:
@@ -1123,7 +1123,7 @@ house_districts
 
 # %%
 incidents_df[incidents_df['state_house_district'].notnull()].groupby(
-    ['latitude', 'longitude'])['state_house_district'].unique()[lambda x: x.str.len() > 1]
+    ['latitude', 'longitude'])['state_house_district'].unique()[lambda x: x.str.len() > 1].to_frame()
 
 # %% [markdown]
 # We correct the errors:
@@ -1402,7 +1402,7 @@ incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
     kind='bar',
     figsize=(10,6),
     title='Counts of the addresses with the 50 highest number of incidents'
-)
+);
 
 
 
@@ -1435,7 +1435,7 @@ participants_columns = ['participant_age1', 'participant_age_group1', 'participa
 age_df = incidents_df[participants_columns]
 
 # %%
-age_df.head(10)
+age_df.sample(5, random_state=1)
 
 # %% [markdown]
 # We display a concise summary of the DataFrame:
@@ -1450,20 +1450,7 @@ age_df['participant_age_group1'].unique()
 # Display the maximum and minimum ages, among the possible valid values, in the dataset. We have set a maximum threshold of 122 years, as it is the age reached by [Jeanne Louise Calment](https://www.focus.it/scienza/scienze/longevita-vita-umana-limite-biologico#:~:text=Dal%201997%2C%20anno%20in%20cui,ha%20raggiunto%20un%20limite%20biologico), the world's oldest person.
 
 # %%
-def max_min_value(attribute):
-    age = []
-    for i in age_df[attribute].unique():
-        try: 
-            i = int(float(i))
-            if i <= 122 and i > 0: age.append(i)
-        except: pass
-    print(f'Max value for attribute {attribute}: {np.array(age).max()}')
-    print(f'Max value for attribute {attribute}: {np.array(age).min()}')
-
-max_min_value('participant_age1')
-max_min_value('min_age_participants')
-max_min_value('max_age_participants')
-max_min_value('avg_age_participants')
+age_df[['participant_age1', 'min_age_participants', 'max_age_participants', 'avg_age_participants']].describe()
 
 # %%
 age_df[age_df['max_age_participants'] == '101.0']
@@ -1683,7 +1670,7 @@ plt.show()
 
 # %%
 print('Values of n_participants: ', age_temporary_df['n_participants'].unique())
-display(age_temporary_df['n_participants'].describe())
+age_temporary_df['n_participants'].describe().to_frame()
 
 # %% [markdown]
 # From the data above, it is evident that the third quartile is equal to two participants, and the maximum number of participants per incident reaches the value of 103.
@@ -1730,10 +1717,10 @@ age_temporary_df[age_temporary_df['n_participants_child'] >= 103][['n_participan
 # We have provided additional information below for two of the rows with values out of range.
 
 # %%
-age_temporary_df.loc[35995]
+age_temporary_df.loc[35995].to_frame()
 
 # %%
-age_temporary_df.iloc[42353]
+age_temporary_df.iloc[42353].to_frame()
 
 # %% [markdown]
 # This data visualization has been helpful in understanding the exceptions in the dataset and correcting them when possible, using other data from the same entry.
@@ -1767,7 +1754,7 @@ else:
 # We display the first 2 rows and a concise summary of the DataFrame:
 
 # %%
-incidents_df.head(2)
+incidents_df.sample(2, random_state=1)
 
 # %%
 incidents_df.info()
@@ -1850,7 +1837,7 @@ def plot_hist(df_column, n_bin=100, density=True, title=None, y_label=None, colo
 
 
 # %%
-plot_hist(incidents_df['n_participants'], n_bin=104, y_label='n_participants', density=False, y_logscale=True);
+plot_hist(incidents_df['n_participants'], title='Distribution of number of participants', n_bin=104, y_label='n_participants', density=False, y_logscale=True);
 
 # %%
 # distribuition number of participants
@@ -1864,10 +1851,7 @@ plt.title('Distribution of number of participants')
 plt.show()
 
 # %%
-print('Max number of participants: ', incidents_df['n_participants'].max())
-print('Max number of children: ', incidents_df['n_participants_child'].max())
-print('Max number of teens: ', incidents_df['n_participants_teen'].max())
-print('Max number of adults: ', incidents_df['n_participants_adult'].max())
+incidents_df[['n_participants', 'n_participants_child', 'n_participants_teen', 'n_participants_adult']].max().to_frame().rename(columns={0:'max value'})
 
 # %%
 incidents_df[incidents_df['n_participants_adult'] > 60][['n_participants', 'n_participants_adult', 
@@ -1941,12 +1925,12 @@ incidents_df.describe()
 
 # %%
 nltk.download('stopwords')
-stopwords = set(stopwords.words('english'))
+stopwords_set = set(stopwords.words('english'))
 
 word_cloud_all_train = WordCloud(
     width=1500,
     height=1200,
-    stopwords=stopwords,
+    stopwords=stopwords_set,
     collocations=False,
     background_color='white'
     ).generate(' '.join(incidents_df[incidents_df['notes'].notna()]['notes'].tolist()));
