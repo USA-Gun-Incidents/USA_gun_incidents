@@ -31,6 +31,7 @@ from nltk.corpus import stopwords
 from wordcloud import WordCloud
 from pyproj import Transformer
 import zipfile
+import builtins
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
 
@@ -240,7 +241,6 @@ def load_checkpoint(checkpoint_name, casting=None, date_cols=None):
 # We plot the distribution of the dates using different binning strategies:
 
 # %%
-import builtins
 def plot_dates(df_column, title=None, color=None):
     def iqr_fence(x):
         q1 = x.quantile(0.25)
@@ -404,7 +404,7 @@ fig = px.line(
 )
 fig.update_xaxes(tickangle=-90)
 fig.show()
-pyo.plot(fig, filename='../html/incidents_per_day_scatter.html', auto_open=False)
+pyo.plot(fig, filename='../html/incidents_per_day_scatter.html', auto_open=False);
 
 # %%
 incidenst_per_day = incidents_df.groupby('date').size()
@@ -418,7 +418,7 @@ fig = calplot(
          y=0
 )
 fig.show()
-pyo.plot(fig, filename='../html/incidents_per_day_heatmap.html', auto_open=False)
+pyo.plot(fig, filename='../html/incidents_per_day_heatmap.html', auto_open=False);
 
 # %% [markdown]
 # #### Incidents During Festivities
@@ -534,7 +534,7 @@ fig = px.bar(
     barmode='group',
 )
 fig.show()
-pyo.plot(fig, filename='../html/incidents_per_holiday.html', auto_open=False)
+pyo.plot(fig, filename='../html/incidents_per_holiday.html', auto_open=False);
 
 # %% [markdown]
 # In summary, the analysis reveals that there are not many incidents during any holiday. The distribution of the number of incidents during each holiday, relative to the total number of incidents in that year, remains consistent over the years. This consistency aligns with our expectations, given the similarity in the distribution of incidents across days throughout the years.
@@ -579,7 +579,7 @@ if missing_states == False:
 # We now check if, given a certain value for the attributes `latitude` and `longitude`, the attribute `city_or_county` has always the same value:
 
 # %%
-incidents_df.groupby(['latitude', 'longitude'])['city_or_county'].unique()[lambda x: x.str.len() > 1]
+incidents_df.groupby(['latitude', 'longitude'])['city_or_county'].unique()[lambda x: x.str.len() > 1].to_frame()
 
 # %% [markdown]
 # That is not true and is due to the fact that sometimes the attribute `city_or_county` takes on the value of the city, other times the value of the county (as in the first row displayed above). Furthermore, we notice that even when the attribute refers to the same county it could be written in different ways (e.g. "Bethel (Newtok)", "Bethel (Napaskiak)", "Bethel"). 
@@ -588,7 +588,7 @@ incidents_df.groupby(['latitude', 'longitude'])['city_or_county'].unique()[lambd
 # We now check if a similar problem occurs for the attribute `address`:
 
 # %%
-incidents_df.groupby(['latitude', 'longitude'])['address'].unique()[lambda x: x.str.len() > 1]
+incidents_df.groupby(['latitude', 'longitude'])['address'].unique()[lambda x: x.str.len() > 1].to_frame()
 
 # %% [markdown]
 # Still this attribute may be written in different ways (e.g. "Avenue" may also be written as "Ave", or "Highway" as "Hwy"). There could also be some errors (e.g. the same point corresponds to the address "33rd Avenue", "Kamehameha Highway" and "Kilauea Avenue extension").
@@ -622,7 +622,7 @@ incidents_df[(incidents_df['latitude'] == 37.6499) & (incidents_df['longitude'] 
 # %%
 geopy_path = os.path.join(DATA_FOLDER_PATH, 'external_data/geopy.csv')
 geopy_df = pd.read_csv(geopy_path, index_col=['index'], low_memory=False, dtype={})
-geopy_df.head(n=2)
+geopy_df.sample(2, random_state=1)
 
 # %% [markdown]
 # The rows in this dataframe correspond to the rows in the original dataset. Its column *coord_presence* is false if the corresponding row in the original dataset did not have latitude and longitude values.
@@ -730,7 +730,7 @@ print('Number of rows with null value for latitude: ', incidents_df['latitude'].
 print('Number of rows with null value for longitude: ', incidents_df['longitude'].isnull().sum(), ' / ', incidents_df['longitude'].isnull().sum()*100/tot_row, '%')
 
 # %%
-sns.heatmap(incidents_df.isnull(), cbar=False, xticklabels=True)
+sns.heatmap(incidents_df.isnull(), cbar=False, xticklabels=True);
 
 # %% [markdown]
 # After this check, all the entries in the dataset have at least the state value not null and consistent. Only 12,796 data points, which account for 5.34% of the dataset, were found to have inconsistent latitude and longitude values.
@@ -739,7 +739,7 @@ sns.heatmap(incidents_df.isnull(), cbar=False, xticklabels=True)
 # Below, we have included some plots to visualize the inconsistent values in the dataset.
 
 # %%
-incidents_df.groupby(['state_consistency','county_consistency','address_consistency']).count().sort_index(ascending=False)
+incidents_df.groupby(['state_consistency','county_consistency','address_consistency']).size().to_frame().rename(columns={0:'count'}).sort_index(ascending=False)
 
 # %%
 stats = {}
@@ -755,14 +755,14 @@ clean_geo_stat_stats = pd.DataFrame(stats, index=stats_columns).transpose()
 clean_geo_stat_stats
 
 # %%
-incidents_df[['latitude', 'county', 'city']].isna().groupby(['latitude', 'county', 'city']).size().reset_index().rename(columns={0:'count'})
+incidents_df[['latitude', 'county', 'city']].isna().groupby(['latitude', 'county', 'city']).size().to_frame().rename(columns={0:'count'})
 
 # %%
-incidents_df[['latitude']].isna().groupby(['latitude']).size().reset_index().rename(columns={0:'count'})
+incidents_df[['latitude']].isna().groupby(['latitude']).size().to_frame().rename(columns={0:'count'})
 
 # %%
 incidents_df_not_null = incidents_df[incidents_df['latitude'].notna()]
-print('Number of entries with not null values for latitude and longitude: ', len(dummy_df))
+print('Number of entries with not null values for latitude and longitude: ', len(incidents_df_not_null))
 plot_scattermap_plotly(incidents_df_not_null, 'state', zoom=2,)
 
 # %%
@@ -916,11 +916,6 @@ def plot_info_city(df, lat, lon, info_circle, prop_rad=True):
 # %%
 plot_info_city(info_city, 'centroid_lat', 'centroid_lon', 'tot_points')
 
-# %%
-fig = plot_scattermap_plotly(info_city, size='tot_points', x_column='centroid_lat', 
-    y_column='centroid_lon', hover_name=False, zoom=2, title='Number of points per city') 
-pyo.plot(fig, filename='../html/incidents_per_city.html', auto_open=False);
-# FIXME: discretizzare e.g. <x, between(x, y), ...
 
 # %% [markdown]
 # We utilize the previously calculated data to infer missing values for the *city* field in entries of the dataset where latitude and longitude are available. The *city* field is assigned if the distance of the entry from the centroid falls within the third quartile of all points assigned to that centroid.
@@ -967,6 +962,13 @@ plot_scattermap_plotly(dummy_df, 'city', zoom=2, title='City inferred')
 
 # %%
 incidents_df = new_incidents_df
+
+# %%
+fig = plot_scattermap_plotly(info_city, size='tot_points', x_column='centroid_lat', 
+    y_column='centroid_lon', hover_name=False, zoom=2, title='Number of incidents per city') 
+fig.show()
+pyo.plot(fig, filename='../html/incidents_per_city.html', auto_open=False);
+# FIXME: discretizzare e.g. <x, between(x, y), ...
 
 # %% [markdown]
 # From this process, we infer 2248 *city* values.
@@ -1794,8 +1796,61 @@ print('Total rows with null value for n_females: ', incidents_df['n_females'].is
 # %%
 sns.heatmap(incidents_df.isnull(), cbar=False)
 
+
 # %% [markdown]
 # Below, we have provided the distribution of the total number of participants and the number of participant per age range for each incident. Once again, to make the histograms more comprehensible use a logaritmic scale for y-axes.
+
+# %%
+def plot_hist(df_column, n_bin=100, density=True, title=None, y_label=None, color=None, y_logscale=False):
+    
+    def iqr_fence(x):
+        q1 = x.quantile(0.25)
+        med = x.quantile(0.5)
+        q3 = x.quantile(0.75)
+        IQR = q3 - q1
+        u = x.max()
+        l = x.min()
+        Lower_Fence = builtins.max(builtins.min(x[x > q1 - (1.5 * IQR)], default=pd.Timestamp.min), l)
+        #Lower_Fence = builtins.max(q1 - (1.5 * IQR), l)
+        Upper_Fence = builtins.min(builtins.max(x[x < q3 + (1.5 * IQR)], default=pd.Timestamp.max), u)
+        #Upper_Fence = builtins.min(q3 + (1.5 * IQR), u)
+        return [Lower_Fence, q1, med, q3, Upper_Fence]
+    relevant_positions = iqr_fence(df_column)
+    n_items = len(df_column.index)
+
+    fig, axs = plt.subplots(3, sharex=True, figsize=(14, 6))
+    fig.suptitle(title)
+
+    # fixed bin
+    axs[0].hist(df_column, bins=n_bin, density=density, color=color)
+    axs[0].set_ylabel(str(n_bin) + ' bin')
+    axs[0].grid(axis='y')
+    if y_logscale:
+        axs[0].set_yscale('log')
+
+    # number of bins computed using Sturge's rule
+    n_bin = int(1 + math.log2(n_items))
+    axs[1].hist(df_column, bins=n_bin, density=density, color=color)
+    axs[1].set_ylabel("Sturge\'s rule binning")
+    if y_logscale:
+        axs[1].set_yscale('log')
+    axs[1].grid(axis='y')
+
+    axs[2].boxplot(x=df_column.dropna().values, labels=[''], vert=False)
+    axs[2].set_xlabel(y_label)
+
+    for i in range(2):
+        axs[i].axvline(x = relevant_positions[0], color = 'black', linestyle = '--', alpha=0.75)
+        axs[i].axvline(x = relevant_positions[1], color = 'black', linestyle = '-.', alpha=0.75)
+        axs[i].axvline(x = relevant_positions[2], color = 'black', linestyle = '-.', alpha=0.75)
+        axs[i].axvline(x = relevant_positions[3], color = 'black', linestyle = '-.', alpha=0.75)
+        axs[i].axvline(x = relevant_positions[4], color = 'black', linestyle = '--', alpha=0.75)
+    
+    return fig
+
+
+# %%
+plot_hist(incidents_df['n_participants'], n_bin=104, y_label='n_participants', density=False, y_logscale=True);
 
 # %%
 # distribuition number of participants
@@ -1873,13 +1928,7 @@ plt.show()
 # Below, we plot the distribution of the average age of participants in each incident.
 
 # %%
-plt.figure(figsize=(20, 8))
-plt.hist(incidents_df['avg_age_participants'], bins=100, density=False, edgecolor='black', linewidth=0.8) # FIXME: provare + binning (magare anche sturges's rule)
-plt.xlim(0, 100)
-plt.xlabel('Participants average age')
-plt.ylabel('Frequency')
-plt.title('Distribution of participants average age')
-plt.show()
+plot_hist(incidents_df['avg_age_participants'], y_label='avg_age_participants', density=False);
 
 # %%
 incidents_df.describe()
@@ -2016,7 +2065,7 @@ else:
     save_checkpoint(incidents_df, 'checkpoint_5')
 
 # %%
-incidents_df['tag_consistency'].value_counts()
+incidents_df['tag_consistency'].value_counts().to_frame()
 
 # %% [markdown]
 # We correct the inconsistencies and we save again the dataset. Then we check again to see if there are any improvement.
@@ -2038,16 +2087,16 @@ else:
     save_checkpoint(incidents_df, 'checkpoint_6')
 
 # %%
-incidents_df.sample(10, random_state=1)
+incidents_df.sample(2, random_state=1)
 
 # %%
 pd.DataFrame(data=incidents_df.dtypes).T
 
 # %%
-incidents_df['tag_consistency'].value_counts()
+incidents_df['tag_consistency'].value_counts().to_frame()
 
 # %%
-incidents_df.loc[incidents_df['tag_consistency'] == False]
+incidents_df.loc[incidents_df['tag_consistency'] == False].sample(2, random_state=1)
 
 # %% [markdown]
 # We notice that the inconsistency is given by the fact that the `n_injured` attribute always tells that there is one person injured in the accident, but at the same time we have the characteristic "<b>Home Invasion - No death or injury</b>". In this case we prefer to be consistent with the numerical attribute, since it's a more precise and reliable information on the incident.
