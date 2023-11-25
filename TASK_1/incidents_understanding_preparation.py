@@ -1936,8 +1936,8 @@ word_cloud_all_train = WordCloud(
     ).generate(' '.join(incidents_df[incidents_df['notes'].notna()]['notes'].tolist()));
 
 plt.imshow(word_cloud_all_train)
-plt.axis('off')
-plt.title('Word cloud of notes')
+plt.axis('off');
+plt.title('Word cloud of notes');
 
 # %% [markdown]
 # We check if given the first characteristic of a record, the second one is different. This to ensure that the info we have are not redundant.
@@ -1954,7 +1954,7 @@ incidents_df[incidents_df['incident_characteristics1']==incidents_df['incident_c
 ch1_counts = incidents_df['incident_characteristics1'].value_counts()
 ch2_counts = incidents_df['incident_characteristics2'].value_counts()
 ch_counts = ch1_counts.add(ch2_counts, fill_value=0).sort_values(ascending=True)
-ch_counts
+ch_counts.to_frame()
 
 # %%
 fig = ch_counts.plot(kind='barh', figsize=(5, 18))
@@ -1988,7 +1988,7 @@ plt.tight_layout()
 # %%
 fig, ax = plt.subplots(figsize=(20, 15)) # FIX: questo plot possiamo toglierlo? dovrebbe contenere la stessa informazione di quello sotto
 sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(by="Shot - Dead (murder, accidental, suicide)", inplace=False, ascending=False).tail(-1),
-            cmap='coolwarm', yticklabels=True)
+            cmap='coolwarm', yticklabels=True);
 
 # %%
 characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(
@@ -1997,7 +1997,7 @@ characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort
     ascending=False).plot(
         kind='bar',
         figsize=(20,10)
-    )
+    );
 
 # %% [markdown]
 # We can see that the most of the other characteristics are not paired to the one we're analyzing, in particular there are very few ones which are paired to it for a significant number of times.
@@ -2147,7 +2147,7 @@ incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
     kind='bar',
     figsize=(10,6),
     title='Counts of the addresses with the 50 highest number of incidents'
-) # many airports!!
+); # many airports!!
 
 # %% [markdown]
 # We display the most common characteristics for incidents involving women.
@@ -2219,7 +2219,7 @@ usa_population_df = pd.read_csv(DATA_FOLDER_PATH + 'external_data/2010_United_St
 usa_population_df.info()
 
 # %%
-usa_population_df.head()
+usa_population_df.sample(5, random_state=1)
 
 # %%
 usa_population_df.drop(columns=['Population as of 2000 census', 'Change', 'Percent change', 'Rank'], inplace=True) # FIX: fare solo cu col
@@ -2227,10 +2227,10 @@ usa_population_df.rename(columns={'Population as of 2010 census':'population_sta
 usa_population_df['state'] = usa_population_df['state'].str.upper()
 usa_population_df['population_state_2010'] = usa_population_df['population_state_2010'].str.replace(',', '').astype('int64')
 incidents_df = incidents_df.merge(usa_population_df, on=['state'], how='left')
-incidents_df.head()
+incidents_df.sample(5, random_state=1)
 
 # %%
-incidents_per_state = incidents_df[incidents_df['year']<=2020].groupby(['state', 'population_state_2010']).size()
+incidents_per_state = incidents_df[incidents_df['year']<=2020].groupby(['state', 'population_state_2010']).size() #FIX non va?!?
 incidents_per_state = ((incidents_per_state / incidents_per_state.index.get_level_values('population_state_2010'))*100000).to_frame(name='incidents_per_100k_inhabitants').sort_values(by='incidents_per_100k_inhabitants', ascending=True)
 incidents_per_state.reset_index(inplace=True)
 incidents_per_state.plot(
@@ -2244,10 +2244,10 @@ incidents_per_state.plot(
 )
 
 # %%
-incidents_df[incidents_df['state']=='DISTRICT OF COLUMBIA'].groupby(['latitude', 'longitude', 'date']).size()[lambda x: x > 1].sort_values(ascending=False)
+incidents_df[incidents_df['state']=='DISTRICT OF COLUMBIA'].groupby(['latitude', 'longitude', 'date']).size()[lambda x: x > 1].sort_values(ascending=False).to_frame().rename(columns={0:'count'})
 
 # %%
-incidents_df.groupby(['latitude', 'longitude', 'date']).size()[lambda x: x>1]
+incidents_df.groupby(['latitude', 'longitude', 'date']).size()[lambda x: x>1].to_frame().rename(columns={0:'count'})
 
 # %%
 incidents_per_month_per_state = incidents_df.groupby(['state', 'month_name', 'year']).size()
@@ -2416,7 +2416,7 @@ incidents_df.shape[0]
 numerical_columns = incidents_df.select_dtypes(include=['float64', 'int64']).columns
 plt.figure(figsize=(15, 12))
 corr_matrix = incidents_df[numerical_columns].corr()
-sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
+sns.heatmap(corr_matrix, mask=np.triu(corr_matrix));
 
 # %%
 incidents_df.to_csv(DATA_FOLDER_PATH +'incidents_cleaned.csv', index=True)
