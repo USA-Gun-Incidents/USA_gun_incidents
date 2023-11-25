@@ -36,33 +36,31 @@ incidents_df.rename(
 )
 dataset_original_columns = incidents_df.columns
 
-# %% [markdown]
-# We associate to each record the semester (1 or 2) in which the incident occurred:
-
-# %%
-incidents_df['sem'] = (incidents_df['date'].dt.month // 7) + 1
 
 # %% [markdown]
-# For each record we compute the ratio between the value of a specific feature in that record and the value of an aggregation function (e.g. sum or median) applied to the feature in a certain time and space window.
-# The functions define below performs this computation:
+# First, we compute a set of indicators aimed at highlighting the degree of abnormality of the value of a specific feature of an incident with respect to the values of the same feature in the incidents happened in the same period and/or in the same geographical area. 
+#
+# The following function computes for each record the ratio between the value of a specific feature in that record and the value of an aggregation function (e.g. sum or mean) applied to the feature restricted to a certain time and space window:
 
 # %%
 def compute_window_ratio_indicator(df, gby, feature, agg_fun, suffix):
 	grouped_df = df.groupby(gby)[feature].agg(agg_fun)
 	df = df.merge(grouped_df, on=gby, how='left', suffixes=[None, suffix])
 	df[feature+suffix+'_ratio'] = df[feature] / df[feature+suffix]
-	df.loc[np.isclose(df[feature], 0), feature+suffix+'_ratio'] = 1 # TODO: when 0/0 => 1
+	df.loc[np.isclose(df[feature], 0), feature+suffix+'_ratio'] = 1 # set to 1 when 0/0
 	df.drop(columns=[feature+suffix], inplace=True)
 	return df
 
 # %% [markdown]
 # We apply that function to most of the numerical features of the dataset, using:
 # - as aggregation functions the sum and the mean
-# - as time window the semester and the year
-# - as space window both the congressional district (that we have previously inferred for all the records) and the state
+# - as time window the semester of the year or the whole year
+# - as space window the congressional district of the state or the whole state
+#
+# We chose not to use 'county' or 'city' as space window because not all the records have a value for those features (e.g. incidents happend outside a city). The values of the congressional districts are instead always present (we have previously inferred the missing ones).
 
 # %%
-# numerical columns to use to compute local ratios
+# numerical columns to use
 window_features = [
     'n_males',
     'n_females',
@@ -78,47 +76,51 @@ window_features = [
     'n_teen',
     'n_child'
 ]
-for column in window_features:
-    # column / (sum(column) in the same semester and congressional district)
+
+# we associate to each incident the semester of the year in which it happened
+incidents_df['sem'] = (incidents_df['date'].dt.month // 7) + 1
+
+for feature in window_features:
+    # feature / (sum(feature) in the same semester and congressional district)
     incidents_df = compute_window_ratio_indicator(
         df=incidents_df,
         gby=['year', 'sem', 'state', 'congd'],
-        feature=column,
+        feature=feature,
         agg_fun='sum',
         suffix='_sum_sem_congd'
     )
-    # column / (sum(column) in the same year and state
+    # feature / (sum(feature) in the same year and state)
     incidents_df = compute_window_ratio_indicator(
         df=incidents_df,
         gby=['year', 'state'],
-        feature=column,
+        feature=feature,
         agg_fun='sum',
         suffix='_sum_year_state'
     )
-    # column / (mean(column) in the same semester and congressional district)
+    # feature / (mean(feature) in the same semester and congressional district)
     incidents_df = compute_window_ratio_indicator(
         df=incidents_df,
         gby=['year', 'sem', 'state', 'congd'],
-        feature=column,
+        feature=feature,
         agg_fun='mean',
         suffix='_mean_sem_congd'
     )
-    # column / (mean(column) in the same year and state)
+    # feature / (mean(feature) in the same year and state)
     incidents_df = compute_window_ratio_indicator(
         df=incidents_df,
         gby=['year', 'state'],
-        feature=column,
+        feature=feature,
         agg_fun='mean',
         suffix='_mean_year_state'
     )
-# store the names of the new columns
+# store the names of the new features
 window_ratios_wrt_mean = []
 window_ratios_wrt_total = []
-for column in incidents_df.columns:
-    if 'mean' in column:
-        window_ratios_wrt_mean.append(column)
-    elif 'sum' in column:
-        window_ratios_wrt_total.append(column)
+for feature in incidents_df.columns:
+    if 'mean' in feature:
+        window_ratios_wrt_mean.append(feature)
+    elif 'sum' in feature:
+        window_ratios_wrt_total.append(feature)
 
 # %% [markdown]
 # We visualize the distributions of the ratios w.r.t the mean:
@@ -129,11 +131,13 @@ sns.violinplot(data=incidents_df[window_ratios_wrt_mean], ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
-# We define a function to apply a logarithmic transformation to the ratio indicators (we sum 1% of the minimum value excluding 0 to avoid infinite values):
+# All the distributions are highly skewed. The indicators about the number of killed people, the number of teens and the number of child have far outliers.
+#
+# We define a function to apply a logarithmic transformation of a set of features (summing 1% of the minimum value of the feature excluding 0 to avoid infinite values):
 
 # %%
-def log_transform(df, columns):
-    for col in columns:
+def log_transform(df, features):
+    for col in features:
         eps = (df[df[col]!=0][col].min())/100 # 1% of the minimum value
         df['log_'+col] = np.log(df[col] + eps)
     return df
@@ -142,11 +146,11 @@ def log_transform(df, columns):
 # We apply a logarithmic transformation to the ratio indicators displayed above:
 
 # %%
-incidents_df = log_transform(df=incidents_df, columns=window_ratios_wrt_mean)
-# store the names of the trasnformed columns
+incidents_df = log_transform(df=incidents_df, features=window_ratios_wrt_mean)
+# store the names of the transformed features
 log_window_ratios_mean = []
-for column in window_ratios_wrt_mean:
-    log_window_ratios_mean.append('log_'+column)
+for feature in window_ratios_wrt_mean:
+    log_window_ratios_mean.append('log_'+feature)
 
 # %% [markdown]
 # We visualize the distributions of the features after the transformation:
@@ -157,6 +161,8 @@ sns.violinplot(data=incidents_df[log_window_ratios_mean], ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
+# Still there are many outliers.
+#
 # We visualize the distributions of the indicators w.r.t the total:
 
 # %%
@@ -165,62 +171,76 @@ sns.violinplot(data=incidents_df[window_ratios_wrt_total], ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
+# The distributions about the number of injured people, the number of arrested people and the number of unharmed people are skewed but have no outliers. All the other distributions have outliers.
+#
 # We apply the logarithmic transformation to the ratio indicators w.r.t the total and visualize the distributions after the transformation:
 
 # %%
-incidents_df = log_transform(df=incidents_df, columns=window_ratios_wrt_total)
-# store the names of the trasnformed columns
+incidents_df = log_transform(df=incidents_df, features=window_ratios_wrt_total)
+# store the names of the transformed features
 log_window_ratios_total = []
-for column in window_ratios_wrt_total:
-    log_window_ratios_total.append('log_'+column)
-# visualize the distributions of the new variables
+for feature in window_ratios_wrt_total:
+    log_window_ratios_total.append('log_'+feature)
+# visualize the distributions of the features
 fig, ax = plt.subplots(figsize=(40, 5))
 sns.violinplot(data=incidents_df[log_window_ratios_total], ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
-# We define a function to compute the ratio of the value a feature w.r.t the value of another feature in the same record:
+# We now compute indicators using only the data of each single record.
+# In particulat, we define a function to compute the ratio between the value a feature in a record w.r.t the value of another feature in the same record:
 
 # %%
 def compute_record_level_ratio_indicator(df, num, den):
-    df[num+'_'+den+'_ratio'] = df[num] / df[den] # 0/0 never happens
+    df[num+'_'+den+'_ratio'] = df[num] / df[den]
     return df
 
 # %% [markdown]
-# We use the function defined above to compute the ratio between the cardinality of a subset of participants and the total number of participants involved in the incident:
+# We use the function defined above to compute the ratio between the cardinality of a subset of participants and the total number of participants involved in the incident and we visualize the distributions of the computed indicators:
 
 # %%
 incident_ratio_num_columns = ['n_males', 'n_females', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 'n_adult', 'n_teen', 'n_child']
-for column in incident_ratio_num_columns:
-    incidents_df = compute_record_level_ratio_indicator(df=incidents_df, num=column, den='n_participants')
-# store the names of the new columns
+for feature in incident_ratio_num_columns:
+    incidents_df = compute_record_level_ratio_indicator(df=incidents_df, num=feature, den='n_participants')
+# store the names of the new features
 record_level_ratios = []
-for column in incidents_df.columns:
-    if 'ratio' in column:
-        if 'mean' not in column and 'sum' not in column:
-            record_level_ratios.append(column)
-
+for feature in incidents_df.columns:
+    if 'ratio' in feature:
+        if 'mean' not in feature and 'sum' not in feature:
+            record_level_ratios.append(feature)
+# visualize the distributions of the features
 fig, ax = plt.subplots(figsize=(15, 5))
 sns.violinplot(data=incidents_df[record_level_ratios], ax=ax)
 plt.xticks(rotation=90, ha='right');
 
+# %% [markdown]
+# Also these distributions are highly skewed. The indicators about the number of killed people and the number of arrested people are skewed but do not have outliers.
+#
+# We apply the logarithmic transformation to the record level ratio indicators and visualize the distributions after the transformation:
+
 # %%
 log_record_level_ratios = []
-for column in record_level_ratios:
-    log_record_level_ratios.append('log_'+column)
-incidents_df = log_transform(df=incidents_df, columns=record_level_ratios)
+for feature in record_level_ratios:
+    log_record_level_ratios.append('log_'+feature)
+incidents_df = log_transform(df=incidents_df, features=record_level_ratios)
 
 fig, ax = plt.subplots(figsize=(15, 5))
 sns.violinplot(data=incidents_df[log_record_level_ratios], ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
+# We now compute a set of indicators with a similar semantics to the ones computed above, but using the concept of **surprisal**.
+#
+# This kind of indicator can also be computed for categorical variables, as well as for a set of variables.
+#
 # The **surprisal** (also called [Information content](https://en.wikipedia.org/wiki/Information_content)) of an event $E$ 
 # with probability $p(E)$ is defined as $log(1/p(E))$ (or equivalently $-log(p(E))$).
 # Surprisal is inversly related to probability (hence the term $1/p(E)$): when $p(E)$ is close to $1$, the surprisal of the event is low, when $p(E)$ is close to $0$, the surprisal of the event is high.
 # The $log$ gives $0$ surprise when the probability of the event is $1$.
 #
 # The surprisal is closely related to **entropy**, which is the expected value of the information content of a random variable, quantifying how surprising the random variable is "on average".
+#
+# The following function computes the surprisal of a set of features of an incident w.r.t the values of the same features in the incidents happened in the same period and/or geographical area:
 
 # %%
 def compute_surprisal_indicator(df, fixed_cols, var_cols):
@@ -235,12 +255,15 @@ def compute_surprisal_indicator(df, fixed_cols, var_cols):
     for attr in fixed_cols:
         label += '_' + attr
 
-    probs[label] = -np.log2(probs['occ']/probs['total']) # 0/0 never happens
+    probs[label] = -np.log2(probs['occ']/probs['total'])
     probs.drop(columns=['occ', 'total'], inplace=True)
     
     df = df.merge(probs, how='left', on=fixed_cols+var_cols)
 
     return df
+
+# %% [markdown]
+# We now compute the surprisal for a feature at a time fixing the semester of the year or the year only, and the congressional district in the state or the state only:
 
 # %%
 surpisal_single_features = ['month', 'day', 'address_type', 'n_child', 'n_teen', 'n_adult', 'min_age', 'avg_age', 'max_age', 'n_killed', 'n_injured', 'n_males', 'n_participants']
@@ -248,10 +271,14 @@ for feature in surpisal_single_features:
     incidents_df = compute_surprisal_indicator(df=incidents_df, fixed_cols=['year', 'sem', 'state', 'congd'], var_cols=[feature])
     incidents_df = compute_surprisal_indicator(df=incidents_df, fixed_cols=['year', 'state'], var_cols=[feature])
 
+# %% [markdown]
+# And we also compute the surprisal for a set of features:
+
+# %%
 incidents_df = compute_surprisal_indicator(df=incidents_df, fixed_cols=['year', 'sem', 'state', 'congd'], var_cols=['month', 'day'])
 incidents_df = compute_surprisal_indicator(df=incidents_df, fixed_cols=['year', 'sem', 'state', 'congd'], var_cols=['n_child', 'n_teen', 'n_adult'])
 
-incidents_tags = [ # TODO: leggere da enum
+incidents_tags = [
     'firearm', 'air_gun', 'shots', 'aggression',
     'suicide', 'injuries', 'death', 'road',
     'illegal_holding', 'house', 'school', 'children',
@@ -261,15 +288,28 @@ incidents_tags = [ # TODO: leggere da enum
 incidents_df = compute_surprisal_indicator(df=incidents_df, fixed_cols=['year', 'sem', 'state', 'congd'], var_cols=incidents_tags)
 incidents_df.rename(columns={incidents_df.columns[-1]: 'surprisal_characteristics'}, inplace=True)
 
+# %% [markdown]
+# We store in a list the names of the features just computed:
+
+# %%
 surprisals = []
-for column in incidents_df.columns:
-    if 'surprisal' in column:
-        surprisals.append(column)
+for feature in incidents_df.columns:
+    if 'surprisal' in feature:
+        surprisals.append(feature)
+
+# %% [markdown]
+# We visualize the distributions of the surprisal indicators:
 
 # %%
 fig, ax = plt.subplots(figsize=(30, 5))
 sns.violinplot(data=incidents_df[surprisals], ax=ax)
 plt.xticks(rotation=90, ha='right');
+
+# %% [markdown]
+# TODO: commentare
+
+# %% [markdown]
+# We also define an indicator to measure the severity of an incident, based on the number of killed and injured people and we visualize its distribution:
 
 # %%
 incidents_df['severity'] = (
@@ -279,12 +319,15 @@ incidents_df['severity'] = (
 incidents_df['severity'].replace([np.inf], 0, inplace=True)
 sns.violinplot(data=incidents_df[['severity']])
 
+# %% [markdown]
+# Additionally, we compute the age rage of the participants involved in the incident and we visualize its distribution:
+
 # %%
 incidents_df['age_range'] = incidents_df['max_age'] - incidents_df['min_age']
 sns.violinplot(data=incidents_df[['age_range']])
 
 # %%
-import utm
+import utm # TODO: probabilmente andranno tolte
 
 def project_lat_long(latidude, longitude):
     # check if the coordinates are valid
@@ -355,7 +398,7 @@ features_to_drop = [
     'log_n_killed_mean_ratio',
     'log_n_injured_mean_ratio',
     'surprisal_n_killed',
-    'suprisal_n_injured', # discarded to reduce dimensionality
+    'surprisal_n_injured', # discarded to reduce dimensionality
     'log_n_males_mean_ratio',
     'log_n_participants_mean_ratio',
     'surprisal_n_participants',

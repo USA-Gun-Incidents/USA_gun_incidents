@@ -19,7 +19,7 @@ from scipy.spatial.distance import pdist, squareform
 from pyclustering.cluster.xmeans import xmeans, splitting_type
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 from yellowbrick.cluster import KElbowVisualizer, SilhouetteVisualizer, InterclusterDistance
-import utm
+import json
 import os
 import sys
 sys.path.append(os.path.abspath('..'))
@@ -31,44 +31,31 @@ pd.set_option('max_colwidth', None)
 RANDOM_STATE = 42 # to get reproducible results
 
 # %%
-# TODO: si leggerà un solo file che contiene tutto
 incidents_df = pd.read_csv(
-    '../data/incidents_cleaned.csv'
+    '../data/incidents_indicators.csv',
+    index_col=0
 )
-indicators_df = pd.read_csv(
-    '../data/incidents_cleaned_indicators.csv', index_col=0
-)
-features_to_cluster = [
-    'latitude_proj', 'longitude_proj', 'location_importance', 'city_entropy', 'address_entropy',
-    'avg_age_participants', 'age_range', 'log_avg_age_mean_SD', 'avg_age_entropy',
-    'n_participants', 'n_participants_child_prop', 'n_participants_teen_prop', #'adults_entropy',
-    'n_males_pr', 'log_n_males_n_males_mean_semest_congd_ratio',
-    'n_killed_pr', 'n_injured_pr', 'n_arrested_pr', 'n_unharmed_pr',
-    'tags_entropy'
-]
+
+f = open('../data/indicators_names.json')
+features_to_cluster = json.loads(f.read())
+
 categorical_features = [
-    'year', 'month', 'day_of_week', 'party', #'state', 'address_type', 
+    'year', 'month', 'day_of_week', 'party', #'state', 'address_type', 'county', 'city'
     'firearm', 'air_gun', 'shots', 'aggression', 'suicide',
     'injuries', 'death', 'road', 'illegal_holding', 'house',
     'school', 'children', 'drugs', 'officers', 'organized', 'social_reasons',
     'defensive', 'workplace', 'abduction', 'unintentional'
+    # 'incident_characteristics1', 'incident_characteristics2'
     ]
+# other interesting features:
+# poverty_perc, date
 
 # %%
-indicators_df = indicators_df.dropna()
+incidents_df = incidents_df.dropna(subset=features_to_cluster)
+indicators_df = incidents_df[features_to_cluster]
+scaler = MinMaxScaler()
+X = scaler.fit_transform(indicators_df.values)
 
-# %%
-# TODO: da spostare nel file che fa gli indicatori
-latlong_projs = utm.from_latlon(indicators_df['latitude'].to_numpy(), indicators_df['longitude'].to_numpy())
-scaler= MinMaxScaler()
-latlong = scaler.fit_transform(np.stack([latlong_projs[0], latlong_projs[1]]).reshape(-1, 2))
-indicators_df['latitude_proj'] = latlong[:,0]
-indicators_df['longitude_proj'] = latlong[:,1]
-
-# %%
-# scaler= StandardScaler() # TODO: fare in questo notebook
-# X = scaler.fit_transform(indicators_df.values) # TODO: come scegliere?
-X = indicators_df[features_to_cluster].values
 
 # %% [markdown]
 # ## Identification of the best value of k
@@ -127,12 +114,8 @@ ks = plot_score_varying_k(X=X, kmeans_params=kmeans_params, metric='SSE', start_
 best_k += ks
 
 # %%
-# k = plot_k_elbow(X=X, kmeans_params=kmeans_params, metric='SSE', start_k=2, max_k=[10, 20, 30])
-# best_k += ks
-
-# %%
-# k = plot_k_elbow(X=X, kmeans_params=kmeans_params, metric='silhouette', start_k=1, max_k=[20])
-# best_k += ks
+ks = plot_score_varying_k(X=X, kmeans_params=kmeans_params, metric='silhouette', start_k=2, max_k=[20])
+best_k += ks
 
 # %%
 # k = plot_k_elbow(X=X, kmeans_params=kmeans_params, metric='calinski_harabasz', start_k=1, max_k=[20])
