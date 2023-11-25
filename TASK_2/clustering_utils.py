@@ -236,7 +236,8 @@ def scatter_by_cluster(
         centroids=None,
         ncols=3,
         figsize=(35, 60),
-        color_palette=sns.color_palette() # default palette assumes having max 6 cluster
+        color_palette=sns.color_palette()
+        title=None
     ):
     '''
     This function plots a scatter plot of each pair of the given features in the given dataframe,
@@ -294,7 +295,7 @@ def scatter_by_cluster(
             [0], [0], marker='o', color='w', label=f'Cluster {c}', markerfacecolor=color_palette[c]))
     f.legend(handles=legend_elements, loc='lower center', ncols=len(clusters_ids))
 
-    plt.suptitle(("Clusters in different feature spaces"), fontsize=20)
+    plt.suptitle(title, fontsize=20)
     #plt.show()
 
 def scatter_pca_features_by_cluster(
