@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+# %% [markdown]
+# # KMeans clustering
+
+# %% [markdown]
+# We import the libraries:
+
 # %%
 import pandas as pd
 import numpy as np
@@ -10,7 +16,7 @@ import plotly.offline as pyo
 import networkx as nx
 import warnings
 np.warnings = warnings # altrimenti numpy da problemi con pyclustering, TODO: è un problema solo mio?
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score, silhouette_score, silhouette_samples, adjusted_rand_score
 from sklearn.metrics import homogeneity_score, completeness_score, normalized_mutual_info_score
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
@@ -28,17 +34,19 @@ from clustering_utils import *
 # %matplotlib inline
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
-RANDOM_STATE = 42 # to get reproducible results
+
+# %% [markdown]
+# We load the data and prepare it for the clustering:
 
 # %%
-incidents_df = pd.read_csv(
-    '../data/incidents_indicators.csv',
-    index_col=0
-)
-
+# load the data
+incidents_df = pd.read_csv('../data/incidents_indicators.csv', index_col=0)
+# load the names of the features to use for clustering
 f = open('../data/indicators_names.json')
 features_to_cluster = json.loads(f.read())
-
+# FIXME: da fare in indicators
+features_to_cluster = [feature for feature in features_to_cluster if feature not in ['lat_proj', 'lon_proj']] # 'n_killed_prop', 'n_injured_prop', 'n_unharmed_prop'
+# FIXME: da spostare più avanti
 categorical_features = [
     'year', 'month', 'day_of_week', 'party', #'state', 'address_type', 'county', 'city'
     'firearm', 'air_gun', 'shots', 'aggression', 'suicide',
@@ -47,21 +55,67 @@ categorical_features = [
     'defensive', 'workplace', 'abduction', 'unintentional'
     # 'incident_characteristics1', 'incident_characteristics2'
     ]
-# other interesting features:
-# poverty_perc, date
+# FIXME: poverty_perc, date
+# drop nan
+incidents_df = incidents_df.dropna(subset=features_to_cluster)
+# initialize a colum for the clustering labels
+incidents_df['cluster'] = None
+# project on the indicators
+indicators_df = incidents_df[features_to_cluster]
+
+# %% [markdown]
+# We apply MinMaxScaler and StandardScaler to the data, visualizing the results of the transformation:
 
 # %%
-incidents_df = incidents_df.dropna(subset=features_to_cluster)
-indicators_df = incidents_df[features_to_cluster]
-scaler = MinMaxScaler()
-X = scaler.fit_transform(indicators_df.values)
+# apply MinMaxScaler
+minmax_scaler = MinMaxScaler()
+X_minmax = minmax_scaler.fit_transform(indicators_df.values)
+# apply StandardScaler
+std_scaler = StandardScaler()
+X_std = std_scaler.fit_transform(indicators_df.values)
+# plot the distributions of the indicators after the transformations
+fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(25, 6))
+axs[0].boxplot(indicators_df.values)
+axs[0].set_xticklabels(features_to_cluster, rotation=90);
+axs[0].set_title('Original data');
+axs[1].boxplot(X_minmax)
+axs[1].set_xticklabels(features_to_cluster, rotation=90);
+axs[1].set_title('Min-Max scaling');
+axs[2].boxplot(X_std)
+axs[2].set_xticklabels(features_to_cluster, rotation=90);
+axs[2].set_title('Standard scaling');
 
+# %% [markdown]
+# Variables have different scales and variances.
+#
+# Since K-means tends to produce globular clusters, leaving variances unequal is like giving different weights to features based on their variance. To avoid this, we will use StandardScaler.
+
+# %%
+X = X_std
+
+# %% [markdown]
+# Below we define the parameters of the k-means algorithm:
+# - 300 iterations should be enough to converge (it is the default parameter of the scikit-learn implementation)
+# - the algorithm is run 10 times with different initializations and the best result in terms of SSE is chosen (10 runs is the default parameter of the scikit-learn implementation)
+# - initial centroids are sampled based on an empirical probability distribution of the points’ contribution to the overall inertia (this method is called k-means++ and again it is the default parameter of the scikit-learn implementation)
+# - the maximum number of K to later be evaluated is 30 (higher values lead to results that are difficult to interpret)
+# - we fixed the random seed to make the results reproducible
+
+# %%
+MAX_ITER = 300
+N_INIT = 10
+INIT_METHOD = 'k-means++'
+MAX_K = 30
+RANDOM_STATE = 42
 
 # %% [markdown]
 # ## Identification of the best value of k
 
+# %% [markdown]
+# The following function uses the implementation of the elbow method from the library [Yellowbrick](https://www.scikit-yb.org/en/latest/index.html), to identify the best value of k. This method consists in computing a metric to evaluate the quality of the clustering for each value of k, and then plotting the metric as a function of k. The best value of k is the one that corresponds to the point of inflection of the curve (the point where the metric starts to decrease more slowly).
+
 # %%
-def plot_score_varying_k(X, kmeans_params, metric, start_k, max_k):
+def apply_k_elbow_method(X, kmeans_params, metric, start_k, max_k, plot_elbow=True):
     if metric == 'SSE':
         metric = 'distortion'
         metric_descr = 'SSE'
@@ -74,84 +128,106 @@ def plot_score_varying_k(X, kmeans_params, metric, start_k, max_k):
     
     _, axs = plt.subplots(nrows=1, ncols=len(max_k) if len(max_k)!= 1 else 2, figsize=(30,5))
 
-    best_k = []
-
     for i in range(len(max_k)):
         kmeans_params['n_clusters'] = i
         kmeans = KMeans(**kmeans_params)
 
-        elbow_vis = KElbowVisualizer(kmeans, k=(start_k, max_k[i]), metric=metric, timings=False, ax=axs[i])
+        elbow_vis = KElbowVisualizer(kmeans, k=(start_k, max_k[i]), metric=metric, timings=False, ax=axs[i], locate_elbow=plot_elbow)
         elbow_vis.fit(X)
-        if elbow_vis.elbow_value_ != None and elbow_vis.elbow_value_ not in best_k:
-            best_k.append(elbow_vis.elbow_value_)
         axs[i].set_title(f'{metric_descr} elbow for K-Means clustering (K in [{str(start_k)}, {str(max_k[i])}])')
         axs[i].set_ylabel(metric_descr)
         axs[i].set_xlabel('K')
-        axs[i].legend([
-            f'{metric_descr}',
-            f'elbow at K = {str(elbow_vis.elbow_value_)}, {metric_descr} = {elbow_vis.elbow_score_:0.2f}'
-        ])
+        if plot_elbow:
+            axs[i].legend([
+                f'{metric_descr}',
+                f'elbow at K = {str(elbow_vis.elbow_value_)}, {metric_descr} = {elbow_vis.elbow_score_:0.2f}'
+            ])
+        else:
+            axs[i].legend([
+                f'{metric_descr}'
+            ])
 
         if len(max_k)==1:
             axs[1].remove()
     
     plt.show()
-    return best_k
-
-# %%
-MAX_ITER = 300
-N_INIT = 10
-INIT_METHOD = 'k-means++'
-kmeans_params = {'init': INIT_METHOD, 'n_init': N_INIT, 'max_iter': MAX_ITER, 'random_state': RANDOM_STATE}
-max_k = 30
-best_k = []
 
 # %% [markdown]
-# Ci permette anche di valutare la sensibilità all'inizializzazione dei centroidi. Più di 30 difficile da interpretare. Sia partendo da 1 che da 2. Come interpola.
+# Now we apply the elbow method evaluating the SSE and computing the elbow for each value of k between 1 and 10, 1 and 20 and 1 and 30. We consider also k=1 (absence of clusters) and we repeat the analysis with k in different ranges because the inflection point of the curve could vary depending on the number of points the curve is made of.
 
 # %%
-ks = plot_score_varying_k(X=X, kmeans_params=kmeans_params, metric='SSE', start_k=1, max_k=[10, 20, 30])
-best_k += ks
+kmeans_params = {'init': INIT_METHOD, 'n_init': N_INIT, 'max_iter': MAX_ITER, 'random_state': RANDOM_STATE}
+apply_k_elbow_method(X=X, kmeans_params=kmeans_params, metric='SSE', start_k=1, max_k=[10, 20, 30])
+
+# %% [markdown]
+# The elbow method identifies k=4, k=7 and k=10 as best possible values of k. At k=10 the point of inflection is more evident.
 
 # %%
-ks = plot_score_varying_k(X=X, kmeans_params=kmeans_params, metric='silhouette', start_k=2, max_k=[20])
-best_k += ks
+best_k = [4, 7, 10]
+
+# %% [markdown]
+# We repeat the analysis using the silhouette score.
 
 # %%
-# k = plot_k_elbow(X=X, kmeans_params=kmeans_params, metric='calinski_harabasz', start_k=1, max_k=[20])
-# best_k += ks
+apply_k_elbow_method(X=X, kmeans_params=kmeans_params, metric='silhouette', start_k=2, max_k=[12], plot_elbow=False)
+
+# %% [markdown]
+# The silhouette score has a global maximum for k=2; k=8 and k=10 are local maximum with very close silhouette scores.
+
+# %%
+best_k += [2, 8]
+
+# %% [markdown]
+# We repeat again the analysing evaluating the Calinski-Harabasz score (the ratio of the sum of between-cluster dispersion and of within-cluster dispersion; the higher it is the better the clustering).
+
+# %%
+apply_k_elbow_method(X=X, kmeans_params=kmeans_params, metric='calinski_harabasz', start_k=2, max_k=[12], plot_elbow=False)
+
+# %% [markdown]
+# The Calinski-Harabasz score is maximum for k=2. It also has two local maxima for k=7.
+
+# %% [markdown]
+# To identify the best value of k we also apply the X-means algorithm from the library [pyclustering](https://github.com/annoviko/pyclustering/), which is a variation of the k-means algorithm that should automatically find the best value of k. The algorithm starts with k=2 and then it iteratively splits the clusters until a score does not improve anymore. The implementation we will use supports both the BIC score (Bayesian Information Criterion) and the Minimum Noiseless Descriptionlength score (MDL):
 
 # %%
 initial_centers = kmeans_plusplus_initializer(data=X, amount_centers=1, random_state=RANDOM_STATE).initialize()
-xmeans_MDL_instance = xmeans( # TODO: assicurarsi di starlo usando nel modo in cui vogliamo, si arresta prima in base al BIC?
+xmeans_MDL_instance = xmeans(
     data=X,
     initial_centers=initial_centers,
-    kmax=max_k,
+    kmax=MAX_K,
     splitting_type=splitting_type.BAYESIAN_INFORMATION_CRITERION,
     random_state=RANDOM_STATE
 )
 xmeans_MDL_instance.process()
 n_xmeans_BIC_clusters = len(xmeans_MDL_instance.get_clusters())
-print('Number of clusters found by xmeans using BIC score: ', n_xmeans_BIC_clusters)
-if n_xmeans_BIC_clusters < max_k and n_xmeans_BIC_clusters not in best_k:
-    best_k.append(n_xmeans_BIC_clusters)
+print(f'Number of clusters found by xmeans using BIC score and setting the maximum number of clusters to {MAX_K}: {n_xmeans_BIC_clusters}')
 
 # %%
-xmeans_MDL_instance = xmeans( # TODO: idem come sopra
+xmeans_MDL_instance = xmeans(
     data=X,
     initial_centers=initial_centers,
-    kmax=max_k,
+    kmax=MAX_K,
     splitting_type=splitting_type.MINIMUM_NOISELESS_DESCRIPTION_LENGTH,
     random_state=RANDOM_STATE
 )
 xmeans_MDL_instance.process()
 n_xmeans_MDL_clusters = len(xmeans_MDL_instance.get_clusters())
-print('Number of clusters found by xmeans using MDL score: ', n_xmeans_MDL_clusters)
-if n_xmeans_MDL_clusters < max_k and n_xmeans_MDL_clusters not in best_k:
-    best_k.append(n_xmeans_MDL_clusters)
+print(f'Number of clusters found by xmeans using MDL score and setting the maximum number of clusters to {MAX_K}: {n_xmeans_MDL_clusters}')
+
+# %% [markdown]
+# X-means terminates with k equal to the maximum number of clusters allowed (30 in our case). This means that the score always improved when splitting the clusters. No value of k is optimal according to these criteria.
+
+# %% [markdown]
+# To choose the best value of k among the ones identified by the elbow method, we will compute other metrics to evaluate the quality of the clustering. The following function fits the k-means algorithm with a given set of parameters and computes the following metrics:
+# - SSE
+# - BSS (i.e. between-cluster sum of squares; the higher the better)
+# - Davies-Bouldin score (i.e. the average similarity measure of each cluster with its most similar cluster, where similarity is the ratio of within-cluster distances to between-cluster distances; the lower the better)
+# - Calinski-Harabasz score
+# - Silhouette score
 
 # %%
 def fit_kmeans(X, params):
+    print(f"Fitting KMeans with k={params['n_clusters']}")
     kmeans = KMeans(**params)
     kmeans.fit(X)
     results = {}
@@ -160,18 +236,19 @@ def fit_kmeans(X, params):
     results['BSS'] = compute_bss_per_cluster(X=X, clusters=kmeans.labels_, centroids=kmeans.cluster_centers_, weighted=True).sum()
     results['davies_bouldin_score'] = davies_bouldin_score(X=X, labels=kmeans.labels_)
     results['calinski_harabasz_score'] = calinski_harabasz_score(X=X, labels=kmeans.labels_)
-    #results['silhouette_score'] = silhouette_score(X=X, labels=kmeans.labels_) 
+    results['silhouette_score'] = silhouette_score(X=X, labels=kmeans.labels_) 
     results['n_iter'] = kmeans.n_iter_
     return results
 
-# %%
-best_k=[4]
+# %% [markdown]
+# To study the effect of the centroids initialization on the results, we will apply the algorithm using the k-means++ initialization repeated 10 times (as previously done), but we will also initialize the centroids with the final centroids computed by BisectingKMeans. 
 
 # %%
 results = {}
 kmeans_params = {}
 kmeans_params['random_state'] = RANDOM_STATE
 kmeans_params['max_iter'] = MAX_ITER
+best_k = sorted(best_k)
 for k in best_k:
     kmeans_params['n_init'] = N_INIT
     kmeans_params['n_clusters'] = k
@@ -179,45 +256,121 @@ for k in best_k:
     result = fit_kmeans(X=X, params=kmeans_params)
     results[str(k)+'means'] = result
 
-    bisect_kmeans = BisectingKMeans(n_clusters=k, n_init=5, random_state=RANDOM_STATE).fit(X) # TODO: salvare i risultati anche di questo?
-    kmeans_params['n_init'] = 1
-    kmeans_params['init'] = bisect_kmeans.cluster_centers_
-    result = fit_kmeans(X=X, params=kmeans_params)
-    results[str(k)+'means_bis_init'] = result
+    # FIXME: fare dopo una volta scelto il migliore
+    # bisect_kmeans = BisectingKMeans(n_clusters=k, n_init=5, init=INIT_METHOD, random_state=RANDOM_STATE).fit(X)
+    # kmeans_params['n_init'] = 1
+    # kmeans_params['init'] = bisect_kmeans.cluster_centers_
+    # result = fit_kmeans(X=X, params=kmeans_params)
+    # results[str(k)+'means_bis_init'] = result
 
 # %%
 results_df = pd.DataFrame(results).T
 results_df.drop(columns=['model'])
 
-# %%
-k = 4
-kmeans = results[f'{k}means']['model']
-clusters = results[f'{k}means']['model'].labels_
-centroids = results[f'{k}means']['model'].cluster_centers_
-indicators_df['cluster'] = clusters
+# %% [markdown]
+# We observe that:
+# - SSE is best for k=10, but this metric is expected to decrease increasing the number of clusters
+# - BSS is best for k=10
+# - Davies-Bouldin score is best for k=10
+# - Calinski-Harabasz score is best for k=2
+# - Silhouette score is best for k=2
 
+# %%
+best_k = [2, 10]
+
+# %%
+fig, axs = plt.subplots(nrows=1, ncols=len(best_k), figsize=(25,5))
+for i in range(len(best_k)):
+    k = best_k[i]
+    plot_clusters_size(clusters=results[f'{k}means']['model'].labels_, ax=axs[i], title=f'{best_k[i]}-Means clusters size', color_palette=sns.color_palette('tab10'))
+
+# %%
+fig, axs = plt.subplots(nrows=1, ncols=len(best_k), figsize=(30,10), sharey=True)
+for i in range(len(best_k)):
+    clusters = results[f'{best_k[i]}means']['model'].labels_
+    silhouette_per_point = silhouette_samples(X=X, labels=clusters)
+    results[f'{best_k[i]}means']['silhouette_per_point'] = silhouette_per_point
+    plot_scores_per_point(
+        score_per_point=silhouette_per_point,
+        clusters=clusters,
+        score_name='Silhouette score', ax=axs[i],
+        title=f'Silhouette score for {best_k[i]}-Means clustering',
+        color_palette=sns.color_palette('tab10'),
+        minx=-0.18
+    )
+
+# %% [markdown]
+# When using k=2, approximately half of the points in cluster 0 have a negative silhouette score. This means that the average distance to other points in cluster 0 is greater than the average distance to points in cluster 1. When using k=10, there are still points with negative silhouette score, but some clusters have points with higher silhouette scores. Since it is not clear which value of k is better, we will characterize the clusters obtained with k=2 and k=10.
 
 # %% [markdown]
 # ## Characterization of the clusters
 
 # %% [markdown]
-# ### Analysis of the centroids
+# ### Analysis of the centroids with k=2
 
 # %%
-def plot_parallel_coordinates(points, features, figsize=(8, 4), title=None): # TODO: va fatto sulle feature trasformate giusto? per algoritmi non centroid based non ha senso?
-    plt.figure(figsize=figsize)
-    for i in range(0, len(points)):
-        plt.plot(points[i], marker='o', label='Cluster %s' % i)
-    plt.tick_params(axis='both', which='major', labelsize=10)
-    plt.xticks(range(0, len(features)), features, rotation=90)
-    plt.legend(fontsize=10)
-    plt.title(title)
-    plt.show()
+k = 2
+kmeans = results[f'{k}means']['model']
+clusters = results[f'{k}means']['model'].labels_
+centroids = results[f'{k}means']['model'].cluster_centers_
 
+# %% [markdown]
+# We visualize the centroids with a parallel coordinates plot:
 
 # %%
-plot_parallel_coordinates(points=centroids, features=features_to_cluster, title=f'Centroids of {k}-means clusters')
+for j in range(0, len(centroids)):
+    plt.plot(centroids[j], marker='o', label='Cluster %s' % j, c=sns.color_palette('tab10')[j])
+plt.tick_params(axis='both', which='major', labelsize=10)
+plt.xticks(range(0, len(features_to_cluster)), features_to_cluster, rotation=90)
+plt.legend(fontsize=10)
+plt.title(f'Centroids of {k}-means clusters');
 
+# %% [markdown]
+# We observe that some feature do not vary much between the two clusters, while others do. 
+#
+# Cluster 0 groups incidents involving higher number of participants, including children, teens and females. These incidents seem less severe (the centroid has a lower value of killed people and an higher value of unharmed people).
+# Cluster 1, the largest cluster, probably groups incidents with the most common characteristics in the dataset, i.e. those involving few adult males.
+
+# %% [markdown]
+# ### Analysis of the centroids with K=10
+
+# %%
+k = 10
+kmeans = results[f'{k}means']['model']
+clusters = results[f'{k}means']['model'].labels_
+centroids = results[f'{k}means']['model'].cluster_centers_
+silhouette_per_point = results[f'{k}means']['silhouette_per_point']
+
+# %% [markdown]
+# We visualize the centroids with a parallel coordinates plot:
+
+# %%
+for j in range(0, len(centroids)):
+    plt.plot(centroids[j], marker='o', label='Cluster %s' % j, c=sns.color_palette('tab10')[j])
+plt.tick_params(axis='both', which='major', labelsize=10)
+plt.xticks(range(0, len(features_to_cluster)), features_to_cluster, rotation=90)
+plt.legend(fontsize=10)
+plt.title(f'Centroids of {k}-means clusters');
+
+# %% [markdown]
+# We observe that:
+# - cluster 0 has the highest values of location_imp and surprisal_address_type
+# - cluster 1 has the lowest value of n_males_prop
+# - cluster 2 has the highest value of n_arrestes_prop
+# - cluster 3 has the highest value of n_teen_prop
+# - cluster 4 has the highest value of n_killed_prop (and the lowest of n_injured_prop)
+# - cluster 5 has the highest value of n_unharmed_prop
+# - cluster 6 has the highest value of age_range
+# - cluster 7 has the highest value of n_injured_prop and the lowest of surprisal_characteristics
+# - cluster 8 has the highest value of n_child_prop, surprisal_age_groups and surprisal_characteristics; and the lowest of avg_age
+# - cluster 9 has the highest value of n_participants (and one of the highest surprisal_n_males)
+#
+# Surprisal day does not vay much across the clusters.
+#
+# We decide to analyze in more detail these 10 clusters to identify more specific patterns.
+
+# %% [markdown]
+# We visualize the same information using a interactive radar plot:
 
 # %%
 def plot_spider(points, features, title=None, palette=sns.color_palette()):
@@ -234,50 +387,187 @@ def plot_spider(points, features, title=None, palette=sns.color_palette()):
     fig.show()
     pyo.plot(fig, filename=f'../html/centroids_spider.html', auto_open=False)
 
-
 # %%
-plot_spider(points=centroids, features=features_to_cluster, title=f'Centroids of {k}-means clusters')
+plot_spider(points=centroids, features=features_to_cluster, title=f'Centroids of {k}-means clusters', palette=sns.color_palette('tab10'))
 
 # %% [markdown]
-# ## Distribution of variables within the clusters (and in the whole dataset)
+# ## Distribution of variables within the 10 clusters
 
 # %%
-incidents_df = incidents_df.loc[indicators_df.index]
 incidents_df['cluster'] = clusters
 
-# %%
-plot_scattermap_plotly(incidents_df, 'cluster', zoom=2, title='Incidents clustered by Kmeans')
+# %% [markdown]
+# We plot on a map the points in each cluster:
 
 # %%
-for i in range(k): # TODO: fare subplot (è più complicato di quello che sembra, plotly non supporta subplots con mappe)
+for i in range(k):
     plot_scattermap_plotly(
         incidents_df[incidents_df['cluster']==i],
         'cluster',
         zoom=2.5,
         height=400,
         title=f'Cluster {i}',
-        color_sequence=sns.color_palette().as_hex()[i:],
+        color_sequence=sns.color_palette('tab10').as_hex()[i:],
         black_nan=False,
         showlegend=False
     )
 
+# %% [markdown]
+# Incidents are not clustered according to their geographical location.
+# Points in cluster 0 - the one whose centroid has high location importance - are distributed similarly to points in other clusters. This is probably due to the fact that location importance is correlated with the population density, and we expect that in areas with higher densisty also the number of incidents is higher as well as the etereogenity of their characteristics.
+
+# %% [markdown]
+# Now we inspect the distribution of categorical features within the clusters:
+
 # %%
-for feature in categorical_features:
-    plot_bars_by_cluster(df=incidents_df, feature=feature, cluster_column='cluster')
+plot_bars_by_cluster(df=incidents_df, feature='year', cluster_column='cluster')
+
+# %% [markdown]
+# Cluster 2 - the one with the highest value of n_arrestes_prop - contains fewer incidents happened in 2014, that year less people where arrested
+# Cluster 5 - the one with highest value of n_unharmed_prop - contains more incidents happend in 2014, that year incidents where less severe (and probably the smaller number of arrested is a consequence of this)
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='day_of_week', cluster_column='cluster')
+
+
+# %% [markdown]
+# Cluster 2 - the one with the highest value of n_arrestes_prop - has a different distribution compared to the one in the whole dataset, with a pick on Wednesday and Thursday instead of in the weekend, as in the whole dataset. This deviation may be attributed to police shift pattern
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='party', cluster_column='cluster')
+
+# %% [markdown]
+# In cluster 2 - the one with the highest value of n_arrestes_prop - the number of incidents happened in Republican states is higher than those happened in Democratic states. This is probably due to variations in the law enforcement policies.
+# In cluster 7 - the one with the highest value of n_injured_prop and the lowest of surprisal_characteristics - the proportion of incidents happend in Democratic states is higher. This behaviour is not easily explainable.
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='firearm', cluster_column='cluster')
+
+# %% [markdown]
+# Cluster 5 - the one with the highest value of n_unharmed_prop - has the highest number of incidents that did not involved firearms.
+
+# %%
+incidents_df[incidents_df['firearm']==False][['incident_characteristics1', 'incident_characteristics2', 'cluster']]
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='shots', cluster_column='cluster')
+
+# %% [markdown]
+# In cluster 4 and cluster 7 - those with highest value of n_killed_prop and n_injured_prop - the majority of incidents were shooting incidents (as expected).
+#
+# In cluster 2 - the one with the highest value of n_arrestes_prop - the number of shooting or non shooting incidents are approximately the same. Maybe guns were found during commission of other crimes, we check this:
+
+# %%
+incidents_df[
+    (incidents_df['incident_characteristics1']=='Possession (gun(s) found during commission of other crimes)') |
+    (incidents_df['incident_characteristics1']=='Possession (gun(s) found during commission of other crimes)')
+]['cluster'].value_counts().reset_index()
+
+# %% [markdown]
+# As expected most of the incidents in cluster 5 exhibit that characteristic.
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='aggression', cluster_column='cluster')
+
+# %% [markdown]
+# As expected in cluster 2 the number of non aggresive incidents is higher, while in cluster 7 - the one with highest value of n_injured_prop - is it lower.
+# In cluster 4 - the one with highest value of n_killed_prop - the majority of incidents is non aggressive. This could make sense if those incidents are suicides, let's check:
+
+# %%
+incidents_df[
+    incidents_df['suicide']==True
+]['cluster'].value_counts().reset_index()
+
+# %% [markdown]
+# The majority of incidents were actually suicides.
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='suicide', cluster_column='cluster')
+
+# %% [markdown]
+# Again, most of suicidal incidents are in cluster 4. But this cluster also contains incidents that are not suicidal.
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='injuries', cluster_column='cluster')
+
+# %% [markdown]
+# Most of incidents in cluster 2 - the one with the highest value of n_arrestes_prop - have no injuries. This is in line with the previous observations.
+# Also cluster 4 - the one with highest value of n_killed_prop and the lowest of n_injured_prop - has a high number of incidents with no injuries (if people died are not considered injured).
+# Incidens in cluster 7 - the one with the highest value of n_injured_prop - have, as expected, a high number of injuries.
+# Incidents in cluster 3, 8 and 9 - the one with the highest value of n_teen_prop, n_child_prop and n_participants respectively - have an higher proportion of injuries.
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='death', cluster_column='cluster')
+
+# %% [markdown]
+# Cluster 4 and cluster 7 - the one with highest value of n_killed_prop and n_injured_prop respectively - have the highest and lowest number of mortal incidents.
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='illegal_holding', cluster_column='cluster')
+
+# %% [markdown]
+# Cluster 4 and cluster 7 - the one with highest value of n_killed_prop and n_injured_prop respectively - have fewer incidents in which participants were illegally armed.
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='house', cluster_column='cluster')
+
+# %% [markdown]
+# All the observations made so far are in line with the characteristics of these distributions.
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='children', cluster_column='cluster')
+
+# %% [markdown]
+# Most of the incidents involving children are in cluster 8 - the one having the highest value of n_child_prop. Some of them are in cluster 6 - the one with the highest value of age_range.
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='drugs', cluster_column='cluster')
+
+# %% [markdown]
+# Cluster 2 - the one with the highest value of n_arrestes_prop - has an higher proportion of incidents involving drugs.
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='officers', cluster_column='cluster')
+
+# %% [markdown]
+# The distributions of incidents involving officers in the clusters are similar to the one in the whole dataset.
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='defensive', cluster_column='cluster')
+
+# %% [markdown]
+# Most of the incidents with defensive use of firearms are in cluster 5 - the one with the highest value of n_unharmed_prop. Guns were probably used as a means of threat.
+
+# %%
+plot_bars_by_cluster(df=incidents_df, feature='unintentional', cluster_column='cluster')
+
+# %% [markdown]
+# Cluster 3 and 8, the ones with the highest value of n_teen_prop and n_child_prop respectively, have the highest number of accidental incidents.
+
+# %%
+# TODO: organized, social reasons, workplace, abduction
+# no much to say
+
+# %% [markdown]
+# We visualize the clusters in the each pair of dimensions:
+
+# %%
+# fare stesso per povertà
 
 # %%
 scatter_by_cluster(
-    df=indicators_df,
-    features=[
-        'latitude_proj',
-        'longitude_proj',
-        'avg_age_participants'
-    ],
+    df=incidents_df,
+    features=features_to_cluster,
     cluster_column='cluster',
     centroids=centroids,
-    figsize=(15, 10),
-    ncols=3
+    figsize=(15, 70),
+    ncols=3,
+    color_palette=sns.color_palette('tab10')
 )
+plt.tight_layout()
+
+# %% [markdown]
+# We can recognize different clusters when points are scattered in the plane defined by surprisal_n_males and surprisal_age_groups.
 
 # %%
 pca = PCA()
@@ -292,7 +582,7 @@ plt.title('Explained variance by principal component')
 plt.xticks(np.arange(0,len(exp_var_pca),1.0));
 
 # %%
-palette = [sns.color_palette()[i] for i in range(k)]
+palette = [sns.color_palette('tab10')[i] for i in range(k)]
 scatter_pca_features_by_cluster(
     X_pca=X_pca,
     n_components=4,
@@ -302,9 +592,12 @@ scatter_pca_features_by_cluster(
     title='Clusters in PCA space'
 )
 
+# %% [markdown]
+# In the features spaces obtained by pairing the first 4 principal components, the clusters are not well separated.
+
 # %%
 plot_boxes_by_cluster(
-    df=indicators_df,
+    df=incidents_df,
     features=features_to_cluster,
     cluster_column='cluster',
     figsize=(15, 35),
@@ -313,7 +606,7 @@ plot_boxes_by_cluster(
 
 # %%
 plot_violin_by_cluster(
-    df=indicators_df,
+    df=incidents_df,
     features=features_to_cluster,
     cluster_column='cluster',
     figsize=(15, 20),
@@ -323,10 +616,12 @@ plot_violin_by_cluster(
 # %%
 for feature in features_to_cluster:
     plot_hists_by_cluster(
-        df=indicators_df,
+        df=incidents_df,
         feature=feature,
         cluster_column='cluster',
-        title=f'Distribution of {feature} in each cluster'
+        title=f'Distribution of {feature} in each cluster',
+        color_palette=sns.color_palette('tab10'),
+        figsize=(30, 5)
     )
 
 # %% [markdown]
@@ -348,31 +643,20 @@ plt.xlabel('Feature')
 plt.title('SSE per feature')
 
 # %%
-fig, axs = plt.subplots(1)
-plot_clusters_size(clusters=clusters, ax=axs, title='Clusters size')
-fig.sow()
-
-# %%
 # print top 5 points with highest SSE
 se_per_point = compute_se_per_point(X=X, clusters=clusters, centroids=centroids)
 indices_of_top_contributors = np.argsort(se_per_point)[-5:]
 incidents_df.iloc[indices_of_top_contributors]
 
-# %%
-plot_scores_per_point(score_per_point=se_per_point, clusters=clusters, score_name='SE')
+# %% [markdown]
+# All these points have an high number of participants.
 
 # %%
-silhouette_per_point = silhouette_samples(X=X, labels=clusters)
+fig, axs = plt.subplots(1)
+plot_scores_per_point(score_per_point=se_per_point, clusters=clusters, score_name='SE', ax=axs, color_palette=sns.color_palette('tab10'), minx=100)
 
-# %%
-plot_scores_per_point(score_per_point=silhouette_per_point, clusters=clusters, score_name='Silhouette score')
-
-# %%
-# NOTE: c'è una libreria che lo fa solo per la silhouette (forse meglio usare la nostra funzione generica)
-# silhouette_vis = SilhouetteVisualizer(kmeans, title='Silhouette plot', colors=sns.color_palette().as_hex())
-# silhouette_vis.fit(X)
-# silhouette_per_point = silhouette_vis.silhouette_samples_
-# silhouette_vis.show()
+# %% [markdown]
+# The number of participants contributes a lot to the SSE.
 
 # %%
 clusters_silh = np.full(clusters.shape[0], -1)
@@ -380,7 +664,7 @@ for i, s in enumerate(silhouette_per_point):
     if s >= 0:
         clusters_silh[i] = clusters[i]
 
-palette=([(0,0,0)]+[sns.color_palette()[i] for i in range(k)])
+palette=([sns.color_palette('tab10')[i] for i in range(k)]+[(0,0,0)])
 hue_order=[i for i in range(k)]+[-1]
 scatter_pca_features_by_cluster(
     X_pca=X_pca,
@@ -395,6 +679,9 @@ scatter_pca_features_by_cluster(
 visualizer = InterclusterDistance(kmeans)
 visualizer.fit(X)
 visualizer.show()
+
+# %% [markdown]
+# Clusters 2, 4, 5, 7 and 0 are highly overlapped, while clusters 8 is well separated from the others.
 
 # %%
 # compute cohesion for each cluster
@@ -411,14 +698,14 @@ for i in range(k):
 
 # %%
 fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(20,5))
-axs[0].bar(range(k), se_per_cluster, color=sns.color_palette())
-axs[0].set_ylim(30000, 0)
+axs[0].bar(range(k), se_per_cluster, color=sns.color_palette('tab10'))
+axs[0].set_ylim(200000, 0)
 axs[0].set_title('Cohesion') # TODO: non è proprio cohesion
 axs[0].set_ylabel('SSE')
-axs[1].bar(range(k), bss_per_cluster, color=sns.color_palette())
+axs[1].bar(range(k), bss_per_cluster, color=sns.color_palette('tab10'))
 axs[1].set_title('Separation')
 axs[1].set_ylabel('BSS')
-axs[2].bar(range(k), silhouette_per_cluster, color=sns.color_palette())
+axs[2].bar(range(k), silhouette_per_cluster, color=sns.color_palette('tab10'))
 axs[2].set_title('Silhouette')
 axs[2].set_ylabel('Silhouette score')
 
@@ -430,99 +717,27 @@ for i in range(3):
 plt.suptitle('Cohesion and separation measures for each cluster', fontweight='bold')
 
 # %%
-centroids_dm = pd.DataFrame(squareform(pdist(centroids)), columns=range(k), index=range(k))
-centroids_dm
-
-# %%
-G = nx.from_numpy_array(centroids_dm.values)
-clusterings = centroids_dm.columns.values
-G = nx.relabel_nodes(G, dict(zip(range(len(clusterings)), clusterings)))
-edge_labels = {(i, j): "{:.2f}".format(centroids_dm[i][j]) for i, j in G.edges()}
-pos = nx.spring_layout(G)
-nx.draw(G, pos, with_labels=True, node_color=sns.color_palette().as_hex()[:len(clusterings)])
-nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
-
-# %%
 scatter_pca_features_by_score(
     X_pca=X_pca,
     clusters=clusters,
     x_component=1,
     y_component=2,
     score_per_point=silhouette_per_point,
-    score_name='Silhouette score'
+    score_name='Silhouette score',
+    cmaps=['Blues', 'Oranges', 'Greens', 'Reds', 'Purples', 'YlOrBr', 'PuRd', 'Greys', 'Wistia', 'GnBu'],
+    figsize=(40, 6)
 )
 
 # %%
-dm, idm = plot_distance_matrices(X=X, n_samples=500, clusters=clusters, random_state=RANDOM_STATE)
+dm, idm = plot_distance_matrices(X=X, n_samples=5000, clusters=clusters, random_state=RANDOM_STATE)
 
 # %%
-write_clusters_to_csv(clusters, './kmeans_clusters.csv')
-write_clusters_to_csv(clusters, './DBSCAN_clusters.csv')
-write_clusters_to_csv(clusters, './heirarchical_clusters.csv')
+write_clusters_to_csv(clusters, f'./{k}means_clusters.csv')
 
 # %%
 compute_permutation_invariant_external_metrics(incidents_df, 'cluster', categorical_features)
 
 # %%
-clusterings=[
-    [0,0,0,1,1,1,2,2,2,3,3,3],
-    [1,1,1,0,0,2,2,2,2,3,3,4],
-    [1,1,1,0,0,2,2,2,2,3,3,3]
-]
-labels = [
-    'KMeans',
-    'DBSCAN',
-    'Heirarchical'
-]
-adj_rand_scores = compute_score_between_clusterings(
-    clusterings=clusterings,
-    labels=labels,
-    score_fun=adjusted_rand_score,
-    score_name='Adjusted Rand Score',
-    figsize=(5,4)
-)
+compute_external_metrics(incidents_df, 'cluster', categorical_features)
 
-# %%
-label1 = [0,0,0,1,1,1,2,2,2]
-label2 = [1,1,1,0,0,2,2,2,2]
 
-label1, label2 = align_labels(label1, label2) # TODO: questa cosa è okay?
-label2
-
-# %%
-confusion_matrix(label1, label2)
-
-# %%
-cm = np.array( # TODO: l'entropia calcolata sul libro è sbagliata?
-    [
-        [3,5,40,506,96,27],
-        [4,7,280,29,39,2],
-        [1,1,1,7,4,671],
-        [10,162,3,119,73,2],
-        [331,22,5,70,13,23],
-        [5,358,12,212,48,13]
-    ]
-)
-
-# %%
-purities = np.max(cm, axis=1) / np.sum(cm, axis=1)
-print('Purity per cluster:')
-print(purities)
-
-# %%
-purity = np.sum((purities * np.sum(cm, axis=1)) / np.sum(cm))
-print(f'Overall purity: {purity}')
-
-# %%
-probs = cm / np.sum(cm, axis=1)
-log_probs = np.log2(probs, out=np.zeros_like(probs), where=(probs!=0)) # 0 if prob=0
-entropies = -np.sum(np.multiply(probs, log_probs), axis=1)
-print('Entropy per cluster:')
-print(entropies)
-
-# %%
-entropy = np.sum((entropies * np.sum(cm, axis=1)) / np.sum(cm))
-print(f'Overall entropy: {entropy}')
-
-# %%
-compute_external_metrics(df=incidents_df, cluster_column='cluster', external_features=categorical_features) # TODO: nan purity and entropy? only on classes with same size?

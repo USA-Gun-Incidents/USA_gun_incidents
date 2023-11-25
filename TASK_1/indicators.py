@@ -2,6 +2,9 @@
 # # Definition and study of indicators
 
 # %% [markdown]
+# In this notebook, we address the Task 1.2, i.e. the extraction of indicators for describing the incidents. First we will compute the indicators on different features combinations, visualizing their distributions. Then, we will study the correlation between the indicators and choose the most relevant ones. (SEMANTICA)
+
+# %% [markdown]
 # We import the libraries:
 
 # %%
@@ -57,7 +60,7 @@ def compute_window_ratio_indicator(df, gby, feature, agg_fun, suffix):
 # - as time window the semester of the year or the whole year
 # - as space window the congressional district of the state or the whole state
 #
-# We chose not to use 'county' or 'city' as space window because not all the records have a value for those features (e.g. incidents happend outside a city). The values of the congressional districts are instead always present (we have previously inferred the missing ones).
+# We chose not to use 'county' or 'city' as space window because not all the records have a value for those features (e.g. incidents happend in rural areas). The values of the congressional districts are instead always present (we have previously inferred the missing ones).
 
 # %%
 # numerical columns to use
@@ -161,7 +164,7 @@ sns.violinplot(data=incidents_df[log_window_ratios_mean], ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
-# Still there are many outliers.
+# As expected the logarithmic transformation reduced the skeweness of the distributions, but outliers are still present.
 #
 # We visualize the distributions of the indicators w.r.t the total:
 
@@ -171,8 +174,6 @@ sns.violinplot(data=incidents_df[window_ratios_wrt_total], ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
-# The distributions about the number of injured people, the number of arrested people and the number of unharmed people are skewed but have no outliers. All the other distributions have outliers.
-#
 # We apply the logarithmic transformation to the ratio indicators w.r.t the total and visualize the distributions after the transformation:
 
 # %%
@@ -213,22 +214,10 @@ fig, ax = plt.subplots(figsize=(15, 5))
 sns.violinplot(data=incidents_df[record_level_ratios], ax=ax)
 plt.xticks(rotation=90, ha='right');
 
+
 # %% [markdown]
-# Also these distributions are highly skewed. The indicators about the number of killed people and the number of arrested people are skewed but do not have outliers.
+# Maschi adulti. 
 #
-# We apply the logarithmic transformation to the record level ratio indicators and visualize the distributions after the transformation:
-
-# %%
-log_record_level_ratios = []
-for feature in record_level_ratios:
-    log_record_level_ratios.append('log_'+feature)
-incidents_df = log_transform(df=incidents_df, features=record_level_ratios)
-
-fig, ax = plt.subplots(figsize=(15, 5))
-sns.violinplot(data=incidents_df[log_record_level_ratios], ax=ax)
-plt.xticks(rotation=90, ha='right');
-
-# %% [markdown]
 # We now compute a set of indicators with a similar semantics to the ones computed above, but using the concept of **surprisal**.
 #
 # This kind of indicator can also be computed for categorical variables, as well as for a set of variables.
