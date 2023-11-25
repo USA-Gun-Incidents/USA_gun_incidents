@@ -29,14 +29,8 @@ incidents_df.head(2)
 # # Prepare dataset and indices for choosen state
 
 # %%
-ind_names_list
-
-# %%
-ind_names_list += ['poverty_perc']
-
-# %%
 illinois_df = incidents_df[incidents_df['state']=='ILLINOIS'][ind_names_list].dropna()
-illinois_df.describe()
+illinois_df.head(2)
 
 # %% [markdown]
 # # Density clustering
@@ -58,7 +52,7 @@ illinois_df.describe()
 # ## Indices correlation
 
 # %%
-corr_matrix_illinois = illinois_df[columns].corr()
+corr_matrix_illinois = illinois_df.dropna().corr('kendall')
 
 import seaborn as sns
 
@@ -67,11 +61,30 @@ sns.heatmap(corr_matrix_illinois, annot=True, cmap=plt.cm.Reds, mask=np.triu(cor
 plt.show()
 
 # %%
-illinois_df[columns].describe()
+ind_names_list = [
+    # geo
+    'location_imp',
+    'entropy_address_type',
+    # age
+    'avg_age',
+    # participants
+    'severity',
+    'n_males_prop',
+    'n_arrested_prop',
+    'n_participants',
+    ]
 
 # %%
-# show Nan values in illinois_df[columns]
-illinois_df[columns].isna().sum()
+corr_matrix_illinois = illinois_df[ind_names_list].corr('kendall')
+
+import seaborn as sns
+
+plt.figure(figsize=(20, 8))
+sns.heatmap(corr_matrix_illinois, annot=True, cmap=plt.cm.Reds, mask=np.triu(corr_matrix_illinois))
+plt.show()
+
+# %%
+illinois_df[ind_names_list].describe()
 
 # %% [markdown]
 # ## Utilities
@@ -85,7 +98,7 @@ def standardization(df, columns):
     return std_scaler.transform(df[columns].values)
 
 # %%
-def plot_dbscan(X_std, db): 
+def plot_dbscan(X, db): 
     labels = db.labels_ 
     n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)  
     unique_labels = set(labels)
@@ -103,26 +116,26 @@ def plot_dbscan(X_std, db):
 
         class_member_mask = labels == k # array of booleans where True = point in cluster k
 
-        xy = X_std[class_member_mask & core_samples_mask]
+        xy = X[class_member_mask & core_samples_mask]
         plt.plot(
             xy[:, 0],
             xy[:, 1],
             "o",
             markerfacecolor=tuple(col),
             markeredgecolor='k',
-            markersize=6,
+            markersize=10,
             label=f'Cluster {k}'
         )
 
         # plot noise points
-        xy = X_std[class_member_mask & ~core_samples_mask]
+        xy = X[class_member_mask & ~core_samples_mask]
         plt.plot(
             xy[:, 0],
             xy[:, 1],
-            "x",
+            "o",
             markerfacecolor=tuple(col),
             markeredgecolor=col,
-            markersize=8,
+            markersize=6,
             label=f'Cluster {k}'
         )
 
@@ -189,7 +202,7 @@ def find_best_eps(X, k_list=[3, 5, 9, 15]):
         ax[int(i/3), int(i%3)].set_ylabel('%sth near neighbor distance' %k)
         ax[int(i/3), int(i%3)].set_xlabel('Point Sorted according to distance of %sth near neighbor' %k)
         #ax[int(i/3), int(i%3)].set_yticks(np.linspace(0, 5, 12))
-        ax[int(i/3), int(i%3)].set_ylim(0, 3)
+        #ax[int(i/3), int(i%3)].set_ylim(0, 3)
         ax[int(i/3), int(i%3)].tick_params(axis='both', which='major', labelsize=8)
         ax[int(i/3), int(i%3)].grid(linestyle='--', linewidth=0.5, alpha=0.6)
 
@@ -202,7 +215,13 @@ def find_best_eps(X, k_list=[3, 5, 9, 15]):
 # ### Std data
 
 # %%
-X_std_illinois = standardization(illinois_df, columns) #TODO: sono già standardizzati
+X_std_illinois = standardization(illinois_df, columns=ind_names_list)
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+plt.boxplot(X_std_illinois, vert=True, labels=ind_names_list)
+plt.xticks(rotation=90, ha='right')
+plt.show()
 
 # %%
 #kneed_algorithm(X_std_illinois, neighbors=5)
@@ -211,9 +230,9 @@ X_std_illinois = standardization(illinois_df, columns) #TODO: sono già standard
 find_best_eps(X_std_illinois, k_list=[3, 5, 9, 15, 20, 30]) # altro metodo per kneed point
 
 # %%
-eps = [0.5, 1, 1.5, 2]
+eps = [0.75, 1, 1.25, 1.5, 1.75, 2]
 # eps: maximum distance between two samples for one to be considered as in the neighborhood of the other.
-min_samples = [5, 10, 15, 20]
+min_samples = [3, 5, 10, 15, 20]
 
 dbscan_illinois = pd.DataFrame(columns=['eps', 'min_samples', '#clusters', '#noise', '%noise', 'silhouette_coef',
     '#cluster0', '#cluster1', '#cluster2', '#cluster3', '#cluster4', '#cluster5', '#cluster6', '#cluster7'])
@@ -230,50 +249,48 @@ dbscan_illinois
 dbscan_illinois_second = pd.DataFrame(columns=['eps', 'min_samples', '#clusters', '#noise', '%noise', 'silhouette_coef',
     '#cluster0', '#cluster1', '#cluster2', '#cluster3', '#cluster4', '#cluster5', '#cluster6', '#cluster7'])
 
-for e in [1.7, 2.3, 2.5]:
+for e in [1.8, 2, 2.2]:
     for k in [5, 10, 15, 20]:
         db = dbscan(X_std_illinois, eps=e, min_samples=k, plot_clusters=False)
         dbscan_illinois_second = pd.concat([dbscan_illinois_second, pd.DataFrame(db, index=[0])], ignore_index=True)
 
-# %%
-dbscan_illinois_second
-
-# %%
-dbscan_illinois_third = pd.DataFrame(columns=['eps', 'min_samples', '#clusters', '#noise', '%noise', 'silhouette_coef',
-    '#cluster0', '#cluster1', '#cluster2', '#cluster3', '#cluster4', '#cluster5', '#cluster6', '#cluster7'])
-
-for e in [2.1, 2.2, 2.3]:
-    for k in [5, 7, 10]:
-        db = dbscan(X_std_illinois, eps=e, min_samples=k, plot_clusters=False)
-        dbscan_illinois_third = pd.concat([dbscan_illinois_third, pd.DataFrame(db, index=[0])], ignore_index=True)
-
-# %%
-dbscan_illinois_third
-
 # %% [markdown]
 # ### Visualize results
 
-# %% [markdown]
-# scegliamo config 
-# eps = 2.3, k = 10
-#
-# ultima
-
 # %%
-db = DBSCAN(eps=2.3, min_samples=10).fit(X_std_illinois)
+db = DBSCAN(eps=1.75, min_samples=5).fit(X_std_illinois) #21 dati stadardizzati, eps=1.75, min_samples=5
 plot_dbscan(X_std_illinois, db)
 
 # %%
-fig, ax = plt.subplots(7, 4, figsize=(20, 30))
-index = 0
-for i in range(8):
-    for j in range(i+1, 8):
-        ax[int(index/4), index%4].scatter(illinois_df.values[:, i], illinois_df.values[:, j], c=db.labels_, cmap='plasma_r', s=6)
-        ax[int(index/4), index%4].set_xlabel(illinois_df.columns[i], fontsize=8)
-        ax[int(index/4), index%4].set_ylabel(illinois_df.columns[j], fontsize=8)
-        ax[int(index/4), index%4].tick_params(axis='both', which='major', labelsize=6)
-        ax[int(index/4), index%4].grid(linestyle='--', linewidth=0.5, alpha=0.6)
-        index = index + 1
+df = illinois_df[ind_names_list]
+
+fig, ax = plt.subplots(6, 4, figsize=(20, 30))
+i = 0
+for i in range(7):
+    for j in range(i+1, 7):
+        ax[int(i/4), i%4].scatter(df.values[:, i], df.values[:, j], c=db.labels_, cmap='plasma', s=6)
+        ax[int(i/4), i%4].set_xlabel(df.columns[i], fontsize=8)
+        ax[int(i/4), i%4].set_ylabel(df.columns[j], fontsize=8)
+        ax[int(i/4), i%4].tick_params(axis='both', which='major', labelsize=6)
+        ax[int(i/4), i%4].grid(linestyle='--', linewidth=0.5, alpha=0.6)
+        i = i + 1
+#plt.suptitle('DBSCAN Clustering', fontsize=16)
+plt.show()
+
+# %%
+columns = ['n_males', 'n_adult', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed']
+df = incidents_df.loc[illinois_df.index][columns]
+
+fig, ax = plt.subplots(4, 4, figsize=(20, 15))
+i = 0
+for i in range(6):
+    for j in range(i+1, 6):
+        ax[int(i/4), i%4].scatter(df.values[:, i], df.values[:, j], c=db.labels_, cmap='plasma', s=6)
+        ax[int(i/4), i%4].set_xlabel(df.columns[i], fontsize=8)
+        ax[int(i/4), i%4].set_ylabel(df.columns[j], fontsize=8)
+        ax[int(i/4), i%4].tick_params(axis='both', which='major', labelsize=6)
+        ax[int(i/4), i%4].grid(linestyle='--', linewidth=0.5, alpha=0.6)
+        i = i + 1
 #plt.suptitle('DBSCAN Clustering', fontsize=16)
 plt.show()
 
@@ -295,23 +312,48 @@ plt.show()
 
 
 # %%
+illinois_df['cluster'] = db.labels_
+sns.pairplot(illinois_df, hue='cluster', palette=sns.color_palette(
+    n_colors=illinois_df['cluster'].unique().shape[0]), vars=ind_names_list)
+plt.show()
+
+# %%
 fig, ax = plt.subplots(4, 2, figsize=(20, 15), sharex=False, sharey=False)
-index = 0
-for i in range(8):
+i = 0
+for i in range(7):
     for cluster in np.unique(db.labels_):
-        ax[int(index/2), index%2].hist(illinois_df.values[db.labels_==cluster, i], 
+        ax[int(i/2), i%2].hist(illinois_df.values[db.labels_==cluster, i], 
             bins=int(1+3.3*np.log(X_std_illinois[db.labels_==cluster, i].shape[0])), 
             label=f'Cluster {cluster}', edgecolor='black', linewidth=0.8, alpha=0.7)
-    ax[int(index/2), index%2].set_xlabel(illinois_df.columns[i], fontsize=8)
-    ax[int(index/2), index%2].set_yscale('log')
-    ax[int(index/2), index%2].tick_params(axis='both', which='major', labelsize=6)
-    ax[int(index/2), index%2].legend()
-    ax[int(index/2), index%2].grid(linestyle='--', linewidth=0.5, alpha=0.6)
-    index = index + 1
+    ax[int(i/2), i%2].set_xlabel(illinois_df.columns[i], fontsize=8)
+    ax[int(i/2), i%2].set_yscale('log')
+    ax[int(i/2), i%2].tick_params(axis='both', which='major', labelsize=6)
+    ax[int(i/2), i%2].legend()
+    ax[int(i/2), i%2].grid(linestyle='--', linewidth=0.5, alpha=0.6)
+    i = i + 1
 
 
 # %%
-illinois_df['cluster'] = db.labels_
+columns = ['n_males', 'n_adult', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed']
+df = incidents_df.loc[illinois_df.index][columns]
+df['cluster'] = db.labels_
+
+fig, ax = plt.subplots(3, 2, figsize=(20, 10), sharex=False, sharey=False)
+i = 0
+for i in range(6):
+    for cluster in np.unique(db.labels_):
+        ax[int(i/2), i%2].hist(df[df['cluster']==cluster][columns[i]], 
+            bins=int(1+3.3*np.log(df[df['cluster']==cluster].shape[0])), 
+            label=f'Cluster {cluster}', edgecolor='black', linewidth=0.8, alpha=0.7)
+    ax[int(i/2), i%2].set_xlabel(df.columns[i], fontsize=8)
+    ax[int(i/2), i%2].set_yscale('log')
+    ax[int(i/2), i%2].tick_params(axis='both', which='major', labelsize=6)
+    ax[int(i/2), i%2].legend()
+    ax[int(i/2), i%2].grid(linestyle='--', linewidth=0.5, alpha=0.6)
+    i = i + 1
+
+# %%
+#illinois_df['cluster'] = db.labels_
 illinois_df[['latitude', 'longitude', 'county', 'city']] = incidents_df.loc[illinois_df.index, [
     'latitude', 'longitude', 'county', 'city']]
 
@@ -321,5 +363,127 @@ illinois_df.head(2)
 plot_scattermap_plotly(illinois_df, 'cluster', zoom=5, title='Incidents clustered by DBSCAN')
 
 # %%
-plot_scattermap_plotly(illinois_df[illinois_df['county']=='Cook'], 'cluster', zoom=8, 
+plot_scattermap_plotly(illinois_df[illinois_df['county']=='Cook County'], 'cluster', zoom=8, 
     title='Incidents clustered by DBSCAN in Cook county')
+
+# %% [markdown]
+# ### MinMax Scale Data
+
+# %%
+from sklearn.preprocessing import MinMaxScaler
+
+def minmax_scaler(df, columns):
+    minmax_scaler = MinMaxScaler()
+    minmax_scaler.fit(df[columns].values)
+    return minmax_scaler.transform(df[columns].values)
+
+
+# %%
+X_minmax_illinois = minmax_scaler(illinois_df, columns=ind_names_list)
+
+# %%
+find_best_eps(X_minmax_illinois, k_list=[3, 5, 9, 15, 20, 30])
+
+# %%
+eps = [0.1, 0.15, 0.2, 0.25]
+# eps: maximum distance between two samples for one to be considered as in the neighborhood of the other.
+min_samples = [3, 5, 10, 15, 20]
+
+dbscan_illinois = pd.DataFrame(columns=['eps', 'min_samples', '#clusters', '#noise', '%noise', 'silhouette_coef',
+    '#cluster0', '#cluster1', '#cluster2', '#cluster3', '#cluster4', '#cluster5', '#cluster6', '#cluster7'])
+
+for e in eps:
+    for k in min_samples:
+        db = dbscan(X_minmax_illinois, eps=e, min_samples=k, plot_clusters=False)
+        dbscan_illinois = pd.concat([dbscan_illinois, pd.DataFrame(db, index=[0])], ignore_index=True)
+
+# %%
+dbscan_illinois
+
+# %% [markdown]
+# ### Visualize data
+
+# %%
+db = DBSCAN(eps=0.2, min_samples=10).fit(X_minmax_illinois) #12
+plot_dbscan(X_std_illinois, db)
+
+# %%
+# bar plot of number of incidents per cluster
+cluster_counts = pd.Series(db.labels_).value_counts().sort_index()
+
+plt.figure(figsize=(10, 5))
+plt.bar(cluster_counts.index, cluster_counts.values, edgecolor='black', linewidth=0.8, alpha=0.5)
+plt.xlabel('Cluster')
+plt.xticks(cluster_counts.index)
+plt.ylabel('Number of incidents')
+plt.yscale('log')
+for i, v in enumerate(cluster_counts.values):
+    plt.text(x=i-1, y=v, s=str(v), horizontalalignment='center', verticalalignment='bottom', fontsize=8)
+plt.grid(linestyle='--', linewidth=0.5, alpha=0.6)
+plt.title('Number of incidents per cluster')
+plt.show()
+
+# %%
+illinois_df['cluster'] = db.labels_
+sns.pairplot(illinois_df, hue='cluster', palette=sns.color_palette(
+    n_colors=illinois_df['cluster'].unique().shape[0]), vars=ind_names_list)
+plt.show()
+
+# %%
+fig, ax = plt.subplots(7, 1, figsize=(20, 30), sharex=False, sharey=False)
+i = 0
+for i in range(7):
+    for cluster in np.unique(db.labels_):
+        ax[i].hist(illinois_df.values[db.labels_==cluster, i], 
+            bins=int(1+3.3*np.log(X_std_illinois[db.labels_==cluster, i].shape[0])), 
+            stacked=True, fill=True, histtype='step',
+            label=f'Cluster {cluster}', edgecolor='black', linewidth=0.8, alpha=0.7)
+    ax[i].set_xlabel(illinois_df.columns[i], fontsize=8)
+    ax[i].set_yscale('log')
+    ax[i].tick_params(axis='both', which='major', labelsize=6)
+    ax[i].legend(fontsize=8, )
+    ax[i].grid(linestyle='--', linewidth=0.5, alpha=0.6)
+    i = i + 1
+
+# %%
+columns = ['n_males', 'n_adult', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 'year', 'poverty_perc', 'congd']
+df = incidents_df.loc[illinois_df.index][columns]
+
+fig, ax = plt.subplots(9, 4, figsize=(20, 30))
+i = 0
+for i in range(9):
+    for j in range(i+1, 9):
+        ax[int(i/4), i%4].scatter(df.values[:, i], df.values[:, j], c=db.labels_, cmap='plasma', s=20)
+        ax[int(i/4), i%4].set_xlabel(df.columns[i], fontsize=8)
+        ax[int(i/4), i%4].set_ylabel(df.columns[j], fontsize=8)
+        ax[int(i/4), i%4].tick_params(axis='both', which='major', labelsize=6)
+        ax[int(i/4), i%4].grid(linestyle='--', linewidth=0.5, alpha=0.6)
+        i = i + 1
+#plt.suptitle('DBSCAN Clustering', fontsize=16)
+plt.show()
+
+# %%
+columns = ['n_males', 'n_adult', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 'year', 'poverty_perc']
+df = incidents_df.loc[illinois_df.index][columns]
+df['cluster'] = db.labels_
+
+fig, ax = plt.subplots(4, 2, figsize=(20, 15), sharex=False, sharey=False)
+for i in range(8):
+    for cluster in np.unique(db.labels_):
+        ax[int(i/2), i%2].hist(df[df['cluster']==cluster][columns[i]], 
+            bins=int(1+3.3*np.log(df[df['cluster']==cluster].shape[0])), 
+            label=f'Cluster {cluster}', edgecolor='black', linewidth=0.8, alpha=0.7)
+    ax[int(i/2), i%2].set_xlabel(df.columns[i], fontsize=8)
+    ax[int(i/2), i%2].set_yscale('log')
+    ax[int(i/2), i%2].tick_params(axis='both', which='major', labelsize=6)
+    ax[int(i/2), i%2].legend(fontsize=8)
+    ax[int(i/2), i%2].grid(linestyle='--', linewidth=0.5, alpha=0.6)
+
+# %%
+illinois_df[['latitude', 'longitude', 'county', 'city']] = incidents_df.loc[illinois_df.index, [
+    'latitude', 'longitude', 'county', 'city']]
+
+illinois_df.head(2)
+
+# %%
+plot_scattermap_plotly(illinois_df, 'cluster', zoom=5, title='Incidents clustered by DBSCAN')

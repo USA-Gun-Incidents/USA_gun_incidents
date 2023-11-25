@@ -2,6 +2,7 @@ import geopandas
 import numpy as np
 import matplotlib.pyplot as plt
 import plotly.express as px
+from plotly.subplots import make_subplots
 from sklearn.inspection import DecisionBoundaryDisplay
 import matplotlib.dates as mdates
 import pandas as pd
@@ -267,3 +268,95 @@ def get_box_plot_data(labels, bp):
         rows_list.append(dict1)
 
     return pd.DataFrame(rows_list)
+
+def plot_not_nan_entries_by_state(df, attribute_list, labels, n_rows=2, n_columns=4):
+    rows = n_rows
+    cols = n_columns
+    fig = make_subplots(
+        rows=rows, cols=cols,
+        specs=[[{'type': 'choropleth'} for c in range(cols)] for r in range(rows)],
+        subplot_titles=labels,
+        vertical_spacing=0.3,
+        horizontal_spacing=0.01,
+    )
+
+    for i, attribute in enumerate(attribute_list):
+        frame = px.choropleth(
+            df,
+            color=attribute,
+            locations='px_code',
+            locationmode="USA-states",
+            hover_name='state',
+            hover_data={
+                'px_code': False,
+                'not_nan_entries': True,
+            },
+        )
+
+        choropleth_trace = frame['data'][0]
+        fig.add_trace(choropleth_trace, 
+            row=(i)//cols+1, 
+            col=(i) % cols+1
+        )
+        fig.update_layout(
+            title_text="Ratio of NaN entries by state for different attributes",
+            showlegend=False,
+        )
+        fig.update_geos( 
+            scope = 'usa',
+            visible=False)
+
+    fig.show()
+
+def plot_missing_values_for_state(df, attribute):
+    
+    fig, ax = plt.subplots(figsize=(20, 2))
+    ax.bar(df.groupby('state')['state'].count().index, df.groupby('state')['state'].count().values, 
+        label='#Total', edgecolor='black', linewidth=0.8, alpha=0.5)
+    ax.bar(df[df[attribute].isna()].groupby('state')['state'].count().index, df[df[attribute].isna()
+        ].groupby('state')['state'].count().values, label=f'#Missing {attribute}', edgecolor='black', linewidth=0.8)
+    ax.set_xlabel('State')
+    ax.set_yscale('log')
+    ax.set_ylabel('Number of incidents')
+    ax.legend()
+    ax.set_title(f'Percentage of missing values for {attribute} values by state')
+    ax.xaxis.set_tick_params(rotation=90)
+    for state in df['state'].unique():
+        try:
+            plt.text(
+                x=state, 
+                y=df[df[attribute].isna()].groupby('state')['state'].count()[state], 
+                s=str(round(100*df[df[attribute].isna()].groupby('state')['state'].count()[state] / 
+                df.groupby('state')['state'].count()[state]))+'%', 
+                horizontalalignment='center',
+                verticalalignment='bottom',
+                fontsize=8)
+        except:
+            pass
+    plt.show()
+
+def discrete_attribute_distribuition_plot(df, attribute, state):    
+    plt.figure(figsize=(20, 2))
+    plt.bar(df.groupby(attribute)[attribute].count().index,
+        df.groupby(attribute)[attribute].count().values, 
+        label='Whole dataset', edgecolor='black', linewidth=0.8, alpha=0.5)
+    plt.bar(df[df['state']==state].groupby(attribute)[attribute].count().index, 
+        df[df['state']==state].groupby(attribute)[attribute].count().values, 
+        label=state, edgecolor='black', linewidth=0.8, alpha=0.8)
+    plt.xlabel(f'Number of {attribute}')
+    plt.ylabel('Number of incidents')
+    plt.legend()
+    plt.yscale('log')
+    plt.title(f'Number of {attribute} per incident')
+    plt.show()
+
+def continuous_attribute_distribuition_plot(df, attribute, state):
+    plt.figure(figsize=(20, 2))
+    plt.hist(df[attribute], bins=100, label='Whole dataset', edgecolor='black', linewidth=0.8, alpha=0.5)
+    plt.hist(df[df['state']==state][attribute], bins=100, label=state, edgecolor='black', linewidth=0.8, alpha=0.8)
+    plt.xlabel(f'{attribute}')
+    plt.ylabel('Number of incidents')
+    plt.legend()
+    plt.yscale('log')
+    plt.title(f'{attribute} distribuition')
+    plt.show()
