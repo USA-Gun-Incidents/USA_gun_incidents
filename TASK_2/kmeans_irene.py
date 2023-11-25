@@ -32,7 +32,8 @@ RANDOM_STATE = 42 # to get reproducible results
 
 # %%
 incidents_df = pd.read_csv(
-    '../data/incidents_indicators.csv'
+    '../data/incidents_indicators.csv',
+    index_col=0
 )
 
 f = open('../data/indicators_names.json')
