@@ -209,8 +209,8 @@ def plot_bars_by_cluster(
     :param figsize: size of the figure
     '''
 
-    _, axs = plt.subplots(1, 2, figsize=figsize, gridspec_kw={'width_ratios': [1, 2]}, sharey=True)
-    df[feature].value_counts().sort_index().plot(kind='bar', ax=axs[0], color='gray')
+    _, axs = plt.subplots(1, 3, figsize=figsize, gridspec_kw={'width_ratios': [1, 2, 1]}, sharey=True)
+    df[feature].value_counts().sort_index().plot(kind='bar', ax=axs[0], color=sns.color_palette('hls').as_hex())
     axs[0].set_title(f'{feature} distribution in the whole dataset')
     axs[0].set_xlabel(feature)
     axs[0].set_ylabel('Number of incidents')
@@ -225,6 +225,8 @@ def plot_bars_by_cluster(
     axs[1].set_title(f'{feature} distribution in each cluster')
     axs[1].set_xlabel('Cluster')
     axs[1].set_ylabel('Number of incidents')
+    
+    plot_clusters_size(clusters=df[cluster_column], ax=axs[2], title='Clusters size', color_palette=sns.color_palette('tab10'))
     plt.show()
 
 def scatter_by_cluster(
@@ -256,7 +258,7 @@ def scatter_by_cluster(
         nrows += 1
 
     colors = [color_palette[c] for c in df[cluster_column]]
-    f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize, squeeze=False)
+    f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
     id = 0
     for i in range(len(features)):
         for j in range(i+1, len(features)):
@@ -282,7 +284,7 @@ def scatter_by_cluster(
             axs[int(id/ncols)][id%ncols].set_ylabel(y)
             id += 1
     if nrows > 1:
-        for ax in axs[nrows-1, id%ncols+1:]: # TODO: ricontrollare!
+        for ax in axs[nrows-1, id%ncols:]: # TODO: ricontrollare!
             ax.remove()
 
     legend_elements = []
@@ -293,7 +295,7 @@ def scatter_by_cluster(
     f.legend(handles=legend_elements, loc='lower center', ncols=len(clusters_ids))
 
     plt.suptitle(("Clusters in different feature spaces"), fontsize=20)
-    plt.show()
+    #plt.show()
 
 def scatter_pca_features_by_cluster(
         X_pca,
@@ -357,7 +359,7 @@ def plot_boxes_by_cluster( # TODO: lo vogliamo anche in tutto il dataset?
     for feature in features:
         df.boxplot(column=feature, by=cluster_column, ax=axs[int(id/ncols)][id%ncols])
         id += 1
-    for ax in axs[nrows-1, id%ncols+1:]:
+    for ax in axs[nrows-1, id%ncols:]:
         ax.remove()
     fig.suptitle(title, fontweight='bold')
 
@@ -388,7 +390,7 @@ def plot_violin_by_cluster( # TODO: lo vogliamo anche in tutto il dataset?
     for feature in features:
         sns.violinplot(x=cluster_column, y=feature, data=df, ax=axs[int(id/ncols)][id%ncols])
         id += 1
-    for ax in axs[nrows-1, id%ncols+1:]:
+    for ax in axs[nrows-1, id%ncols:]:
         ax.remove()
     fig.suptitle(title)
 
@@ -416,13 +418,13 @@ def plot_hists_by_cluster(
 
     n_clusters = df[cluster_column].unique().shape[0]
     fig, axs = plt.subplots(nrows=1, ncols=n_clusters+1, figsize=figsize, sharex=True, sharey=True)
-    sns.histplot(df[feature], ax=axs[0], bins=bins, color='gray', kde=True)
+    sns.histplot(df[feature], ax=axs[0], bins=bins, color='black', kde=True)
     axs[0].set_title('Whole dataset')
     axs[0].set_xlabel(feature)
     axs[0].set_ylabel('Number of incidents')
     for i in range(1, n_clusters+1):
-        sns.histplot(df[feature][df[cluster_column] == i], ax=axs[i], bins=bins, color=color_palette[i], kde=True)
-        axs[i].set_title(f'Cluster {i}')
+        sns.histplot(df[feature][df[cluster_column] == i-1], ax=axs[i], bins=bins, color=color_palette[i-1], kde=True)
+        axs[i].set_title(f'Cluster {i-1}')
         axs[i].set_xlabel(feature)
         axs[i].set_ylabel('Number of incidents')
     fig.suptitle(title, fontweight='bold')
@@ -447,13 +449,16 @@ def plot_clusters_size(
     ax.set_xlabel('Cluster')
     ax.set_title(title)
 
-def plot_scores_per_point(score_per_point, clusters, score_name, color_palette=sns.color_palette(), title=None):
+def plot_scores_per_point(score_per_point, clusters, score_name, ax, color_palette=sns.color_palette(), title=None, minx=-0.1):
     '''
     This function plots the clustering score for each point, grouped by cluster.
 
     :param score_per_point: clustering score for each point
     :param clusters: cluster labels
     :param score_name: name of the clustering score
+    :param ax: axis to plot on
+    :param color_palette: color palette to use
+    :param title: title of the plot
     '''
 
     n_clusters = len(np.unique(clusters))
@@ -463,7 +468,7 @@ def plot_scores_per_point(score_per_point, clusters, score_name, color_palette=s
         ith_cluster_sse.sort()
         size_cluster_i = ith_cluster_sse.shape[0]
         y_upper = y_lower + size_cluster_i
-        plt.fill_betweenx(
+        ax.fill_betweenx(
             np.arange(y_lower, y_upper),
             0,
             ith_cluster_sse,
@@ -471,17 +476,17 @@ def plot_scores_per_point(score_per_point, clusters, score_name, color_palette=s
             edgecolor=color_palette[i],
             alpha=0.7,
         )
-        plt.text(-0.07, y_lower + 0.5 * size_cluster_i, str(i))
+        ax.text(minx, y_lower + 0.5 * size_cluster_i, str(i))
         y_lower = y_upper
 
-    plt.axvline(x=score_per_point.mean(), color="k", linestyle="--", label='Average')
+    ax.axvline(x=score_per_point.mean(), color="k", linestyle="--", label='Average')
     if title is None:
         title = f"{score_name} for each point in each cluster"
-    plt.title(title)
-    plt.xlabel(score_name)
-    plt.ylabel("Cluster label")
-    plt.legend(loc='best')
-    plt.yticks([])
+    ax.set_title(title)
+    ax.set_xlabel(score_name)
+    ax.set_ylabel("Cluster label")
+    ax.legend(loc='best')
+    ax.set_yticks([])
 
 def scatter_pca_features_by_score(
     X_pca,
