@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
 import seaborn as sns
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as mplt
 from sklearn.decomposition import PCA
 import plotly.express as px
 import warnings
+import json
 np.warnings = warnings # altrimenti numpy da problemi con pyclustering, TODO: è un problema solo mio?
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score, silhouette_score, adjusted_rand_score
@@ -23,36 +23,58 @@ import sys
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
 from clustering_utils import *
-# %matplotlib inline
+%matplotlib inline
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 
 # %%
-# TODO: si leggerà un solo file che contiene tutto
 incidents_df = pd.read_csv(
-    '../data/incidents_cleaned.csv'
+    '../data/incidents_indicators.csv',
+    index_col=0
 )
-indicators_df = pd.read_csv(
-    '../data/incidents_cleaned_indicators.csv', index_col=0
-)
-features_to_cluster = [
-    'latitude_proj', 'longitude_proj', 'location_importance', 'city_entropy', 'address_entropy',
-    'avg_age_participants', 'age_range', 'log_avg_age_mean_SD', 'avg_age_entropy',
-    'n_participants', 'n_participants_child_prop', 'n_participants_teen_prop', 'n_participants_adult_entropy',
-    'n_males_pr', 'log_n_males_n_males_mean_semest_congd_ratio',
-    'n_killed_pr', 'n_injured_pr', 'n_arrested_pr', 'n_unharmed_pr',
-    'tags_entropy'
-]
+
+f = open('../data/indicators_names.json')
+features_to_cluster = json.loads(f.read())
+
 categorical_features = [
-    'year', 'month', 'day_of_week', 'party', #'state', 'address_type', 
+    'year', 'month', 'day_of_week', 'party', #'state', 'address_type', 'county', 'city'
     'firearm', 'air_gun', 'shots', 'aggression', 'suicide',
     'injuries', 'death', 'road', 'illegal_holding', 'house',
     'school', 'children', 'drugs', 'officers', 'organized', 'social_reasons',
     'defensive', 'workplace', 'abduction', 'unintentional'
+    # 'incident_characteristics1', 'incident_characteristics2'
     ]
+# other interesting features:
+# poverty_perc, date
+indicators_df = indicators_df.dropna()
 
 # %%
-indicators_df = indicators_df.dropna()
+features_to_cluster_no_coord = features_to_cluster[2:]
+features_to_cluster_no_coord
+
+# %%
+incidents_df.sample(2, random_state=1)
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+sns.violinplot(data=incidents_df[features_to_cluster],ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+scaler_obj = MinMaxScaler()
+normalized_indicators = pd.DataFrame(data=scaler_obj.fit_transform(incidents_df[features_to_cluster].values), columns=features_to_cluster)
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 5))
+sns.violinplot(data=normalized_indicators,ax=ax)
+plt.xticks(rotation=90, ha='right');
+
+# %%
+normalized_indicators_notna = normalized_indicators.dropna()
+pca = PCA()
+X_pca = pca.fit_transform(normalized_indicators_notna)
+pca_df = pd.DataFrame(index=incidents_df.index)
 
 # %%
 # TODO: da spostare nel file che fa gli indicatori
@@ -464,3 +486,5 @@ sns.heatmap(dm)
 
 # %%
 # plt.matshow(corrm)
+
+

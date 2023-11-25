@@ -7,7 +7,6 @@
 # %% [markdown]
 # # Task 1 - Incidents Data Understanding and Preparation
 
-
 # %% [markdown]
 # We import the libraries:
 
@@ -34,7 +33,6 @@ from pyproj import Transformer
 import zipfile
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-
 
 # %% [markdown]
 # We define constants and settings for the notebook:
@@ -367,7 +365,6 @@ incidents_df.groupby('day_of_week').size().plot(
 )
 plt.xticks(range(7), calendar.day_name[0:7], rotation=45);
 
-
 # %%
 def group_by_day(df, date_col):
     counts_by_day = df[date_col].groupby([df[date_col].dt.year, df[date_col].dt.month, df[date_col].dt.day]).size().rename_axis(['year', 'month', 'day']).to_frame('Number of incidents').reset_index()
@@ -389,7 +386,6 @@ def group_by_day(df, date_col):
     counts_by_day['Day'] = counts_by_day.apply(lambda x: f'{x["day"]} {calendar.month_name[x["month"]]}', axis=1)
     return counts_by_day
 
-
 # %%
 incidents_counts_by_day = group_by_day(
     incidents_df[~((incidents_df['date'].dt.day==29) & (incidents_df['date'].dt.month==2))], # exclude 29 february
@@ -408,13 +404,21 @@ fig = px.line(
 )
 fig.update_xaxes(tickangle=-90)
 fig.show()
-pyo.plot(fig, filename='../html/incidents_per_day.html', auto_open=False)
+pyo.plot(fig, filename='../html/incidents_per_day_scatter.html', auto_open=False)
 
 # %%
-# TODO:
-# aggiungere linea orizzontale per media (e quartili?)
-# stampare le giornate con numero inncidenti <5% e >95% di ogni anno e mapparli su festività (ragionare al contrario)
-# scrivere qualcosa su 29 febbraio
+incidenst_per_day = incidents_df.groupby('date').size()
+
+# %%
+from plotly_calplot import calplot
+# creating the plot
+fig = calplot(
+         incidenst_per_day.reset_index(),
+         x="date",
+         y=0
+)
+fig.show()
+pyo.plot(fig, filename='../html/incidents_per_day_heatmap.html', auto_open=False)
 
 # %% [markdown]
 # #### Incidents During Festivities
@@ -521,7 +525,7 @@ holidays_df_percents
 # Visualize data in a bar plot:
 
 # %%
-px.bar(
+fig = px.bar(
     holidays_df.drop(holidays_df.index[-1]),
     x='holiday',
     y=['n_incidents_2013', 'n_incidents_2014', 'n_incidents_2015', 'n_incidents_2016', 'n_incidents_2017', 'n_incidents_2018'],
@@ -529,7 +533,8 @@ px.bar(
     labels={'holiday': 'Holiday', 'value': 'Number of incidents', 'variable': 'Year'},
     barmode='group',
 )
-#TODO: py offline?
+fig.show()
+pyo.plot(fig, filename='../html/incidents_per_holiday.html', auto_open=False)
 
 # %% [markdown]
 # In summary, the analysis reveals that there are not many incidents during any holiday. The distribution of the number of incidents during each holiday, relative to the total number of incidents in that year, remains consistent over the years. This consistency aligns with our expectations, given the similarity in the distribution of incidents across days throughout the years.
@@ -611,9 +616,6 @@ incidents_df[(incidents_df['latitude'] == 37.6499) & (incidents_df['longitude'] 
 # %% [markdown]
 # That point has probably the correct values for the attributes `state` and `city_or_county`.
 
-# %%
-#FIXME: abbiamo usato geolocator = Nominatim(user_agent="?????"), assicurarsi abbia confini 2013-2020
-
 # %% [markdown]
 # To fix these inconsistencies we used the library [GeoPy]((https://geopy.readthedocs.io/en/stable/)). This library allows to retrieve the address (state, county, suburb, city, town, village, location name, and other features) corresponding to a given latitude and longitude. We queried the library using all the latitudes and longitudes of the points in the dataset and we saved the results in the CSV file we now load:
 
@@ -652,9 +654,9 @@ print(f"\nNumber of rows in which addresstype is null: {geopy_df[geopy_df['addre
 # %% [markdown]
 # We also downloaded from [Wikipedia](https://en.wikipedia.org/wiki/County_(United_States)) the list of the counties (or their equivalent) in each state. 
 #
-# This data was used in cases where no consistency was found with GeoPy data. FIXME: come?
+# This data was used in cases where no consistency was found with GeoPy data.
 #
-# When latitude and longitude where not available we used this information to check whether the county actually belonged to the state. FIXME: è questo che volevi dire con "This dataset made it possible to verify the data consistency for the *state* and *county* fields without the need for *latitude* and *longitude* values"?
+# When latitude and longitude where not available we used this information to check whether the county actually belonged to the state.
 
 # %%
 counties_path = os.path.join(DATA_FOLDER_PATH, 'external_data/counties.csv')
@@ -719,18 +721,19 @@ else:
 # #### Visualize Consistent Geographical Data
 
 # %%
-print('Number of rows with all null values: ', incidents_df.isnull().all(axis=1).sum())
-print('Number of rows with null value for state: ', incidents_df['state'].isnull().sum())
-print('Number of rows with null value for county: ', incidents_df['county'].isnull().sum())
-print('Number of rows with null value for city: ', incidents_df['city'].isnull().sum())
-print('Number of rows with null value for latitude: ', incidents_df['latitude'].isnull().sum())
-print('Number of rows with null value for longitude: ', incidents_df['longitude'].isnull().sum())
+tot_row = incidents_df.index.size
+print('Number of rows with all null values: ', incidents_df.isnull().all(axis=1).sum(), ' / ', incidents_df.isnull().all(axis=1).sum()*100/tot_row, '%')
+print('Number of rows with null value for state: ', incidents_df['state'].isnull().sum(), ' / ', incidents_df['state'].isnull().sum()*100/tot_row, '%')
+print('Number of rows with null value for county: ', incidents_df['county'].isnull().sum(), ' / ', incidents_df['county'].isnull().sum()*100/tot_row, '%')
+print('Number of rows with null value for city: ', incidents_df['city'].isnull().sum(), ' / ', incidents_df['city'].isnull().sum()*100/tot_row, '%')
+print('Number of rows with null value for latitude: ', incidents_df['latitude'].isnull().sum(), ' / ', incidents_df['latitude'].isnull().sum()*100/tot_row, '%')
+print('Number of rows with null value for longitude: ', incidents_df['longitude'].isnull().sum(), ' / ', incidents_df['longitude'].isnull().sum()*100/tot_row, '%')
 
 # %%
 sns.heatmap(incidents_df.isnull(), cbar=False, xticklabels=True)
 
 # %% [markdown]
-# After this check, all the entries in the dataset have at least the state value not null and consistent. Only 12,796 data points, which account for 4.76% of the dataset, were found to have inconsistent latitude and longitude values.  FIXME: ogni volta che c'è un percentuale (o qualsiasi numero in generale) nel markdown bisognerebbe averli calcolati e stampati nelle celle di codice precedenti
+# After this check, all the entries in the dataset have at least the state value not null and consistent. Only 12,796 data points, which account for 5.34% of the dataset, were found to have inconsistent latitude and longitude values.
 
 # %% [markdown]
 # Below, we have included some plots to visualize the inconsistent values in the dataset.
@@ -752,34 +755,15 @@ clean_geo_stat_stats = pd.DataFrame(stats, index=stats_columns).transpose()
 clean_geo_stat_stats
 
 # %%
-geo_null_counts = [] # FIXME: mettere in dataframe come sopra
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].notna()) & (incidents_df['city'].notna())]))
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].notna()) & (incidents_df['city'].isna())]))
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].isna()) & (incidents_df['city'].notna())]))
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].isna()) & (incidents_df['city'].isna())]))
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].isna()) & (incidents_df['county'].notna()) & (incidents_df['city'].notna())]))
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].isna()) & (incidents_df['county'].notna()) & (incidents_df['city'].isna())]))
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].isna()) & (incidents_df['county'].isna()) & (incidents_df['city'].notna())]))
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].isna()) & (incidents_df['county'].isna()) & (incidents_df['city'].isna())]))
-
-print('LAT/LONG     COUNTY     CITY             \t#samples')
-print( 'not null    not null   not null         \t', geo_null_counts[0])
-print( 'not null    not null   null             \t', geo_null_counts[1])
-print( 'not null    null       not null         \t', geo_null_counts[2])
-print( 'not null    null       null             \t', geo_null_counts[3])
-print( 'null        not null   not null         \t', geo_null_counts[4])
-print( 'null        not null   null             \t', geo_null_counts[5])
-print( 'null        null       null             \t', geo_null_counts[6])
-print( 'null        null       null             \t', geo_null_counts[7])
-print('\n')
-print( 'TOT samples                             \t', sum(geo_null_counts))
-print( 'Samples with not null values for lat/lon\t', geo_null_counts[0]+geo_null_counts[1]+geo_null_counts[2])
-print( 'Samples with null values for lat/lon    \t', geo_null_counts[4]+geo_null_counts[5]+geo_null_counts[6]+geo_null_counts[7])
+incidents_df[['latitude', 'county', 'city']].isna().groupby(['latitude', 'county', 'city']).size().reset_index().rename(columns={0:'count'})
 
 # %%
-dummy_df = incidents_df[incidents_df['latitude'].notna()] # FIXME: possiamo sostituire tutte le variabili 'dummy' con nomi più significativi? (anche se temporanee)
+incidents_df[['latitude']].isna().groupby(['latitude']).size().reset_index().rename(columns={0:'count'})
+
+# %%
+incidents_df_not_null = incidents_df[incidents_df['latitude'].notna()]
 print('Number of entries with not null values for latitude and longitude: ', len(dummy_df))
-plot_scattermap_plotly(dummy_df, 'state', zoom=2,)
+plot_scattermap_plotly(incidents_df_not_null, 'state', zoom=2,)
 
 # %%
 dummy_df = incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].isna()) & 
@@ -788,7 +772,7 @@ print('Number of entries with not null values for county but not for lat/lon and
 plot_scattermap_plotly(dummy_df, 'state', zoom=2, title='Missing county')
 
 # %% [markdown]
-# Visualize the number of entries for each city where we have the *city* value but not the *county* FIXME: dove stampiamo df dire 'display', visualize è più per le immagini
+# Visualize the number of entries for each city where we have the *city* value but not the *county*
 
 # %%
 incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].isna()) & (incidents_df['city'].notna())].groupby('city').count()
@@ -878,7 +862,7 @@ else: # compute data
         pc = np.quantile(dummy, np.arange(0, 1, 0.05))
         for i in range(len(info_city.columns) - 6):
             info_city.loc[state, county, city][i] = pc[i*2 + 1]
-        info_city.loc[state, county, city][len(info_city.columns) - 6] = len(dummy) # FIXME: invece di -6,-5,... si possono mettere le stringhe?
+        info_city.loc[state, county, city][len(info_city.columns) - 6] = len(dummy)
         info_city.loc[state, county, city][len(info_city.columns) - 5] = min(dummy)
         info_city.loc[state, county, city][len(info_city.columns) - 4] = max(dummy)
         info_city.loc[state, county, city][len(info_city.columns) - 3] = sum(dummy)/len(dummy)
@@ -929,13 +913,13 @@ def plot_info_city(df, lat, lon, info_circle, prop_rad=True):
     plt.title("coordinates of city centroids + " + info_circle)
     plt.show()
 
-
 # %%
 plot_info_city(info_city, 'centroid_lat', 'centroid_lon', 'tot_points')
 
 # %%
-plot_scattermap_plotly(info_city, size='tot_points', x_column='centroid_lat', 
+fig = plot_scattermap_plotly(info_city, size='tot_points', x_column='centroid_lat', 
     y_column='centroid_lon', hover_name=False, zoom=2, title='Number of points per city') 
+pyo.plot(fig, filename='../html/incidents_per_city.html', auto_open=False);
 # FIXME: discretizzare e.g. <x, between(x, y), ...
 
 # %% [markdown]
@@ -991,36 +975,7 @@ incidents_df = new_incidents_df
 # #### Visualize new data
 
 # %%
-geo_null_counts = [] # FIXME: mettere in dataframe come sopra
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].notna()) & (incidents_df['city'].notna())]))
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].notna()) & (incidents_df['city'].isna())]))
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].isna()) & (incidents_df['city'].notna())]))
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].isna()) & (incidents_df['city'].isna())]))
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].isna()) & (incidents_df['county'].notna()) & (incidents_df['city'].notna())]))
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].isna()) & (incidents_df['county'].notna()) & (incidents_df['city'].isna())]))
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].isna()) & (incidents_df['county'].isna()) & (incidents_df['city'].notna())]))
-geo_null_counts.append(len(incidents_df.loc[(incidents_df['latitude'].isna()) & (incidents_df['county'].isna()) & (incidents_df['city'].isna())]))
-
-print('LAT/LONG     COUNTY     CITY             \t#samples')
-print( 'not null    not null   not null         \t', geo_null_counts[0])
-print( 'not null    not null   null             \t', geo_null_counts[1])
-print( 'not null    null       not null         \t', geo_null_counts[2])
-print( 'not null    null       null             \t', geo_null_counts[3])
-print( 'null        not null   not null         \t', geo_null_counts[4])
-print( 'null        not null   null             \t', geo_null_counts[5])
-print( 'null        null       null             \t', geo_null_counts[6])
-print( 'null        null       null             \t', geo_null_counts[7])
-print('\n')
-print( 'TOT samples                             \t', sum(geo_null_counts))
-print( 'Samples with not null values for lat/lon\t', geo_null_counts[0]+geo_null_counts[1]+geo_null_counts[2]+geo_null_counts[3])
-print( 'Samples with null values for lat/lon    \t', geo_null_counts[4]+geo_null_counts[5]+geo_null_counts[6]+geo_null_counts[7])
-
-# %%
-plot_scattermap_plotly(incidents_df.loc[(incidents_df['latitude'].notna()) & 
-    (incidents_df['county'].notna()) & (incidents_df['city'].isna())], 'state', zoom=2, title='Missing city')
-
-# %%
-#TODO: plottare le città inferite e i centroidi dello stesso colore e quelle che rimangono nan di nero
+incidents_df[['latitude', 'county', 'city']].isna().groupby(['latitude', 'county', 'city']).size().reset_index().rename(columns={0:'count'})
 
 # %% [markdown]
 # We check if the attribute `congressional_district` is numbered consistently (with '0' for states with only one congressional district). To do so we use the dataset containing the data about elections in the period of interest (congressional districts are redrawn when (year%10)==0):
@@ -1098,7 +1053,6 @@ incidents_df[
 
 # %% [markdown]
 # Searching online we found that Oregon has 5 congressional districts, so we'll set to nan the congressional district for the rows above:
-
 
 # %%
 incidents_df.loc[
@@ -1440,6 +1394,7 @@ plot_scattermap_plotly(
 
 # %% [markdown]
 # #### Features
+
 # %%
 incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
     kind='bar',
@@ -2153,6 +2108,7 @@ incidents_df['unintentional'].corr(incidents_df['n_participants_child']>0) # not
 
 # %% [markdown]
 # We can see that the two events are not correlated
+
 # %%
 incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
     kind='bar',
@@ -2431,3 +2387,5 @@ sns.heatmap(corr_matrix, mask=np.triu(corr_matrix))
 
 # %%
 incidents_df.to_csv(DATA_FOLDER_PATH +'incidents_cleaned.csv', index=True)
+
+

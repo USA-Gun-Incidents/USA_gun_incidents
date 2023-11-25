@@ -213,7 +213,8 @@ def plot_scattermap_plotly(
         showlegend=showlegend,
         legend_title_text=legend_title
     )
-    fig.show()
+    #fig.show()
+    return fig
 
 def plot_clf_decision_boundary(clf, X_train, y_train, color_map, title=None):
     '''
