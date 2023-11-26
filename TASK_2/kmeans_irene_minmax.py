@@ -6,7 +6,9 @@
 # We import the libraries:
 
 # %%
-# TODO: togli librerie inutili
+import json
+import os
+import sys
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -14,21 +16,14 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 import plotly.express as px
 import plotly.offline as pyo
-import networkx as nx
 import warnings
 np.warnings = warnings # altrimenti numpy da problemi con pyclustering, TODO: è un problema solo mio?
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
-from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score, silhouette_score, silhouette_samples, adjusted_rand_score
-from sklearn.metrics import homogeneity_score, completeness_score, normalized_mutual_info_score
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score, silhouette_score, silhouette_samples
 from sklearn.cluster import KMeans, BisectingKMeans
-from scipy.spatial.distance import pdist, squareform
 from pyclustering.cluster.xmeans import xmeans, splitting_type
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
-from yellowbrick.cluster import KElbowVisualizer, SilhouetteVisualizer, InterclusterDistance
-import json
-import os
-import sys
+from yellowbrick.cluster import KElbowVisualizer
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
 from clustering_utils import *
@@ -43,20 +38,9 @@ pd.set_option('max_colwidth', None)
 # load the data
 incidents_df = pd.read_csv('../data/incidents_indicators.csv', index_col=0)
 # load the names of the features to use for clustering
-f = open('../data/indicators_names.json')
-features_to_cluster = json.loads(f.read())
+features_to_cluster = json.loads(open('../data/indicators_names.json').read())
 # FIXME: da fare in indicators
-features_to_cluster = [feature for feature in features_to_cluster if feature not in ['lat_proj', 'lon_proj']] # 'n_killed_prop', 'n_injured_prop', 'n_unharmed_prop'
-# FIXME: da spostare più avanti
-categorical_features = [
-    'year', 'month', 'day_of_week', 'party', #'state', 'address_type', 'county', 'city'
-    'firearm', 'air_gun', 'shots', 'aggression', 'suicide',
-    'injuries', 'death', 'road', 'illegal_holding', 'house',
-    'school', 'children', 'drugs', 'officers', 'organized', 'social_reasons',
-    'defensive', 'workplace', 'abduction', 'unintentional'
-    # 'incident_characteristics1', 'incident_characteristics2'
-    ]
-# FIXME: poverty_perc, date
+features_to_cluster = [feature for feature in features_to_cluster if feature not in ['lat_proj', 'lon_proj']]
 # drop nan
 incidents_df = incidents_df.dropna(subset=features_to_cluster)
 # initialize a colum for the clustering labels
@@ -87,7 +71,12 @@ axs[2].set_xticklabels(features_to_cluster, rotation=90);
 axs[2].set_title('Standard scaling');
 
 # %% [markdown]
-# Variables have different scales and variances.
+# Variables have different scales.
+#
+# # Since K-means tends to produce globular clusters, leaving variances unequal is like giving different weights to features based on their variance. To avoid this, we will use StandardScaler.
+#
+#
+# K-means also has trouble clustering data that contains outliers
 #
 # TODO: commentare
 

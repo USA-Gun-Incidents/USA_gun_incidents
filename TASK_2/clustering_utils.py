@@ -236,7 +236,7 @@ def scatter_by_cluster(
         centroids=None,
         ncols=3,
         figsize=(35, 60),
-        color_palette=sns.color_palette()
+        color_palette=sns.color_palette(),
         title=None
     ):
     '''

@@ -45,7 +45,7 @@ incidents_df = pd.read_csv('../data/incidents_indicators.csv', index_col=0)
 f = open('../data/indicators_names.json')
 features_to_cluster = json.loads(f.read())
 # FIXME: da fare in indicators
-features_to_cluster = [feature for feature in features_to_cluster if feature not in ['lat_proj', 'lon_proj']] # 'n_killed_prop', 'n_injured_prop', 'n_unharmed_prop'
+features_to_cluster = [feature for feature in features_to_cluster if feature not in ['lat_proj', 'lon_proj', 'n_participants', 'location_imp']] # 'n_killed_prop', 'n_injured_prop', 'n_unharmed_prop'
 # FIXME: da spostare più avanti
 categorical_features = [
     'year', 'month', 'day_of_week', 'party', #'state', 'address_type', 'county', 'city'
