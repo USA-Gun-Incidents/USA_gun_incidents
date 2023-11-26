@@ -64,7 +64,7 @@ network = som(rows, cols, structure, som_params)
 network.train(X, autostop=True, epochs=100000)
 
 # %% [markdown]
-# We save the clustering results:
+# We store the clustering results:
 
 # %%
 for i in range(n_clusters):
@@ -201,7 +201,7 @@ f.suptitle("Most frequent value for each feature in each cluster", fontweight='b
 network.show_distance_matrix()
 
 # %% [markdown]
-# We notice that the cell in the middle of the grid is similar to all the adjacent cells (it has not a unique identity). Instead, the prototipe of the cluster in the down-left corner is well separated from the adjacent prototipes.
+# We notice that the prototype of the cell in the middle of the grid is similar to all the adjacent cells (it has not a unique identity). Instead, the prototipe of the cluster in the down-left corner is well separated from the adjacent prototipes.
 
 # %% [markdown]
 # We visualize clusters in the principal components space:
@@ -250,7 +250,13 @@ plot_boxes_by_cluster(
 )
 
 # %% [markdown]
+# The distributions of the variables are in line with the observations made looking at the average values of the features in the clusters.
+
+# %% [markdown]
 # ## Evaluation of the clustering results
+
+# %% [markdown]
+# ## Internal indices
 
 # %%
 clustering_scores = {}
@@ -263,7 +269,7 @@ clustering_scores['silhouette_score'] = silhouette_score(X=X, labels=incidents_d
 pd.DataFrame(clustering_scores, index=['SOM'])
 
 # %% [markdown]
-# TODO: COMMENTARE
+# We plot the sihlouette for each point:
 
 # %%
 fig, axs = plt.subplots(1, figsize=(8,5))
@@ -279,6 +285,8 @@ plot_scores_per_point(
 
 # %% [markdown]
 # The majority of points in cluster 4 have a negative silhouette score.
+#
+# We visualize SSE for each feature:
 
 # %%
 sse_feature = []
@@ -294,12 +302,13 @@ plt.ylabel('SSE')
 plt.xlabel('Feature')
 plt.title('SSE per feature');
 
-# %%
-se_per_point = compute_se_per_point(X=X, clusters=clusters, centroids=prototypes)
-indices_of_top_contributors = np.argsort(se_per_point)[-5:]
-incidents_df.iloc[indices_of_top_contributors]
+# %% [markdown]
+# As in K-means, the features that contribute the most to the SSE are n_males_prop and n_teen_prop.
+#
+# We visualize SSE for each point:
 
 # %%
+se_per_point = compute_se_per_point(X=X, clusters=clusters, centroids=prototypes)
 fig, axs = plt.subplots(1, figsize=(10,5))
 plot_scores_per_point(
     score_per_point=se_per_point,
@@ -309,6 +318,9 @@ plot_scores_per_point(
     color_palette=sns.color_palette('tab10'),
     minx=-0.1
 )
+
+# %% [markdown]
+# We now compute cohesion (SSE) and separation (BSS) for each cluster and visualize it:
 
 # %%
 # compute cohesion for each cluster
@@ -342,23 +354,33 @@ for i in range(3):
 
 plt.suptitle('Cohesion and separation measures for each cluster', fontweight='bold')
 
+# %% [markdown]
+# We visualize the distance matrix sorted by cluster computed on a stratified subsample of 5000 points:
+
 # %%
 clusters = incidents_df['cluster'].to_numpy()
 plot_distance_matrices(X, n_samples=5000, clusters=clusters)
+
+# %% [markdown]
+# The matrix is not so crisp as the one obtained with K-means, but we can still see some patterns.
+#
+# ## External indices
+#
+# We measure the extent to which the discovered clustering structure matches some categorical features of the dataset:
 
 # %%
 incidents_df['unharmed'] = incidents_df['n_unharmed'] > 0
 incidents_df['arrested'] = incidents_df['n_arrested'] > 0
 incidents_df['males'] = incidents_df['n_males'] > 0
 incidents_df['females'] = incidents_df['n_females'] > 0
-compute_permutation_invariant_external_metrics(
+external_score_df = compute_permutation_invariant_external_metrics(
     incidents_df,
     'cluster',
     ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested', 'males', 'females']
 )
+external_score_df
 
 # %%
 write_clusters_to_csv(clusters, f'./SOM_clusters.csv')
-# results_df.loc[f'{k}means'].to_csv(f'./{k}-Means_internal_scores.csv')
-# external_scores_df.to_csv(f'./{k}-Means_external_scores.csv')
-# pd.DataFrame(incidents_df.index).to_csv(f'./{k}-Means_indexes.csv')
+pd.DataFrame(clustering_scores, index=['SOM']).to_csv(f'./SOM_internal_scores.csv')
+external_score_df.to_csv(f'./SOM_external_scores.csv')
