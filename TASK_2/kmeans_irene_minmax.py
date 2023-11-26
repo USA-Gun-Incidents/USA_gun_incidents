@@ -1,6 +1,10 @@
-# -*- coding: utf-8 -*-
 # %% [markdown]
-# # KMeans clustering
+# # K-Means clustering
+
+# %% [markdown]
+# K-means clustering is simple and efficient partitional clustering algorithm. It starts from k initial centroids (where k is a user-specified parameter) and operates by iteratively assigning each data point to the cluster whose centroid is closest according to a specific distance metric (typically the euclidean distance). Centroids are updated at the end of each iteration based on the newly formed clusters.
+# 
+# In this notebook, we will use the K-means algorithm to cluster the incidents dataset using the indicators previously extracted.
 
 # %% [markdown]
 # We import the libraries:
@@ -27,7 +31,7 @@ from yellowbrick.cluster import KElbowVisualizer
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
 from clustering_utils import *
-# %matplotlib inline
+%matplotlib inline
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 
@@ -49,7 +53,7 @@ incidents_df['cluster'] = None
 indicators_df = incidents_df[features_to_cluster]
 
 # %% [markdown]
-# We apply MinMaxScaler and StandardScaler to the data, visualizing the results of the transformation:
+# We apply MinMaxScaler and StandardScaler to the data, visualizing the results of the transformations:
 
 # %%
 # apply MinMaxScaler
@@ -71,14 +75,7 @@ axs[2].set_xticklabels(features_to_cluster, rotation=90);
 axs[2].set_title('Standard scaling');
 
 # %% [markdown]
-# Variables have different scales.
-#
-# # Since K-means tends to produce globular clusters, leaving variances unequal is like giving different weights to features based on their variance. To avoid this, we will use StandardScaler.
-#
-#
-# K-means also has trouble clustering data that contains outliers
-#
-# TODO: commentare
+# Variables have different scales and variances. There are both advantages and disadvantages in using Min-Max scaling or Standard scaling. Min-Max scaling leaves variances unequal, but it preserves the shape of the original distribution. Standard scaling makes the variances equal, but it does not preserve the shape of the original distribution. Since K-means tends to produce globular clusters, leaving variances unequal is like giving different weights to features based on their variance. At the same time, using Standard scaling the feature n_participants, that is in a completly different range from the other features, is likely to negatively affect the clustering results. We decide to use Min-Max scaling because we want to keep the feature n_participants and becuase the features with higher interquartile range (e.g. n_killed_prop, n_injured_prop, n_unharmed_prop, n_arrested_prop), that could be weighted more in the clustering, are actually the ones describing the main characteristics of the incidents.
 
 # %%
 X = X_minmax
@@ -90,6 +87,7 @@ X = X_minmax
 # - initial centroids are sampled based on an empirical probability distribution of the points’ contribution to the overall inertia (this method is called k-means++ and again it is the default parameter of the scikit-learn implementation)
 # - the maximum number of K to later be evaluated is 30 (higher values lead to results that are difficult to interpret)
 # - we fixed the random seed to make the results reproducible
+# - the scikit-learn implementation of k-means uses the euclidean distance as distance metric
 
 # %%
 MAX_ITER = 300
@@ -143,7 +141,7 @@ def apply_k_elbow_method(X, kmeans_params, metric, start_k, max_k, plot_elbow=Tr
     plt.show()
 
 # %% [markdown]
-# Now we apply the elbow method evaluating the SSE and computing the elbow for each value of k between 1 and 10, 1 and 20 and 1 and 30. We consider also k=1 (absence of clusters) and we repeat the analysis with k in different ranges because the inflection point of the curve could vary depending on the number of points the curve is made of.
+# We apply the elbow method evaluating the SSE and computing the elbow for each value of k between 1 and 10, 1 and 20 and 1 and 30. We consider also k=1 (absence of clusters) and we repeat the analysis with k in different ranges because the inflection point of the curve could vary depending on the number of points the curve is made of.
 
 # %%
 kmeans_params = {'init': INIT_METHOD, 'n_init': N_INIT, 'max_iter': MAX_ITER, 'random_state': RANDOM_STATE}
@@ -174,7 +172,7 @@ apply_k_elbow_method(X=X, kmeans_params=kmeans_params, metric='calinski_harabasz
 # The Calinski-Harabasz score is maximum for k=4.
 
 # %% [markdown]
-# To identify the best value of k we also apply the X-means algorithm from the library [pyclustering](https://github.com/annoviko/pyclustering/), which is a variation of the k-means algorithm that should automatically find the best value of k. The algorithm starts with k=2 and then it iteratively splits the clusters until a score does not improve anymore. The implementation we will use supports both the BIC score (Bayesian Information Criterion) and the Minimum Noiseless Descriptionlength score (MDL):
+# To identify the best value of k we also apply the X-means algorithm from the library [pyclustering](https://github.com/annoviko/pyclustering/) X-means is a variation of the k-means algorithm that should automatically find the best value of k. The algorithm starts with k=2 and then it iteratively splits the clusters until a score does not improve anymore. The implementation we will use supports both the BIC score (Bayesian Information Criterion) and the Minimum Noiseless Descriptionlength score (MDL):
 
 # %%
 initial_centers = kmeans_plusplus_initializer(data=X, amount_centers=1, random_state=RANDOM_STATE).initialize()
@@ -203,8 +201,7 @@ print(f'Number of clusters found by xmeans using MDL score and setting the maxim
 
 # %% [markdown]
 # X-means terminates with k equal to the maximum number of clusters allowed (30 in our case). This means that the score always improved when splitting the clusters. No value of k is optimal according to these criteria.
-
-# %% [markdown]
+# 
 # To choose the best value of k among the ones identified by the elbow method, we will compute other metrics to evaluate the quality of the clustering. The following function fits the k-means algorithm with a given set of parameters and computes the following metrics:
 # - SSE
 # - BSS (i.e. between-cluster sum of squares; the higher the better)
@@ -228,7 +225,7 @@ def fit_kmeans(X, params):
     return results
 
 # %% [markdown]
-# To study the effect of the centroids initialization on the results, we will apply the algorithm using the k-means++ initialization repeated 10 times (as previously done), but we will also initialize the centroids with the final centroids computed by BisectingKMeans. 
+# We apply that function using the best values of k, saving the results in a dictionary:
 
 # %%
 results = {}
@@ -243,24 +240,19 @@ for k in best_k:
     result = fit_kmeans(X=X, params=kmeans_params)
     results[str(k)+'means'] = result
 
-    # FIXME: fare dopo una volta scelto il migliore
-    # bisect_kmeans = BisectingKMeans(n_clusters=k, n_init=5, init=INIT_METHOD, random_state=RANDOM_STATE).fit(X)
-    # kmeans_params['n_init'] = 1
-    # kmeans_params['init'] = bisect_kmeans.cluster_centers_
-    # result = fit_kmeans(X=X, params=kmeans_params)
-    # results[str(k)+'means_bis_init'] = result
-
 # %%
 results_df = pd.DataFrame(results).T
 results_df.drop(columns=['model'])
 
 # %% [markdown]
 # We observe that:
-# - SSE is best for k=10, but this metric is expected to decrease increasing the number of clusters
-# - BSS is best for k=10
-# - Davies-Bouldin score is best for k=10
-# - Calinski-Harabasz score is best for k=2
-# - Silhouette score is best for k=2
+# - SSE and BSS are both best for k=7, but these metrics are expected toimprove while increasing the number of clusters
+# - Davies-Bouldin score is best for k=4
+# - Calinski-Harabasz score is best for k=4
+# - Silhouette score is best for k=4
+# 
+# 
+# We could have also used hierarchical clustering to identify the best value of k. However, because of the high computational cost of hierarchical clustering, we should have used a subset of the data. Furthermore, since the methods we used so far are concordant in identifying k=4 as the best value of k, we decided to conclude the analysis here and use k=4 for the final clustering.
 
 # %%
 k = 4
@@ -270,9 +262,15 @@ centroids = results[f'{k}means']['model'].cluster_centers_
 inverse_centroids = minmax_scaler.inverse_transform(centroids)
 incidents_df['cluster'] = clusters
 
+# %% [markdown]
+# We visualize the size of the clusters:
+
 # %%
 fig, axs = plt.subplots(1, figsize=(25,5))
 plot_clusters_size(clusters=clusters, ax=axs, title=f'{k}-Means clusters size', color_palette=sns.color_palette('tab10'))
+
+# %% [markdown]
+# Cluster 1 is the biggest, however clusters are not too much unbalanced.
 
 # %% [markdown]
 # ## Characterization of the clusters
@@ -288,10 +286,9 @@ plt.xticks(range(0, len(features_to_cluster)), features_to_cluster, rotation=90)
 plt.legend(fontsize=10)
 plt.title(f'Centroids of {k}-means clusters');
 
-
 # %% [markdown]
 # We observe that some feature do not vary much between the clusters (i.e. location_imp, surprisal_address_type, age_range, avg_age, surprisal_min_age, n_child_prop, n_males_prop, suprisal_n_males, surprisal_day).
-#
+# 
 # Regarding the centroids, we observe that:
 # - The centroid of cluster 0 has an higher proportion of injured people and teens; the values of surprisal_characteristics and the proportion of arrested people, instead, are lower.
 # - The centroid of cluster 1 has an higher proportion of arrested people.
@@ -320,7 +317,7 @@ def plot_spider(points, features, title=None, palette=sns.color_palette()):
 plot_spider(points=centroids, features=features_to_cluster, title=f'Centroids of {k}-means clusters', palette=sns.color_palette('tab10'))
 
 # %% [markdown]
-# ## Distribution of variables within the 10 clusters
+# ## Distribution of variables within the clusters
 
 # %% [markdown]
 # We plot on a map the points in each cluster:
@@ -343,7 +340,7 @@ for i in range(k):
 # Incidents are not clustered according to their geographical location.
 
 # %% [markdown]
-# Now we inspect the distribution of categorical features within the clusters:
+# Now we inspect the distribution of the most relevant categorical features within the clusters:
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='year', cluster_column='cluster')
@@ -354,7 +351,6 @@ plot_bars_by_cluster(df=incidents_df, feature='year', cluster_column='cluster')
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='day_of_week', cluster_column='cluster')
-
 
 # %% [markdown]
 # Cluster 1 - characterized by the highest value of n_arrestes_prop - exhibits a different distribution compared to the one in the whole dataset, with a pick on Wednesday instead of in the weekend. This deviation may be attributed to the police shift pattern.
@@ -376,7 +372,7 @@ plot_bars_by_cluster(df=incidents_df, feature='shots', cluster_column='cluster')
 
 # %% [markdown]
 # In cluster 0 and cluster 2 - those with highest values of n_injured_prop and n_killed_prop - the majority of incidents were shooting incidents (as expected).
-#
+# 
 # In cluster 1 - characterized by the highest value of n_arrestes_prop - the proportion of incidents that did not involved firearms is higher than in the whole dataset
 
 # %%
@@ -452,10 +448,6 @@ plot_bars_by_cluster(df=incidents_df, feature='unintentional', cluster_column='c
 # %% [markdown]
 # The distribution of accidental incidents in the clusters is similar to the one in the whole dataset, cluster 0 - characterized by an higher proportion of injured people and teens - has also a slightly higher proportion of accidental incidents compared to the whole dataset. Maybe in those incidents teens were playing with guns.
 
-# %%
-# TODO: organized, social reasons, workplace, abduction
-# no much to say
-
 # %% [markdown]
 # We visualize the cluster in the bidimensional feature spaces obtained pairing some features used for the clustering:
 
@@ -496,15 +488,34 @@ X_pca = pca.fit_transform(X)
 
 # %%
 exp_var_pca = pca.explained_variance_ratio_
-plt.bar(range(0,len(exp_var_pca)), exp_var_pca, align='center')
+
+diff_var = []
+for i, var in enumerate(exp_var_pca[:-1]):
+    diff_var.append( var-exp_var_pca[i+1])
+xtick = []
+gap = 0
+for i, var in enumerate(diff_var):
+    xtick.append(i+gap)
+    if i != 0 and diff_var[i-1] <= var:
+        gap += 0.5
+        if gap == 0.5:
+            plt.axvline(x = i+gap+0.25, color = 'green', linestyle = '-.', alpha=0.5, label='possible cut')
+        else:
+            plt.axvline(x = i+gap+0.25, color = 'green', linestyle = '-.', alpha=0.5)
+print(xtick)
+xtick.append(xtick[-1]+1.5)
+
+plt.bar(xtick, exp_var_pca, align='center')
+plt.plot(xtick[1:], diff_var, label='difference from prevoius variance', color='orange')
 plt.ylabel('Explained variance ratio')
 plt.xlabel('Principal component')
 plt.title('Explained variance by principal component')
-plt.xticks(np.arange(0,len(exp_var_pca),1.0));
+plt.xticks(xtick, range(exp_var_pca.shape[0]));
+plt.legend();
 
 # %% [markdown]
 # The first 6 components contribute the most to the overall variance in the dataset.
-#
+# 
 # We visualize the clusters in the feature spaces obtained by pairing the first 6 principal components:
 
 # %%
@@ -519,7 +530,7 @@ scatter_pca_features_by_cluster(
 )
 
 # %% [markdown]
-# In the features spaces obtained by pairing the first 4 principal components, the clusters are well separated.
+# In the feature spaces obtained by pairing the first 4 principal components, the clusters are well separated.
 
 # %% [markdown]
 # We now visualize the distributions of the features used to cluster the data in each cluster:
@@ -556,14 +567,15 @@ for feature in features_to_cluster:
 
 # %% [markdown]
 # ## Evaluation of the clustering results
+# 
+# ### Internal indices
 
 # %% [markdown]
-# We plot the silhouette score for each point in each cluster:
+# We compute and plot the silhouette score for each point:
 
 # %%
 fig, axs = plt.subplots(1, figsize=(8,5))
 silhouette_per_point = silhouette_samples(X=X, labels=clusters)
-results[f'{k}means']['silhouette_per_point'] = silhouette_per_point
 plot_scores_per_point(
     score_per_point=silhouette_per_point,
     clusters=clusters,
@@ -574,8 +586,8 @@ plot_scores_per_point(
 )
 
 # %% [markdown]
-# Few points in cluster 3 have a negative silhouette score. Also, the majority of points of cluster 3 have a silhouette score below the avrage.
-#
+# Few points have a negative silhouette score. The majority of points with a negative silhouette score belong to cluster 3. Also, the majority of points of cluster 3 have a silhouette score below the average.
+# 
 # Now we color in black points with a negative silhouette score in the principal component feature space:
 
 # %%
@@ -612,7 +624,7 @@ scatter_pca_features_by_score(
 
 # %% [markdown]
 # In the feature space of the first two principal components, points from cluster 1 are not well separated by their sihlouette score.
-#
+# 
 # We plot now the first and third principal components:
 
 # %%
@@ -629,7 +641,7 @@ scatter_pca_features_by_score(
 
 # %% [markdown]
 # In this feature space none of the clusters are well separated by their sihlouette score.
-#
+# 
 # We finally plot the first and third principal components:
 
 # %%
@@ -666,11 +678,11 @@ plt.title('SSE per feature');
 
 # %% [markdown]
 # The features that contribute the most to the SSE are n_males_prop and n_teen_prop. The feature that contributes less is n_participants.
-#
+# 
 # We now compute the SSE for each point and display the 5 points with highest SSE.
 
 # %%
-se_per_point = compute_se_per_point(X=X, clusters=clusters, centroids=centroids)
+se_per_point = compute_se_per_point(X=X, clusters=clusters, centroids=centroids) # TODO:??
 indices_of_top_contributors = np.argsort(se_per_point)[-5:]
 incidents_df.iloc[indices_of_top_contributors]
 
@@ -696,6 +708,9 @@ plot_scores_per_point(
 
 # %%
 # TODO: capire cosa rappresentano le componenti
+
+# %%
+# TODO: plot con cerchi
 
 # %% [markdown]
 # We now compute cohesion (SSE) and separation (BSS) for each cluster and visualize it:
@@ -736,15 +751,17 @@ plt.suptitle('Cohesion and separation measures for each cluster', fontweight='bo
 # Cluster 0 is the less cohesive but it is the most separated. Cluster 1 is both cohesive and well separated. Cluster 3 is the lowest separated (this was also evident from the silhouette score).
 
 # %% [markdown]
-# We also visualize the distance matrix sorted by cluster computed on a stratified subsample of 5000 points:
+# We visualize the distance matrix sorted by cluster computed on a stratified subsample of 5000 points:
 
 # %%
 dm, idm = plot_distance_matrices(X=X, n_samples=5000, clusters=clusters, random_state=RANDOM_STATE)
 
 # %% [markdown]
-# The pearson correlation coefficient between the two matrix is 0.62. Indeed, the matrix has a sharp block diagonal structure.
-#
-# We now compare the clustering with some categorical features of the dataset, using the following permutation invariant scores:
+# The pearson correlation coefficient between the two matrix is 0.62. Indeed, the matrix has a sharp block diagonal structure, meaning that clusters are well separated.
+# 
+# ### External indices
+# 
+# We measure the extent to which the discovered clustering structure matches some categorical features of the dataset, using the following permutation invariant scores:
 # - **Adjusted rand score**: this score computes a similarity measure between two clusterings by considering all pairs of samples and counting pairs that are assigned in the same or different clusters in the predicted and true clusterings. It is 0 for random labeling, 1.0 when the clusterings are identical and is bounded below by -0.5 for especially discordant clusterings.
 # - **Normalized mutual information**: is a normalization of the Mutual Information (MI) score to scale the results between 0 (no mutual information) and 1 (perfect correlation). Mutual Information is a function that measures the agreement of the two assignments, ignoring permutations.
 # - **Homogeneity**: measure the degree to which each cluster contains only members of a single class; it ranges between 0 and 1, with 1 denoting perfectly homogeneous labeling.
@@ -753,34 +770,47 @@ dm, idm = plot_distance_matrices(X=X, n_samples=5000, clusters=clusters, random_
 # %%
 incidents_df['unharmed'] = incidents_df['n_unharmed'] > 0
 incidents_df['arrested'] = incidents_df['n_arrested'] > 0
-compute_permutation_invariant_external_metrics(
+external_scores_df = compute_permutation_invariant_external_metrics(
     incidents_df,
     'cluster',
     ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested']
 )
+external_scores_df
 
 # %% [markdown]
-# TODO: describe
-
-# %%
-# TODO: purity and entropy?
-
-
-
-# %%
-# TODO: invoca bisecting kmeans e ri-stampa il dataframe
-
-# ricontrollare di aver invocato le funzioni
+# The category that best matches the clustering is 'unharmed' followed by 'death' and 'arrested'. The most homogeneous category is 'unharmed', and it is also the most complete. However, completeness is quite low for all the categories.
 
 # %% [markdown]
-# We save the clustering labels:
+# We save the clustering labels and scores for later use:
 
 # %%
-write_clusters_to_csv(clusters, f'./{k}means_clusters.csv')
+write_clusters_to_csv(clusters, f'./{k}-Means_clusters.csv')
+results_df.loc[f'{k}means'].to_csv(f'./{k}-Means_internal_scores.csv')
+external_scores_df.to_csv(f'./{k}-Means_external_scores.csv')
+pd.DataFrame(incidents_df.index).to_csv(f'./{k}-Means_indexes.csv')
 
 # %% [markdown]
 # ## Final considerations
-#
-# Advantages:
-#
+# 
+# Advantages of K-means:
+# - Is computationally efficient and can be used on large datasets (as the one we used); if using the euclidean distance it converges quickly
+# - Is restricted to data for which there is a notion of centroid
+# 
 # Disadvantages:
+# - To run the algorithm the number of clusters must be known a priori
+# - It finds clusters with globular shapes, therefore does not work with clusters of differing sizes or densities
+# - Is affected by outliers
+# - The resulting clustering could vary depending on the initialization of the centroids. One approach to mitigate this problem is to initialize the centroids with the final centroids computed by BisectingKMeans. In the following we will use this approach.
+
+# %%
+bisect_kmeans = BisectingKMeans(n_clusters=k, n_init=10, init=INIT_METHOD, random_state=RANDOM_STATE).fit(X)
+params = {'n_clusters': k, 'n_init': 1, 'init': bisect_kmeans.cluster_centers_, 'random_state': RANDOM_STATE}
+result = fit_kmeans(X, params)
+results[str(k)+'means_bis_init'] = result
+results_df = pd.DataFrame(results).T
+results_df.drop(columns=['model'])
+
+# %% [markdown]
+# We observe a slight improvement in the Davies-Bouldin score and in the silhouette score. The other metrics do not improve. The repetition of execution with different initializations already addressed the problem of the instability of the results.
+
+

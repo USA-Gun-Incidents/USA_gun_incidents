@@ -4,14 +4,19 @@ import seaborn as sns
 from clustering_utils import *
 
 # %%
-kmeans_clusters = pd.read_csv('./kmeans_clusters.csv', index_col=0)['cluster'].to_numpy() # files written with write_clusters_to_csv in clustering utils
-dbscan_clusters = pd.read_csv('./dbscan_clusters.csv', index_col=0)['cluster'].to_numpy()
-heirarchical_clusters = pd.read_csv('./heirarchical_clusters.csv', index_col=0)['cluster'].to_numpy()
+labels_files = ['./4-Means_clusters.csv', './4-Means_clusters-PCA.csv', './dbscan_clusters.csv', './heirarchical_clusters.csv']
+
+labels = []
+for files in labels_files:
+    labels.append(pd.read_csv(files, index_col=0)['cluster'].to_numpy())
+
+# dbscan_clusters = pd.read_csv('./dbscan_clusters.csv', index_col=0)['cluster'].to_numpy()
+# heirarchical_clusters = pd.read_csv('./heirarchical_clusters.csv', index_col=0)['cluster'].to_numpy()
 
 # %%
 sankey_plot(
-    [kmeans_clusters, dbscan_clusters, heirarchical_clusters],
-    labels_titles=['Kmeans', 'DBSCAN', 'Heirarchical'],
+    [kmeans_clusters, kmeans_PCA_clusters],
+    labels_titles=['Kmeans', 'Kmeans-PCA'],
     title='Clusterings comparison'
 )
 
