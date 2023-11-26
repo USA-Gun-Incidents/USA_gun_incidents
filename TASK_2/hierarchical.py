@@ -203,9 +203,6 @@ results_df['cophenetic correlation coefficient'] = cophenetic_coefs
 results_df.set_index(['method'], inplace=True)
 results_df
 
-# %%
-pd.DataFrame(silhouette_samples(incidents_df, clusters_info_df.loc[3]['cluster_labels'], metric='euclidean'), index=incidents_df.index)
-
 # %% [markdown]
 # We plot the silhouette scores for each point to visualize the distribution of the score values for each cluster of the algorithms.
 
