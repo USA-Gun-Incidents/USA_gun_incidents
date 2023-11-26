@@ -19,14 +19,14 @@ from pyclustering.nnet.som import som_parameters, som, type_conn
 from clustering_utils import *
 
 # %% [markdown]
-# We load the data and prepare it for the clustering. We will use the same dataset used with K-means and X-means.
+# We load the data and prepare it for the clustering. We will use the same dataset used with K-means and X-means and we will apply MinMax scaling to normalize the data.
 
 # %%
 # load the data
 incidents_df = pd.read_csv('../data/incidents_indicators.csv', index_col=0)
 # load the names of the features to use for clustering
 features_to_cluster = json.loads(open('../data/indicators_names.json').read())
-# FIXME: da fare in indicators
+# for the clustering we will use all the extracted indicators except the projected coordinates
 features_to_cluster = [feature for feature in features_to_cluster if feature not in ['lat_proj', 'lon_proj']]
 # drop nan
 incidents_df = incidents_df.dropna(subset=features_to_cluster).reset_index(drop=True)
@@ -39,18 +39,15 @@ minmax_scaler = MinMaxScaler()
 X = minmax_scaler.fit_transform(indicators_df.values)
 
 # %% [markdown]
-# Scrivere che c'è codice in libreria per clustering che wrappa quello che facciamo sotto ma è meno customizzabile...
+# The [Pyclustering](https://github.com/annoviko/pyclustering/) library provides a SOM implementation tailored for clustering tasks. However, it lacks specific methods for visualizing the results on the grid. Therefore, we opt for the more generic SOM implementation.
 #
-# In the library [Pyclustering](https://github.com/annoviko/pyclustering/) there is ...
+# Determining the best configuration of parameters is out of the scope of this notebook. We will use the default parameters of the SOM algorithm, that are:
+# - adaptation_threshold=0.001, used if autostop=True, determines the threshold for stopping the training
+# - init_learn_rate=0.1
+# - init_radius=2 if cols+rows>4
+# - init_type='distributed in line with uniform grid'
 #
-# Below we define the parameters of the algorithm:
-# - we use the default parameters for the SOM algorithm, that are:
-#     - adaptation_threshold=0.001, used if autostop=True, determines the threshold for stopping the training
-#     - init_learn_rate=0.1
-#     - init_radius=2 if cols+rows>4
-#     - init_type=    distributed in line with uniform grid
-# - we use a 3x3 grid
-# - each grid cell has at most 4 neighbors
+# We use a 3x3 grid (i.e. 9 clusters) in which each grid cell has at most 4 neighbors.
 
 # %%
 som_params = som_parameters()
@@ -61,7 +58,7 @@ structure = type_conn.grid_four
 network = som(rows, cols, structure, som_params)
 
 # %% [markdown]
-# We train the model using the autostop criterion, which stops the training when ... TODO: commentare
+# We train the model using the autostop criterion:
 
 # %%
 network.train(X, autostop=True, epochs=100000)
@@ -74,6 +71,9 @@ for i in range(n_clusters):
     incidents_df.loc[network.capture_objects[i], 'cluster'] = i
 prototypes = np.array(network.weights)
 clusters = np.array(incidents_df['cluster'].astype(int))
+
+# %% [markdown]
+# ## Characterizations of the clusters
 
 # %% [markdown]
 # We visualize the size of each cluster on the grid:
@@ -237,6 +237,9 @@ plt.title(f'Prototypes of SOM clusters');
 # - n_unharmed_prop
 # - n_arrested_prop
 
+# %% [markdown]
+# ## Distribution of variables in the clusters
+
 # %%
 plot_boxes_by_cluster(
     df=incidents_df,
@@ -245,6 +248,9 @@ plot_boxes_by_cluster(
     figsize=(15, 35),
     title='Box plots of features by cluster'
 )
+
+# %% [markdown]
+# ## Evaluation of the clustering results
 
 # %%
 clustering_scores = {}
@@ -343,17 +349,16 @@ plot_distance_matrices(X, n_samples=5000, clusters=clusters)
 # %%
 incidents_df['unharmed'] = incidents_df['n_unharmed'] > 0
 incidents_df['arrested'] = incidents_df['n_arrested'] > 0
+incidents_df['males'] = incidents_df['n_males'] > 0
+incidents_df['females'] = incidents_df['n_females'] > 0
 compute_permutation_invariant_external_metrics(
     incidents_df,
     'cluster',
-    ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested']
+    ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested', 'males', 'females']
 )
 
 # %%
 write_clusters_to_csv(clusters, f'./SOM_clusters.csv')
-
-# %%
-
-# prova anche con std?
-
-
+# results_df.loc[f'{k}means'].to_csv(f'./{k}-Means_internal_scores.csv')
+# external_scores_df.to_csv(f'./{k}-Means_external_scores.csv')
+# pd.DataFrame(incidents_df.index).to_csv(f'./{k}-Means_indexes.csv')
