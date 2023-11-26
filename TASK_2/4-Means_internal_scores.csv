@@ -1,0 +1,8 @@
+,4means
+BSS,57863.91870811196
+SSE,51878.79845330116
+calinski_harabasz_score,49004.18671712359
+davies_bouldin_score,1.2129926119852776
+model,"KMeans(n_clusters=4, n_init=10, random_state=42)"
+n_iter,6
+silhouette_score,0.3268032005092862
