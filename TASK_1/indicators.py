@@ -2,7 +2,7 @@
 # # Definition and study of indicators
 
 # %% [markdown]
-# In this notebook, we address the Task 1.2, i.e. the extraction of indicators for describing the incidents. First we will compute the indicators on different features combinations, visualizing their distributions. Then, we will study the correlation between the indicators and choose the most relevant ones. (SEMANTICA)
+# In this notebook, we extract indicators for describing the incidents. First we will compute the indicators on different features combinations, visualizing their distributions. Then, we will study the correlation between the indicators and choose the most relevant ones.
 
 # %% [markdown]
 # We import the libraries:
@@ -216,9 +216,7 @@ plt.xticks(rotation=90, ha='right');
 
 
 # %% [markdown]
-# Maschi adulti. 
-#
-# We now compute a set of indicators with a similar semantics to the ones computed above, but using the concept of **surprisal**.
+# We now compute a set of indicators with a similar semanthics to the ones computed above, but using the concept of **surprisal**.
 #
 # This kind of indicator can also be computed for categorical variables, as well as for a set of variables.
 #
@@ -295,9 +293,6 @@ sns.violinplot(data=incidents_df[surprisals], ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
-# TODO: commentare
-
-# %% [markdown]
 # We also define an indicator to measure the severity of an incident, based on the number of killed and injured people and we visualize its distribution:
 
 # %%
@@ -315,8 +310,11 @@ sns.violinplot(data=incidents_df[['severity']])
 incidents_df['age_range'] = incidents_df['max_age'] - incidents_df['min_age']
 sns.violinplot(data=incidents_df[['age_range']])
 
+# %% [markdown]
+# We project latitude and longitude using the Universal Transverse Mercator system (UTM):
+
 # %%
-import utm # TODO: probabilmente andranno tolte
+import utm
 
 def project_lat_long(latidude, longitude):
     # check if the coordinates are valid
@@ -366,8 +364,6 @@ indicators_abbr = {
     # temporal data
     'surprisal_month_day_fixing_year_sem_state_congd': 'surprisal_day'
 }
-
-# %%
 incidents_df.rename(columns=indicators_abbr, inplace=True)
 
 # %%
@@ -391,7 +387,6 @@ features_to_drop = [
     'log_n_males_mean_ratio',
     'log_n_participants_mean_ratio',
     'surprisal_n_participants',
-    # surprisal_age_groups
 ]
 indicators = [feature for feature in list(indicators_abbr.values()) if feature not in features_to_drop]
 
@@ -406,28 +401,30 @@ corr_matrix = incidents_df[indicators].corr('spearman')
 sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coolwarm')
 
 # %%
-print(incidents_df.shape[0])
-print(incidents_df[indicators].dropna().shape[0])
-
-# %%
 import json
 with open('../data/indicators_names.json', 'w') as f:
     json.dump(indicators, f)
 
 # %%
-origianal_features_minus_indicators = [feature for feature in dataset_original_columns if feature not in indicators]
-incidents_df[origianal_features_minus_indicators + indicators].to_csv('../data/incidents_indicators.csv')
+original_features_minus_indicators = [feature for feature in dataset_original_columns if feature not in indicators]
+incidents_df[original_features_minus_indicators + indicators].to_csv('../data/incidents_indicators.csv')
 incidents_df[indicators].to_csv('../data/indicators.csv')
 
+# %%
+incidents_df[indicators].info()
+
+# %%
+print(incidents_df.shape[0])
+print(incidents_df[indicators].dropna().shape[0])
+
+# %%
+incidents_df[indicators].describe()
+
 # %% [markdown]
-# ## Indicators semanthics
-#
-# TODO: mettere link geopy
+# ## Final Indicators semanthics
 #
 # | Name | Description | Present in the original dataset |
 # | :--: | :---------: | :-----------------------------: |
-# | lat_proj | Latitude projection using Universal Transverse Mercator system | No |
-# | long_proj | Longitude projection using Universal Transverse Mercator system | No |
 # | location_imp | Location importance according to Geopy | No |
 # | surprisal_address_type | Surprisal of the address type w.r.t the address types of incidents happened in the same semester of the same year and in the congressional district of the same state | No |
 # | age_range | Difference between the maximum and the minimum age of the participants involved in the incident | No |
@@ -445,10 +442,3 @@ incidents_df[indicators].to_csv('../data/indicators.csv')
 # | n_arrested_prop | Ratio between the number of people arrested and the number of participants involved in the incident | No |
 # | n_participants | Number of participants in the incident | Yes |
 # | surprisal_day | Surprisal of the day of the month and of the month of the incident w.r.t the days of the month and the months of incidents happened in the same semester of the same year and in the congressional district of the same state | No |
-
-# %%
-# TODO: 
-# distribuzioni variabili scelte, con e senza nan
-# scatter semplici e in pca
-# missing values, duplications
-# controllare errori, tipo rapporti devono essere in 0,1, etc.
