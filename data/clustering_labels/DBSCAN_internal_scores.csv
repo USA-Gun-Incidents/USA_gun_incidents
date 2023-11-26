@@ -1,2 +1,2 @@
-,silhouette_score
-0,0.2513519516799431
+,BSS,SSE,calinski_harabasz_score,calinski_harabasz_score,davies_bouldin_score,model,n_iter,silhouette_score
+0,,,,,,"DBSCAN(eps=1.5, min_samples=20)",,0.2513519516799431
