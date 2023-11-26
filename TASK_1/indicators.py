@@ -2,7 +2,7 @@
 # # Definition and study of indicators
 
 # %% [markdown]
-# In this notebook, we extract indicators for describing the incidents. First we will compute the indicators on different features combinations, visualizing their distributions. Then, we will study the correlation between the indicators and choose the most relevant ones.
+# In this notebook, we extract indicators for describing the incidents. First we compute the indicators on different features combinations, visualizing their distributions. Then, we study the correlation between the indicators and choose the most relevant ones. We finally provide a table describing the chosen indicators.
 
 # %% [markdown]
 # We import the libraries:
@@ -327,6 +327,9 @@ def project_lat_long(latidude, longitude):
 incidents_df['lat_proj'], incidents_df['lon_proj'] = zip(*incidents_df.apply(
     lambda row: project_lat_long(row['latitude'], row['longitude']), axis=1))
 
+# %% [markdown]
+# We define a list of the most relevant indicators with their abbreviations:
+
 # %%
 indicators_abbr = {
     # spatial data
@@ -366,6 +369,9 @@ indicators_abbr = {
 }
 incidents_df.rename(columns=indicators_abbr, inplace=True)
 
+# %% [markdown]
+# We visualize pairwise correlations using pearson and spearman correlation coefficients:
+
 # %%
 fig, ax = plt.subplots(figsize=(25, 10))
 corr_matrix = incidents_df[list(indicators_abbr.values())].corr('pearson')
@@ -375,6 +381,9 @@ sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coo
 fig, ax = plt.subplots(figsize=(25, 10))
 corr_matrix = incidents_df[list(indicators_abbr.values())].corr('spearman')
 sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coolwarm')
+
+# %% [markdown]
+# We discard correlated indicators and visualize again the correlation matrix:
 
 # %%
 features_to_drop = [
@@ -390,7 +399,6 @@ features_to_drop = [
 ]
 indicators = [feature for feature in list(indicators_abbr.values()) if feature not in features_to_drop]
 
-# %%
 fig, ax = plt.subplots(figsize=(20, 10))
 corr_matrix = incidents_df[indicators].corr('pearson')
 sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coolwarm')
@@ -400,22 +408,30 @@ fig, ax = plt.subplots(figsize=(20, 10))
 corr_matrix = incidents_df[indicators].corr('spearman')
 sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coolwarm')
 
+# %% [markdown]
+# We save the names of the indicators in a json file and we save the dataset with the indicators:
+
 # %%
 import json
 with open('../data/indicators_names.json', 'w') as f:
     json.dump(indicators, f)
 
-# %%
 original_features_minus_indicators = [feature for feature in dataset_original_columns if feature not in indicators]
 incidents_df[original_features_minus_indicators + indicators].to_csv('../data/incidents_indicators.csv')
 incidents_df[indicators].to_csv('../data/indicators.csv')
+
+# %% [markdown]
+# We visualize the number of nan values for each indicator:
 
 # %%
 incidents_df[indicators].info()
 
 # %%
-print(incidents_df.shape[0])
-print(incidents_df[indicators].dropna().shape[0])
+print(f'The dataset has {incidents_df.shape[0]} rows')
+print(f'Dropping rows with nan values in the indicators columns, {incidents_df[indicators].dropna().shape[0]} rows remain')
+
+# %% [markdown]
+# We display a summary of the descriptive statistica of the indicators:
 
 # %%
 incidents_df[indicators].describe()
