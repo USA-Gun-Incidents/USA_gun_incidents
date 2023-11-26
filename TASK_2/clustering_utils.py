@@ -7,10 +7,10 @@ import plotly.graph_objects as go
 import plotly.offline as pyo
 from sklearn.utils import resample
 from scipy.spatial.distance import pdist, squareform
-from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, precision_score, recall_score
 from sklearn.metrics import adjusted_rand_score, homogeneity_score, completeness_score, normalized_mutual_info_score
 
-def compute_bss_per_cluster(X, clusters, centroids, weighted=True): # TODO: capire se è corretto chiamarla bss se relativa a ciascun cluster
+def compute_bss_per_cluster(X, clusters, centroids, weighted=True):
     '''
     This function computes the between-cluster sum of squares for each cluster.
 
@@ -39,7 +39,7 @@ def compute_se_per_point(X, clusters, centroids):
 
     return np.sum(np.square((X - centroids[clusters])), axis=(1 if X.ndim > 1 else 0))
 
-def compute_purity_per_cluster(pred_labels, true_labels): # if set of labels have different cardinalities not well defined (0/0)
+def compute_purity_per_cluster(pred_labels, true_labels):
     '''
     This function computes the purity of each cluster.
 
@@ -48,7 +48,7 @@ def compute_purity_per_cluster(pred_labels, true_labels): # if set of labels hav
     :return: the purity of each cluster
     '''
     
-    cm = confusion_matrix(pred_labels, true_labels) # FIXME: etichette invertire per seguire definizione libro
+    cm = confusion_matrix(pred_labels, true_labels)
     return np.max(cm, axis=1) / np.sum(cm, axis=1)
 
 def compute_overall_purity(pred_labels, true_labels):
@@ -61,7 +61,7 @@ def compute_overall_purity(pred_labels, true_labels):
     '''
     
     purity_per_cluster = compute_purity_per_cluster(pred_labels, true_labels)
-    cm = confusion_matrix(pred_labels, true_labels) # FIXME: etichette invertire per seguire definizione libro
+    cm = confusion_matrix(pred_labels, true_labels)
     return np.sum((purity_per_cluster * np.sum(cm, axis=1)) / np.sum(cm))
 
 def compute_entropy_per_cluster(pred_labels, true_labels):
@@ -73,7 +73,7 @@ def compute_entropy_per_cluster(pred_labels, true_labels):
     :return: the entropy of each cluster
     '''
     
-    cm = confusion_matrix(pred_labels, true_labels) # FIXME: etichette invertire per seguire definizione libro
+    cm = confusion_matrix(pred_labels, true_labels)
     probs = cm / np.sum(cm, axis=1)
     log_probs = np.log2(probs, out=np.zeros_like(probs), where=(probs!=0)) # 0 if prob=0
     return -np.sum(np.multiply(probs, log_probs), axis=1)
@@ -87,7 +87,7 @@ def compute_overall_entropy(pred_labels, true_labels):
     :return: the overall entropy of the clustering
     '''
     
-    cm = confusion_matrix(pred_labels, true_labels) # FIXME: etichette invertire per seguire definizione libro
+    cm = confusion_matrix(pred_labels, true_labels)
     entropy_per_cluster = compute_entropy_per_cluster(pred_labels, true_labels)
     return np.sum((entropy_per_cluster * np.sum(cm, axis=1)) / np.sum(cm))
 
@@ -126,14 +126,13 @@ def compute_external_metrics(
     f1 = []
     precision = []
     recall = []
-    #roc_auc = []
     purity = []
     entropy = []
 
     n_clusters = df[cluster_column].unique().shape[0]
 
     for feature in external_features:
-        if df[feature].unique().shape[0] != n_clusters: # TODO: ha senso solo se il numero di classi è lo stesso?
+        if df[feature].unique().shape[0] != n_clusters:
             continue
         equal_size_features.append(feature)
         classes = df[feature].astype('category').cat.codes
@@ -142,7 +141,6 @@ def compute_external_metrics(
         f1.append(f1_score(y_true=classes, y_pred=cluster_labels, average='weighted'))
         precision.append(precision_score(y_true=classes, y_pred=cluster_labels, average='weighted', zero_division=0))
         recall.append(recall_score(y_true=classes, y_pred=cluster_labels, average='weighted', zero_division=0))
-        #roc_auc.append(roc_auc_score(y_true=classes, y_score=cluster_labels, multi_class='ovr', average='weighted')) # TODO: non funziona...
         purity.append(compute_overall_purity(true_labels=classes, pred_labels=cluster_labels))
         entropy.append(compute_overall_entropy(true_labels=classes, pred_labels=cluster_labels))
 
@@ -151,7 +149,6 @@ def compute_external_metrics(
     metrics_df['f1'] = f1
     metrics_df['precision'] = precision
     metrics_df['recall'] = recall
-    #cat_clf_metrics_df['roc_auc'] = roc_auc
     metrics_df['purity'] = purity
     metrics_df['entropy'] = entropy
     metrics_df.set_index(['feature'], inplace=True)
@@ -161,7 +158,7 @@ def compute_permutation_invariant_external_metrics(
         df,
         cluster_column,
         external_features
-    ): # definite anche se il numero di classi è diverso
+    ):
     '''
     This function computes permutation invariant metrics to compare the cluster labels with external features.
 
@@ -180,7 +177,7 @@ def compute_permutation_invariant_external_metrics(
     for feature in external_features:
         adj_rand_scores.append(adjusted_rand_score(df[feature], df[cluster_column]))
         mutual_info_scores.append(normalized_mutual_info_score(df[feature], df[cluster_column], average_method='arithmetic'))
-        homogeneity_scores.append(homogeneity_score(df[feature], df[cluster_column])) # != purity, this is permutation invariant
+        homogeneity_scores.append(homogeneity_score(df[feature], df[cluster_column]))
         completeness_scores.append(completeness_score(df[feature], df[cluster_column]))
 
     metrics_df['feature'] = external_features
@@ -264,11 +261,6 @@ def scatter_by_cluster(
     for i in range(len(features)):
         for j in range(i+1, len(features)):
             x, y = df[features].columns[i], df[features].columns[j]
-            
-            #FIXME: quando nrows = 1 da questo errore:
-            # 'Axes' object is not subscriptable
-            # non so se vale la pensa perderci tempo ora come ora
-            # al massimo ci sforzeremo di passare almeno 4 colonne fra le features :)
             axs[int(id/ncols)][id%ncols].scatter(df[x], df[y], s=20, c=colors, edgecolor="k")
 
             if centroids is not None:
@@ -285,7 +277,7 @@ def scatter_by_cluster(
             axs[int(id/ncols)][id%ncols].set_ylabel(y)
             id += 1
     if nrows > 1:
-        for ax in axs[nrows-1, id%ncols:]: # TODO: ricontrollare!
+        for ax in axs[nrows-1, id%ncols:]:
             ax.remove()
 
     legend_elements = []
@@ -296,7 +288,6 @@ def scatter_by_cluster(
     f.legend(handles=legend_elements, loc='lower center', ncols=len(clusters_ids))
 
     plt.suptitle(title, fontsize=20)
-    #plt.show()
 
 def scatter_pca_features_by_cluster(
         X_pca,
@@ -333,7 +324,7 @@ def scatter_pca_features_by_cluster(
     )
     f.fig.suptitle(title)
 
-def plot_boxes_by_cluster( # TODO: lo vogliamo anche in tutto il dataset?
+def plot_boxes_by_cluster(
         df,
         features,
         cluster_column,
@@ -364,7 +355,7 @@ def plot_boxes_by_cluster( # TODO: lo vogliamo anche in tutto il dataset?
         ax.remove()
     fig.suptitle(title, fontweight='bold')
 
-def plot_violin_by_cluster( # TODO: lo vogliamo anche in tutto il dataset?
+def plot_violin_by_cluster(
         df,
         features,
         cluster_column,
@@ -465,14 +456,14 @@ def plot_scores_per_point(score_per_point, clusters, score_name, ax, color_palet
     n_clusters = len(np.unique(clusters))
     y_lower = 0
     for i in range(n_clusters):
-        ith_cluster_sse = score_per_point[np.where(clusters == i)[0]]
-        ith_cluster_sse.sort()
-        size_cluster_i = ith_cluster_sse.shape[0]
+        ith_cluster_score = score_per_point[np.where(clusters == i)[0]]
+        ith_cluster_score.sort()
+        size_cluster_i = ith_cluster_score.shape[0]
         y_upper = y_lower + size_cluster_i
         ax.fill_betweenx(
             np.arange(y_lower, y_upper),
             0,
-            ith_cluster_sse,
+            ith_cluster_score,
             facecolor=color_palette[i],
             edgecolor=color_palette[i],
             alpha=0.7,
@@ -661,8 +652,8 @@ def plot_distance_matrices(X, n_samples, clusters, random_state=None):
     sns.heatmap(idm, ax=axs[1])
     axs[1].set_title('Ideal distance matrix sorted by cluster')
     
-    corr_coef = np.corrcoef(dm.flatten(), idm.flatten()) # TODO: okay fare flatten? forse analogo a non farlo e prendere [0][1]
-    fig.suptitle(f'Pearson Correlation Coefficient = {corr_coef[0,1]:0.2f}', fontweight='bold', y=-0.01) # TODO: è proprio il pearson?
+    corr_coef = np.corrcoef(dm.flatten(), idm.flatten())
+    fig.suptitle(f'Pearson Correlation Coefficient = {corr_coef[0,1]:0.2f}', fontweight='bold', y=-0.01)
     
     return dm, idm
 

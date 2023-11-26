@@ -1,0 +1,8 @@
+,4means
+model,"KMeans(n_clusters=4, n_init=10, random_state=42)"
+SSE,51878.79845330116
+BSS,57863.91870811196
+davies_bouldin_score,1.2129926119852776
+calinski_harabasz_score,49004.18671712359
+silhouette_score,0.3268032005092862
+n_iter,6
