@@ -20,6 +20,7 @@ from sklearn.cluster import DBSCAN
 from sklearn import metrics 
 from scipy.spatial.distance import pdist, squareform
 from plot_utils import plot_scattermap_plotly
+from clustering_utils import plot_dbscan
 
 # %%
 incidents_df = pd.read_csv(
@@ -218,111 +219,6 @@ def dbscan(X, eps=0.1, min_samples=10):
         '#cluster4': list(labels).count(4), '#cluster5': list(labels).count(5),
         '#cluster6': list(labels).count(6), '#cluster7': list(labels).count(7)}
 
-# %%
-#TODO: togliere o spostare in utils
-def plot_dbscan(X, db, columns): 
-    labels = db.labels_ 
-    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)  
-    unique_labels = set(labels)
-    core_samples_mask = np.zeros_like(labels, dtype=bool)
-    core_samples_mask[db.core_sample_indices_] = True # create an array of booleans where True = core point
-    # core point = point that has at least min_samples in its eps-neighborhood
-
-    plt.figure(figsize=(20, 8))
-
-    colors = [plt.cm.rainbow_r(each) for each in np.linspace(0, 1, len(unique_labels))]
-    for k, col in zip(unique_labels, colors):
-        if k == -1:
-            # Black used for noise.
-            col = [0, 0, 0, 1]
-
-        class_member_mask = labels == k # array of booleans where True = point in cluster k
-
-        xy = X[class_member_mask & core_samples_mask]
-        plt.plot(
-            xy[:, 0],
-            xy[:, 1],
-            "o",
-            markerfacecolor=tuple(col),
-            markeredgecolor='k',
-            markersize=10,
-            label=f'Cluster {k}'
-        )
-
-        # plot noise points
-        xy = X[class_member_mask & ~core_samples_mask]
-        plt.plot(
-            xy[:, 0],
-            xy[:, 1],
-            "o",
-            markerfacecolor=tuple(col),
-            markeredgecolor=col,
-            markersize=6,
-            label=f'Cluster {k}'
-        )
-
-    plt.grid()
-    plt.legend()
-    plt.title(f"Estimated number of clusters: {n_clusters_}")
-    plt.show()
-
-import matplotlib.pyplot as plt
-import numpy as np
-
-def plot_dbscan_subplots(X, db, columns=[]):
-    labels = db.labels_
-    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-    unique_labels = set(labels)
-    core_samples_mask = np.zeros_like(labels, dtype=bool)
-    core_samples_mask[db.core_sample_indices_] = True
-    if len(columns) == 0:
-        columns = [f'Dimension {i}' for i in range(X.shape[1])]
-
-    n_dimensions = X.shape[1]
-
-    fig, axs = plt.subplots(n_dimensions, n_dimensions, figsize=(15, 15))
-
-    colors = [plt.cm.rainbow_r(each) for each in np.linspace(0, 1, len(unique_labels))]
-
-    for i in range(n_dimensions):
-        for j in range(n_dimensions):
-            ax = axs[i, j]
-            ax.set_xticks([])
-            ax.set_yticks([])
-
-            if i == j:
-                ax.text(0.5, 0.5, f'{columns[i]}', ha='center', va='center', fontsize=8, color='black')
-            else:
-                for k, col in zip(unique_labels, colors):
-                    if k == -1:
-                        col = [0, 0, 0, 1]
-
-                    class_member_mask = labels == k
-                    xy = X[class_member_mask & core_samples_mask]
-                    ax.plot(
-                        xy[:, i],
-                        xy[:, j],
-                        "o",
-                        markerfacecolor=tuple(col),
-                        markeredgecolor='k',
-                        markersize=4 if k == -1 else 6,
-                        label=f'Cluster {k}'
-                    )
-
-                    xy = X[class_member_mask & ~core_samples_mask]
-                    ax.plot(
-                        xy[:, i],
-                        xy[:, j],
-                        "o",
-                        markerfacecolor=tuple(col),
-                        markeredgecolor=col,
-                        markersize=2 if k == -1 else 4,
-                        label=f'Cluster {k}'
-                    )
-
-                    ax.grid(linestyle='--', linewidth=0.5, alpha=0.6)
-    plt.show()
-
 # %% [markdown]
 # ## DBSCAN Algorithm: Illinois
 
@@ -387,10 +283,20 @@ dbscan_illinois
 
 # %%
 db = DBSCAN(eps=1.5, min_samples=20).fit(X_minmax_illinois) # 5 first trial
-plot_dbscan_subplots(X_minmax_illinois, db, columns=ind_names_list)
+
+# %%
+illinois_df['cluster'] = db.labels_
+
+# %%
+illinois_df.shape
 
 # %% [markdown]
-# ## Results 
+# ### Results 
+
+# %% [markdown]
+# Below, we visualize how the algorithm divided the data into clusters.
+#
+# From the barplot below, we can clearly see that the clusters are not balanced; the majority of entries (9941 over 13234) are contained in one cluster.
 
 # %%
 # bar plot of number of incidents per cluster
@@ -408,29 +314,54 @@ plt.grid(linestyle='--', linewidth=0.5, alpha=0.6)
 plt.title('Number of incidents per cluster')
 plt.show()
 
+# %% [markdown]
+# We visualize clusters by plotting the divisions between all dimensions using Seaborn's pairplot.
+
 # %%
-illinois_df['cluster'] = db.labels_
 sns.pairplot(illinois_df, hue='cluster', palette=sns.color_palette(
     n_colors=illinois_df['cluster'].unique().shape[0]), vars=ind_names_list)
 plt.show()
 
-# %%
-df = incidents_df.loc[illinois_df.index][ind_names_list]
-df['cluster'] = db.labels_
+# %% [markdown]
+# From this plot we can observe that clusters semms divided data for 'n_killed'
 
+# %% [markdown]
+# We plot the data distribution between clusters for 'avg_age' and 'surprisal_address_type' use Plotly for the same visualization to obtain a clearer view and better understand how noise is distributed
+
+# %%
+ind_names_list[:2][0]
+
+# %%
+plot_dbscan(X=X_minmax_illinois, db=db, columns=[0,1], axis_labels=ind_names_list[:2], figsize=(10, 5))
+# 'surprisal_address_type': column 0 in X_minmax_illinois
+# 'avg_age': column 1 in X_minmax_illinois
+
+# %% [markdown]
+# From the plot w can observe that class -1 in black represents the noise points, points with a black border represent the core points of the cluster, while points without a border are the border points.
+#
+# From this plot, a precise division of the clusters does not appear. Cluster 5 seems to occupy points where 'surprisal_address_type' mostly takes negative values. A similar trend can be observed for cluster 3.
+#
+# Clusters 0 and 1 (the most populated ones) seem to have a uniform distribution across the data, and a similar observation applies to the noise points.
+
+# %% [markdown]
+# Belowed we plot 
+
+# %%
 fig, ax = plt.subplots(3, 2, figsize=(20, 10), sharex=False, sharey=False)
 index = 0
 for i in range(6):
     for cluster in np.unique(db.labels_):
-        ax[int(index/2), index%2].hist(df[df['cluster']==cluster][ind_names_list[i]], 
-            bins=int(1+3.3*np.log(df[df['cluster']==cluster].shape[0])), 
+        ax[int(index/2), index%2].hist(illinois_df[illinois_df['cluster']==cluster][ind_names_list[i]], 
+            bins=int(1+3.3*np.log(illinois_df[illinois_df['cluster']==cluster].shape[0])), 
             label=f'Cluster {cluster}', edgecolor='black', linewidth=0.8, alpha=0.7)
-    ax[int(index/2), index%2].set_xlabel(df.columns[i], fontsize=8)
+    ax[int(index/2), index%2].set_xlabel(ind_names_list[i], fontsize=8)
     ax[int(index/2), index%2].set_yscale('log')
     ax[int(index/2), index%2].tick_params(axis='both', which='major', labelsize=6)
     ax[int(index/2), index%2].legend(fontsize=8)
     ax[int(index/2), index%2].grid(linestyle='--', linewidth=0.5, alpha=0.6)
     index += 1
+plt.title('Histograms of features per cluster')
+plt.show()
 
 # %%
 columns = ['n_males', 'n_adult', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 'year', 'poverty_perc', 'congd']
@@ -591,10 +522,9 @@ results = {}
 kmeans_params = {}
 kmeans_params['random_state'] = RANDOM_STATE
 kmeans_params['max_iter'] = MAX_ITER
-best_k = 6
 
 kmeans_params['n_init'] = N_INIT
-kmeans_params['n_clusters'] = k
+kmeans_params['n_clusters'] = 6
 kmeans_params['init'] = INIT_METHOD
 result = fit_kmeans(X=X_minmax_illinois, params=kmeans_params)
 results[str(k)+'means'] = result
@@ -602,3 +532,32 @@ results[str(k)+'means'] = result
 # %%
 results_df = pd.DataFrame(results).T
 results_df.drop(columns=['model'])
+
+# %%
+kmeans = KMeans(**kmeans_params)
+kmeans.fit(X_minmax_illinois)
+
+# %%
+kmeans.labels_
+
+# %%
+from clustering_utils import sankey_plot
+
+# %%
+sankey_plot(
+    [kmeans.labels_, db.labels_],
+    labels_titles=['Kmeans', 'DBSCAN'],
+    title='Clusterings comparison'
+)
+
+# %%
+kmeans_params['n_clusters'] = 3
+kmeans = KMeans(**kmeans_params)
+kmeans.fit(X_minmax_illinois)
+
+# %%
+sankey_plot(
+    [kmeans.labels_, db.labels_],
+    labels_titles=['Kmeans', 'DBSCAN'],
+    title='Clusterings comparison'
+)
