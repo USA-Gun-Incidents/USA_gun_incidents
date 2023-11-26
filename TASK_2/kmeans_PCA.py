@@ -851,7 +851,7 @@ plt.suptitle('Cohesion and separation measures for each cluster', fontweight='bo
 dm, idm = plot_distance_matrices(X=X, n_samples=5000, clusters=clusters, random_state=RANDOM_STATE)
 
 # %%
-write_clusters_to_csv(clusters, f'./{k}means_clusters.csv')
+write_clusters_to_csv(clusters, f'./{chosen_k}means_clusters-PCA.csv')
 
 # %%
 compute_permutation_invariant_external_metrics(incidents_df, 'cluster', categorical_features)
