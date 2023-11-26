@@ -14,14 +14,15 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+import geopandas as gpd
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.cluster import DBSCAN
+from sklearn.cluster import DBSCAN, KMeans
 from sklearn import metrics 
-from sklearn.metrics import silhouette_samples, silhouette_score
+from sklearn.metrics import silhouette_samples, silhouette_score, davies_bouldin_score, calinski_harabasz_score
 from scipy.spatial.distance import pdist, squareform
 from plot_utils import plot_scattermap_plotly
-from clustering_utils import plot_dbscan, plot_scores_per_point
-from clustering_utils import plot_hists_by_cluster_dbscan
+from clustering_utils import plot_dbscan, plot_scores_per_point, plot_bars_by_cluster, compute_bss_per_cluster
+from clustering_utils import plot_hists_by_cluster_dbscan, sankey_plot
 from clustering_utils import plot_distance_matrices, write_clusters_to_csv, compute_permutation_invariant_external_metrics
 
 # %%
@@ -303,34 +304,73 @@ print('Silhouette Coefficient: %0.6f' %
 # %% [markdown]
 # ### Save cluster
 
+# %% [markdown]
+# We save the clusters labels in a csv file, in order to use them for a cluster comparison analysis.
+
 # %%
 illinois_df['cluster'].to_csv('../data/clustering_labels/DBSCAN_clusters.csv', index=True)
 
 # %% [markdown]
 # ## Metrics Visualization
 
-# %%
-#TODO: COMMENTARE LE METRICHE
+# %% [markdown]
+# We have plotted the distance matrix. The distance matrix shows a clear diagonal correlation, as indicated by the Pearson coefficient of 0.43.
 
 # %%
-#plot_distance_matrices(X=X_minmax_illinois, n_samples=len(db.labels_), clusters=db.labels_);
+plot_distance_matrices(X=X_minmax_illinois, n_samples=500, clusters=db.labels_);
+
+# %% [markdown]
+# We have plotted the silhouette score for each point in each cluster. It is noticeable that clusters 0 and 1 (the most populated clusters) have a minority of points for which the silhouette score assumes negative values, indicating potential misclassifications or less distinct clusters. On the other hand, higher silhouette values are achieved by clusters 5 and 6 (the least populated ones), suggesting a clearer separation of points within these clusters.
 
 # %%
-cluster_df = pd.DataFrame()
-cluster_df['DBS_labels'] = db.labels_
-cluster_df['data_point'] = range(len(cluster_df))
-cluster_df.index = pd.RangeIndex(len(cluster_df)) # define an index from 0 to (len(data))
-cluster_df = cluster_df.sort_values(by='DBS_labels')
+def plot_scores_per_point(score_per_point, clusters, score_name, ax, color_palette=sns.color_palette(), title=None, minx=-0.1):
+    '''
+    This function plots the clustering score for each point, grouped by cluster.
 
-from scipy.spatial import distance_matrix
+    :param score_per_point: clustering score for each point
+    :param clusters: cluster labels
+    :param score_name: name of the clustering score
+    :param ax: axis to plot on
+    :param color_palette: color palette to use
+    :param title: title of the plot
+    '''
 
-dist_matrix = distance_matrix(cluster_df, cluster_df)
-ax = sns.heatmap(dist_matrix) # PROXIMITY MATRIX
+    n_clusters = len(np.unique(clusters))
+    y_lower = 0
+    for i in range(n_clusters):
+        ith_cluster_sse = score_per_point[np.where(clusters == i)[0]]
+        ith_cluster_sse.sort()
+        size_cluster_i = ith_cluster_sse.shape[0]
+        y_upper = y_lower + size_cluster_i
+        ax.fill_betweenx(
+            np.arange(y_lower, y_upper),
+            0,
+            ith_cluster_sse,
+            facecolor=color_palette[i],
+            edgecolor=color_palette[i],
+            alpha=0.7,
+        )
+        ax.text(minx+0.1*i, y_lower + 0.5 * size_cluster_i, str(i))
+        y_lower = y_upper
+
+    ax.axvline(x=score_per_point.mean(), color="k", linestyle="--", label='Average')
+    if title is None:
+        title = f"{score_name} for each point in each cluster"
+    ax.set_title(title)
+    ax.set_xlabel(score_name)
+    ax.set_ylabel("Cluster label")
+    ax.legend(loc='best')
+    ax.set_yticks([])
 
 # %%
 fig, ax = plt.subplots(figsize=(15, 3))
 plot_scores_per_point(score_per_point=silhouette_samples(X=X_minmax_illinois, labels=db.labels_), 
     clusters=db.labels_, score_name='Silhouette Coefficient', ax=ax)
+
+# %% [markdown]
+# We saved the silhouette score in a dataframe for later comparison with other clustering algorithms. It's important to note that, in the case of DBSCAN, the silhouette score is not an ideal metric for evaluating clustering since DBSCAN is not a partitioning algorithm. A more meaningful interpretation can be derived using the silhouette score per point, as demonstrated earlier.
+# 
+# In the dataframe, additional columns include other metrics to make it compatible with the metrics dataframe we will use for other clustering algorithms.
 
 # %%
 results_df = pd.DataFrame(columns=['BSS', 'SSE', 'calinski_harabasz_score',
@@ -343,17 +383,21 @@ results_df['silhouette_score'] = silhouette_score(X_minmax_illinois, db.labels_)
 # %%
 results_df
 
+# %% [markdown]
+# We computed the same external metrics as well. It's noteworthy that the metrics for the *death* category, which represents incidents involving at least one fatality, are quite promising. These external metrics have been calculated for a subsequent comparative analysis between clustering algorithms.
+
 # %%
 illinois_df['unharmed'] = illinois_df['n_unharmed'] > 0
-illinois_df['killed'] = illinois_df['n_killed'] > 0
+illinois_df['arrested'] = illinois_df['n_arrested'] > 0
 illinois_df['males'] = illinois_df['n_males'] > 0
 illinois_df['females'] = illinois_df['n_females'] > 0
 
 external_scores_df = compute_permutation_invariant_external_metrics(
     illinois_df,
     'cluster',
-    ['aggression', 'injuries', 'death', 'killed', 'n_males', 'n_females'] #TODO spostare alla fine
+    ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested','males', 'females']
 )
+
 external_scores_df
 
 # %%
@@ -475,8 +519,34 @@ plot_scattermap_plotly(illinois_df[illinois_df['county']=='Cook County'], 'clust
 # %% [markdown]
 # No discernible patterns are observed; data points belonging to each cluster appear to be uniformly distributed across the territory.
 
+# %% [markdown]
+# We use a choropleth map to visualize the the most frequent clusters for incidents in each county in Illinois.
+
 # %%
-#TODO: aggiungere choro map per cluster e visualizzare le features per cluster
+cluster_df = pd.DataFrame()
+cluster_df['county'] = illinois_df['county']
+cluster_df['county'] = cluster_df['county'].str.replace(' County', '')
+cluster_df['county'] = cluster_df['county'].str.replace('Saint Clair', 'St. Clair')
+cluster_df['county'] = cluster_df['county'].str.replace('DeWitt', 'De Witt')
+cluster_df['cluster'] = illinois_df['cluster']
+
+illinois_map = gpd.read_file('../cb_2018_us_county_500k')
+illinois_merged = illinois_map.merge(cluster_df, left_on='NAME', right_on='county')
+illinois_merged = illinois_merged[illinois_merged['STATEFP']=='17']
+
+# %%
+vmin, vmax = illinois_merged['cluster'].agg(['min', 'max'])
+illinois_merged.plot(column='cluster', cmap='plasma', figsize=(10, 6), vmin=vmin, vmax=vmax,
+    legend=True, legend_kwds={'label': 'cluster', 'shrink': 1}, edgecolor='black', linewidth=0.5)
+plt.title('Most frequent cluster per county in Illinois')
+plt.xticks([])
+plt.yticks([])
+plt.show()
+
+# %% [markdown]
+# We can observe that clusters 0 and 1 are the most frequent plot, as we expected, since they are the most populated and 
+# the clusters distribuition sems to be uniform. 
+# We can also observe that in 3 county the most frequent cluster is 2, while in 1 county the most frequent cluster is 5.
 
 # %% [markdown]
 # ## Analysis of Clustering Results Using External Features
@@ -503,11 +573,8 @@ features = [
     'poverty_perc'
 ]
 
-# %%
-#TODO: da qua, mancano commenti
-
 # %% [markdown]
-# We plot histogrmas for each features and each 
+# Below, we have plotted histograms for each of the selected features to visualize how incidents are distributed within the clusters based on feature values.
 
 # %%
 fig, ax = plt.subplots(7, 2, figsize=(15, 15), sharex=False, sharey=False)
@@ -525,16 +592,84 @@ fig.tight_layout()
 plt.show()
 
 # %% [markdown]
+# Despite the histograms not revealing a distinct pattern in the distribution of incidents within the clusters, we are exploring alternative visualization methods to uncover potential relationships or patterns that may not be evident in the current representations.
+
+# %%
+plot_bars_by_cluster(illinois_df[illinois_df['cluster']!=-1], feature='n_males', 
+    cluster_column='cluster', figsize=(10, 5), log_scale=True)
+
+# %%
+plot_bars_by_cluster(illinois_df[illinois_df['cluster']!=-1], feature='n_child', 
+    cluster_column='cluster', figsize=(10, 5), log_scale=True)
+
+# %%
+plot_bars_by_cluster(illinois_df[illinois_df['cluster']!=-1], feature='n_teen', 
+    cluster_column='cluster', figsize=(10, 5), log_scale=True)
+
+# %%
+plot_bars_by_cluster(illinois_df[illinois_df['cluster']!=-1], feature='n_adult', 
+    cluster_column='cluster', figsize=(10, 5), log_scale=True)
+
+# %%
+plot_bars_by_cluster(illinois_df[illinois_df['cluster']!=-1], feature='n_participants', 
+    cluster_column='cluster', figsize=(10, 5), log_scale=True)
+
+# %% [markdown]
+# In the last 3 clusters (the least populated ones), there are no men or children, and they all belong to cluster 3. In cluster 3, there are few teenagers, and from the histograms, it can be observed that the majority of incidents clustered in clusters 3, 4, and 5 involve only one adult female participant.
+
+# %%
+plot_bars_by_cluster(illinois_df[illinois_df['cluster']!=-1], feature='year', 
+    cluster_column='cluster', figsize=(10, 5), log_scale=True)
+
+# %% [markdown]
+# We are unable to find significant patterns among the clusters concerning the temporal division into years.
+
+# %% [markdown]
+# ## Noise Visualization
+
+# %% [markdown]
+# We present statistical metrics for all incidents in Illinois and specifically for those classified as noise by the DBSCAN algorithm. This analysis aims to provide insights into how the clustering algorithm identified noise points.
+
+# %%
+illinois_df.describe()[['min_age', 'max_age', 'avg_age', 'n_child', 'n_teen', 'n_adult', 'n_males',
+       'n_females', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 'n_participants']]
+
+# %%
+illinois_df[illinois_df['cluster']==-1].describe()[['min_age', 'max_age', 'avg_age', 'n_child', 'n_teen', 'n_adult', 'n_males',
+       'n_females', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 'n_participants']]
+
+# %%
+print('Number of incidents classified as noise:', illinois_df[illinois_df['cluster']==-1].shape[0])
+print('Number of noise incidents with at least one woman: ', 
+    illinois_df[(illinois_df['cluster']==-1) & (illinois_df['females']==True)].shape[0])
+print('Number of noise incidents where average age is over 27: ', 
+    illinois_df[(illinois_df['cluster']==-1) & (illinois_df['avg_age']>27)].shape[0])
+print('Number of noise incidents where there are more than two participants: ', 
+    illinois_df[(illinois_df['cluster']==-1) & (illinois_df['n_participants']>2)].shape[0])
+
+# %% [markdown]
+# We can observe that in the majority of incidents classified as noise, there are women present, and the average age is higher than 27, which happens to be the average age of participants in incidents. Additionally, these incidents involve more than two participants, corresponding to the fourth quartile of the number of participants in incidents. 
+# 
+# These results suggest that such incidents could have been considered outliers in the dataset, indicating that the DBSCAN algorithm correctly identified these cases as noise.
+
+# %% [markdown]
 # ## Compare DBSCAN with K-means
 
-# %%
-from sklearn.cluster import KMeans
-from clustering_utils import compute_bss_per_cluster
-from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score, silhouette_score
+# %% [markdown]
+# We also compare the clusters identified by the DBSCAN algorithm with those obtained from k-means clustering, setting k equal to the number of clusters identified by DBSCAN. This approach is suggested in the *'Cluster Evaluation'* chapter of *Pang-Ning Tan, Michael Steinbach, Vipin Kumar. Introduction to Data Mining.*
+
+# %% [markdown]
+# To obtain more information on the k-means algorithm, please refer to the notebook where the algorithm was thoroughly examined.
 
 # %%
+MAX_ITER = 300
+N_INIT = 10
+INIT_METHOD = 'k-means++'
+MAX_K = 30
+RANDOM_STATE = 42
+
 def fit_kmeans(X, params):
-    print(f'Fitting KMeans with k={params['n_clusters']}')
+    #print(f'Fitting KMeans with k={params['n_clusters']}')
     kmeans = KMeans(**params)
     kmeans.fit(X)
     results = {}
@@ -545,14 +680,7 @@ def fit_kmeans(X, params):
     results['calinski_harabasz_score'] = calinski_harabasz_score(X=X, labels=kmeans.labels_)
     results['silhouette_score'] = silhouette_score(X=X, labels=kmeans.labels_) 
     results['n_iter'] = kmeans.n_iter_
-    return results
-
-# %%
-MAX_ITER = 300
-N_INIT = 10
-INIT_METHOD = 'k-means++'
-MAX_K = 30
-RANDOM_STATE = 42
+    return kmeans, results
 
 # %%
 results = {}
@@ -563,19 +691,15 @@ kmeans_params['max_iter'] = MAX_ITER
 kmeans_params['n_init'] = N_INIT
 kmeans_params['n_clusters'] = 6
 kmeans_params['init'] = INIT_METHOD
-result = fit_kmeans(X=X_minmax_illinois, params=kmeans_params)
+
+kmeans, results = fit_kmeans(X=X_minmax_illinois, params=kmeans_params)
 results[str(k)+'means'] = result
 
 # %%
-results_df = pd.DataFrame(results).T
-results_df.drop(columns=['model'])
+results
 
-# %%
-kmeans = KMeans(**kmeans_params)
-kmeans.fit(X_minmax_illinois)
-
-# %%
-from clustering_utils import sankey_plot
+# %% [markdown]
+# To visualize the correspondence between clusters found by DBSCAN and k-means, we plotted the Sankey plot. It's important to note that in the Sankey plot for DBSCAN, Class 0 corresponds to the noise that we have referred to as -1. Additionally, all cluster labels are scaled by 1 for consistency.
 
 # %%
 sankey_plot(
@@ -583,6 +707,9 @@ sankey_plot(
     labels_titles=['Kmeans', 'DBSCAN'],
     title='Clusterings comparison'
 )
+
+# %% [markdown]
+# From the plot, it is evident that clusters between 0 and 3 found by k-means are mapped into the most frequent cluster of DBSCAN. This suggests that we can map DBSCAN clusters to a k-means model with k=3 for a more concise representation.
 
 # %%
 kmeans_params['n_clusters'] = 3
@@ -595,5 +722,8 @@ sankey_plot(
     labels_titles=['Kmeans', 'DBSCAN'],
     title='Clusterings comparison'
 )
+
+# %% [markdown]
+# The results of this latest attempt have shown significant improvement. We can observe that K-means Cluster 1 has been entirely mapped to the clusters identified as 2 and 4 in the DBSCAN plot, K-means Cluster 2 to cluster 2, and K-means Cluster 0 to DBSCAN Cluster 1 and clusters 0, 3, and 6, representing noise and the less numerous classes in DBSCAN. We can, therefore, see clear correspondences in the cluster creation between the two algorithms.
 
 

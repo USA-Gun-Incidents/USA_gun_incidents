@@ -335,6 +335,9 @@ plt.show()
 # %% [markdown]
 # ### Illinois Data Visualization
 
+# %% [markdown]
+# Below, we plot a map of Illinois divided by county to gain a better understanding of the state's geography and how it is distributed across counties. Additionally, we provide a visualization of the most frequent values for selected features in each county. This type of visualization can be helpful for a subsequent analysis of the results obtained from the clustering algorithms.
+
 # %%
 illinois_df = incidents_df[incidents_df['state']=='ILLINOIS'][columns].dropna()
 illinois_df[['latitude', 'longitude', 'county', 'city']] = incidents_df.loc[illinois_df.index, [

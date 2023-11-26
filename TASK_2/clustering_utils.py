@@ -197,7 +197,8 @@ def plot_bars_by_cluster(
         df,
         feature,
         cluster_column,
-        figsize=(15, 5)
+        figsize=(15, 5),
+        log_scale=False
     ):
     '''
     This function plots a bar chart of the given categorical features in the given dataframe, both in the whole dataset
@@ -227,6 +228,10 @@ def plot_bars_by_cluster(
     axs[1].set_ylabel('Number of incidents')
     
     plot_clusters_size(clusters=df[cluster_column], ax=axs[2], title='Clusters size', color_palette=sns.color_palette('tab10'))
+    if log_scale:
+        axs[0].set_yscale('log')
+        axs[1].set_yscale('log')
+        axs[2].set_yscale('log')
     plt.show()
 
 def scatter_by_cluster(
