@@ -714,3 +714,70 @@ def write_clusters_to_csv(clusters, file_path):
 
     clusters_df = pd.DataFrame(clusters, columns=['cluster'])
     clusters_df.to_csv(file_path)
+
+def plot_dbscan(X, db, columns, axis_labels, figsize=(10, 10)): 
+    labels = db.labels_ 
+    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)  
+    unique_labels = set(labels)
+    core_samples_mask = np.zeros_like(labels, dtype=bool)
+    core_samples_mask[db.core_sample_indices_] = True # create an array of booleans where True = core point
+    # core point = point that has at least min_samples in its eps-neighborhood
+
+    plt.figure(figsize=figsize)
+
+    colors = [plt.cm.rainbow_r(each) for each in np.linspace(0, 1, len(unique_labels))]
+    for k, col in zip(unique_labels, colors):
+        if k == -1:
+            # Black used for noise.
+            col = [0, 0, 0, 1]
+
+        class_member_mask = labels == k # array of booleans where True = point in cluster k
+
+        xy = X[class_member_mask & core_samples_mask]
+        plt.plot(
+            xy[:, columns[0]],
+            xy[:, columns[1]],
+            "o",
+            markerfacecolor=tuple(col),
+            markeredgecolor='k',
+            markersize=10,
+            label=f'Cluster {k}'
+        )
+
+        # plot noise points
+        xy = X[class_member_mask & ~core_samples_mask]
+        plt.plot(
+            xy[:, columns[0]],
+            xy[:, columns[1]],
+            "o",
+            markerfacecolor=tuple(col),
+            markeredgecolor=col,
+            markersize=6,
+            label=f'Cluster {k}'
+        )
+
+    plt.grid()
+    plt.xlabel(axis_labels[0])
+    plt.ylabel(axis_labels[1])
+    plt.legend()
+    plt.title(f"Estimated number of clusters: {n_clusters_}")
+    plt.show()
+
+def plot_hists_by_cluster_dbscan(df, db, column, figsize=(15, 8)):
+    # plot hist for poverty_perc for each cluster
+    n_clusters = len(np.unique(db.labels_))
+    fig, ax = plt.subplots(int(np.ceil(n_clusters)/2), 2, figsize=figsize, sharex=True, sharey=True)
+    for i in range(6):
+        ax[int(i/2), i%2].hist(df[column].values[db.labels_==i-1], 
+            bins=int(1+3.3*np.log(df[df['cluster']==i-1].shape[0])), 
+            label='Noise' if i==0 else f'Cluster {i-1}', 
+            edgecolor='black', linewidth=0.8, alpha=0.7,
+            color=sns.color_palette(n_colors=df['cluster'].unique().shape[0])[i])
+        ax[int(i/2), i%2].set_xlabel(column, fontsize=8)
+        ax[int(i/2), i%2].set_yscale('log')
+        ax[int(i/2), i%2].tick_params(axis='both', which='major', labelsize=6)
+        ax[int(i/2), i%2].legend(fontsize=8)
+        ax[int(i/2), i%2].grid(linestyle='--', linewidth=0.5, alpha=0.6)
+    fig.suptitle(f'Histograms of {column} by cluster')
+    fig.tight_layout()
+    plt.show()
