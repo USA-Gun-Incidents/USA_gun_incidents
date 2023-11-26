@@ -4,14 +4,26 @@ import seaborn as sns
 from clustering_utils import *
 
 # %%
-labels_files = ['./4-Means_clusters.csv', './4-Means_clusters-PCA.csv', './dbscan_clusters.csv', './heirarchical_clusters.csv']
+PATH = '../data/clustering_labels/'
+clustering_name = ['KMeans', 'KMeansPCA', 'DBSCAN', 'Heirarchical']
+labels_files = [PATH+'/4-Means_clusters.csv', PATH+'./4-Means_clusters-PCA.csv', PATH+'./DBSCAN_illinois.csv', PATH+'./heirarchical_clusters.csv']
+external_scores_files = [PATH+'./4-Means_external_scores.csv', PATH+'./4-Means_external_scores.csv']#PATH+'./4-Means_external_scores-PCA.csv', PATH+'./DBSCAN_illinois_external_scores.csv', PATH+'./heirarchical_external_scores.csv']
+internal_scores_files = [PATH+'./4-Means_internal_scores.csv', PATH+'./4-Means_internal_scores.csv']#PATH+'./4-Means_internal_scores-PCA.csv', PATH+'./DBSCAN_illinois_internal_scores.csv', PATH+'./heirarchical_internal_scores.csv']
+indexes_files = [PATH+'./4-Means_indexes.csv', PATH+'./4-Means_indexes.csv']#PATH+'./4-Means_indexes-PCA.csv', PATH+'./DBSCAN_illinois_indexes.csv', PATH+'./heirarchical_indexes.csv'
 
 labels = []
-for files in labels_files:
-    labels.append(pd.read_csv(files, index_col=0)['cluster'].to_numpy())
-
-# dbscan_clusters = pd.read_csv('./dbscan_clusters.csv', index_col=0)['cluster'].to_numpy()
-# heirarchical_clusters = pd.read_csv('./heirarchical_clusters.csv', index_col=0)['cluster'].to_numpy()
+common_indexes = set()
+internal_scores_df = pd.DataFrame()
+indexes_df = pd.DataFrame()
+for name, labels_file, external_score_file, internal_score_file, indexes_file in zip(clustering_name, labels_files, external_scores_files, internal_scores_files, indexes_files):
+    labels.append(pd.read_csv(labels_file, index_col=0)['cluster'].to_numpy())
+    internal_scores_curr_df = pd.read_csv(internal_score_file, index_col=0).T['silhouette_score']
+    internal_scores_df = pd.concat([internal_scores_df, internal_scores_curr_df])
+    indexes_curr_df = pd.read_csv(indexes_file, index_col=0)
+    
+    # indexes_df = pd.read_csv(indexes_file, index_col=0)
+    # indexes_list = indexes_df['0'].to_list()
+    # common_indexes = common_indexes.intersection(set(indexes_list)) if len(common_indexes) > 0 else set(indexes_list)
 
 # %%
 sankey_plot(
@@ -19,11 +31,3 @@ sankey_plot(
     labels_titles=['Kmeans', 'Kmeans-PCA'],
     title='Clusterings comparison'
 )
-
-# %%
-# TODO: 
-# - other metrics and plots to compare results in a single plot
-# - align labels according to plot above
-# - make other plots, e.g. mark points belonging to different cluster
-
-
