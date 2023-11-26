@@ -50,27 +50,6 @@ incidents_df = incidents_df[incidents_df['state'] == state]
 incidents_df.drop('state', axis=1, inplace=True)
 
 # %% [markdown]
-# TODO: quando sei sicuro, eliminare le successive 2 celle di codice
-
-# %%
-latlong_projs = utm.from_latlon(incidents_df['latitude'].to_numpy(), incidents_df['longitude'].to_numpy())
-scaler= MinMaxScaler()
-latlong = scaler.fit_transform(np.stack([latlong_projs[0], latlong_projs[1]]).reshape(-1, 2))
-incidents_df['latitude_proj'] = latlong[:,0]
-incidents_df['longitude_proj'] = latlong[:,1]
-
-# %%
-incidents_df.drop(columns=['latitude', 'longitude'], axis=1, inplace=True)
-new_order = ['latitude_proj', 'longitude_proj', 'location_importance', 'avg_age_participants',
-       'n_participants', 'age_range', 'n_participants_child_prop',
-       'n_participants_teen_prop', 'n_killed_pr', 'n_injured_pr',
-       'n_arrested_pr', 'n_unharmed_pr',
-       'log_n_males_n_males_mean_semest_congd_ratio', 'log_avg_age_mean_SD',
-       'avg_age_entropy', 'city_entropy', 'address_entropy',
-       'n_adults_entropy', 'tags_entropy', 'severity']
-incidents_df = incidents_df[new_order]
-
-# %% [markdown]
 # We delete latitude and longitude columns becouse, from previous experiments, we saw that they affect too much the clustering. In fact, in different algorithms, they result to be a criteria "too much weighted", leading in cluster subdivision based almost just on their distribution
 
 # %%
@@ -92,7 +71,7 @@ incidents_df.shape
 
 # %%
 scaler_obj = MinMaxScaler()
-incidents_df = pd.DataFrame(data=scaler_obj.fit_transform(incidents_df.values), columns=incidents_df.columns)
+incidents_df = pd.DataFrame(data=scaler_obj.fit_transform(incidents_df.values), columns=incidents_df.columns, index=incidents_df.index)
 
 # %%
 # print all indexes for clustering
@@ -295,21 +274,20 @@ scatter_by_cluster(incidents_df_cluster,
 # %% [markdown]
 # Here we tell, for each cluster, which are the distinguishing attributes and their associated values:<br>
 # 
-# cluster 0: **surprisal n_injured** > 0.5 & **n_child_prop** > 0 (in the last one not all the points belong to cluster 0 but still the majority)
+# cluster 0: **n_unharmed_prop** > 0 with **location_imp** = 0 & **location_imp** = 0 with all possible values of **n_child_prop**, but in general **n_child_prop** > 0.2 & the majority of the points in  0.2 < **n_injured_prop** < 0.8 & **age_range** <  0.2 & **n_arrested** = 0.2
 # 
-# cluster 1: **n_temp_prop** > 0.5 (it's a small cluster, and for this attriute just half the points belong to the cluster) & (**avg age** = 0.2 & & **surprisal_age_groups** around the half, in particular when **n_injured_prop** = 1 or **n_arrested_prop** = 0)
 # 
-# cluster 2: **n_injured_prop** = 1 & **surprisal_age_groups** < 0.2 & **surprisal_n_males** < 0.2 & **surprisal_characteristics** < 0.2 (for the last 3 attributes, more than half of the points that lie in that space but non all)
+# cluster 1: some points **avg_age** = 0.2 & **surprisal_age_groups** < 0.3 with **n_injured_prop** = 1. Since it's a small cluster it's difficoult to find dominant patterns in the dataset for this cluster
 # 
-# cluster 3: **hunarmed_prop** > 0.5
+# cluster 2: **surprisal age_groups** = 0.1 & **n_injured_prop** = 1
 # 
-# cluster 4: **n_arrested_prop** > 0.2 with **surprisal_n_injured** < 0.5
+# cluster 3: **n_arrested_prop** > 0.5
 # 
-# cluster 5: **avg_age** = 0.2 & **n_teen_prop** < 0.5 but even in this case, since this is a small cluster, not all the points in those spaces belongs to cluster 5
+# cluster 4: a big part of the points in **avg_age** = 0.2 & **surprisal_age_groups** > 0.3 & **n_teen_prop** > 0.3 with **n_child_prop** = 0
 # 
-# cluster 6: **n_killed_prop** = 1 in particular with **surprisal_age_groups** < 0.4
+# cluster 5: **n_killed_prop** = 1
 # 
-# cluster 7: it's the smallest cluster and there are no subspaces of the data where we found a clear distinction from other points, but the records in this cluster lie in 0 < **surprisal_age_groups** < 0.2 & 0.4 < **surprisal_n_males** < 0.6 & **n_males_prop** = 0
+# cluster 6: **surprisal_n_males** = 0.5 & **n_male_prop** = 0
 
 # %% [markdown]
 # We display, for each feature, a **boxplot** and a **violin plot** in order to check the distribution of the data and get some statistical insights for that feature in a specific cluster.<br>
@@ -370,5 +348,102 @@ for feature in incidents_df.columns:
 
 # %% [markdown]
 # What we see it that when data is homogeneously distributed in the dataset, it will be the same on each cluster. Differences among groups arise when there are distributions with more than one local maximum (ex: n_arrested_prop); in these cases it may happen that clusters cover different and separated ranges of that data.
+
+# %% [markdown]
+# Now we analyze the clustering by looking at the feature of the original dataset. This can helps us identify the atributes that better separate each record
+
+# %% [markdown]
+# First of all, we select only the interesting features from the attributes where we want to check the clustering results.
+
+# %%
+features = ['latitude', 'longitude', 'county', 'city', 'location_importance', 'n_participants_child', 'n_participants_teen',
+            'n_participants_adult', 'n_males', 'n_females', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed',
+            'n_participants', 'poverty_perc']
+
+numerical_features = ['latitude', 'longitude', 'location_importance', 'n_participants_child', 'n_participants_teen', 'n_participants_adult',
+                      'n_males', 'n_females', 'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 'n_participants', 'poverty_perc']
+
+incidents_df_full_state = incidents_df_full.loc[incidents_df_full['state'] == state][features] # get the records about only the chosen state
+incidents_df_full_state.head()
+
+# %% [markdown]
+# We add, for each linkage we used, the columns relative to the cluster assigned to every record
+
+# %%
+# all the incidents not included in the analisys are dropped
+incidents_df_full_state = incidents_df_full_state[incidents_df_full_state.index.isin(incidents_df_cluster.index)]
+
+for algorithm in algorithms:
+    incidents_df_full_state[algorithm] = incidents_df_cluster[algorithm]
+
+incidents_df_full_state.head(2)
+
+# %% [markdown]
+# We display a scatter plot for the attributes of the original dataset (again, only on "ward" results).
+# Here we can see if even other features are affected by the clustering.
+
+# %%
+scatter_by_cluster(incidents_df_full_state,
+                   numerical_features,
+                   algorithms[3],
+                   figsize=(20, 180),
+                   color_palette=sns.color_palette(n_colors=clusters_info_df.loc[3]['n_clusters']))
+
+# %% [markdown]
+# Here we tell, for each cluster, which are the distinguishing attributes and their associated values:<br>
+# 
+# cluster 0: **n_hunarmed** > 1 & **n_partecipants_child** < 1 (and in general when there are different partecipants)
+# 
+# cluster 1: there are some points when **n_partecipants_teen** = 1
+# 
+# cluster 2: 0.1 < **location importance** < 0.2 and some points with high **longitude** and **latitude**
+# 
+# cluster 3: **n_arrested** > 1
+# 
+# cluster 4: **n_partecipants_teen** > 1
+# 
+# cluster 5: some points lies where **n_killed** is a little bit under its average
+# 
+# cluster 6: some points lie in **n_males** = 0 where **latitude** is above its average
+# 
+# As we expected, we can see that the attributes that better separate the clusters, are the ones used to built the indicators that better separate the cluster.
+
+# %% [markdown]
+# Again, we display, for each feature, a **boxplot** and a **violin plot** in order get information on data distribution and statistical insights about the attributes for each cluster.<br>
+
+# %%
+for algorithm in ["complete", "ward"]:
+    plot_boxes_by_cluster(incidents_df_full_state,
+                        numerical_features,
+                        algorithm,
+                        figsize=(15, 65),
+                        title=('Box plots of features by cluster - ' + algorithm))
+
+# %%
+for algorithm in ["complete", "ward"]:
+    plot_violin_by_cluster(
+        incidents_df_full_state,
+        numerical_features,
+        algorithm,
+        figsize=(15, 35),
+        title=('Violin plots of features by cluster- ' + algorithm)
+    )
+
+# %% [markdown]
+# At the end we check again for the algorithm "ward", the distribution of the values in each cluster by histograms, including the distribution over all the dataset.
+
+# %%
+for feature in numerical_features:
+    plot_hists_by_cluster(
+        df=incidents_df_full_state,
+        feature=feature,
+        cluster_column='ward',
+        figsize=(30, 10),
+        title=f'Distribution of {feature} in each cluster',
+        color_palette=sns.color_palette(n_colors=int(results_df.loc['ward']['optimal n_clusters']) + 1)
+    )
+
+# %% [markdown]
+# We can observe the same behaviour as before, with the difference that here we have more fragmented and non-homogeneus distribuitions. So, what we can get, as in poverty_perc, is that the distribution of values in each cluster could be very different from the ones of the other groups and from the one over all the dataset.
 
 
