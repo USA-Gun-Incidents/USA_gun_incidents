@@ -273,7 +273,7 @@ external_scores_df = compute_permutation_invariant_external_metrics(
     ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested','males', 'females']
 )
 
-internal_scores_df.to_csv(folderpath + "hierarchical_external_scores.csv")
+external_scores_df.to_csv(folderpath + "hierarchical_external_scores.csv")
 
 # %% [markdown]
 # Here we plot the same dendrograms but applying the threshold we found.
