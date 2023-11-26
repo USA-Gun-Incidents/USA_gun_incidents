@@ -1,5 +1,5 @@
 __pycache__
-*.ipynb
+
 **/.DS_Store
 **/data/geopy/geopy_merged/geopy_merged.json
 **/TASK_1/checkpoints/checkpoint_4.csv
