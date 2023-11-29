@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
-# 
+#
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
-# 
-# # Elections data understanding and preparation
-# 
+#
+# # State House Elections in the USA - Data Understanding and Preparation
+#
 # We import the libraries:
 
 # %%
@@ -16,7 +17,7 @@ import plotly.offline as pyo
 # We define constants and settings for the notebook:
 
 # %%
-%matplotlib inline
+# %matplotlib inline
 
 import sys, os
 sys.path.append(os.path.abspath('..'))
@@ -42,9 +43,9 @@ elections_df.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about the winner of the congressional elections in the USA, for each year, state and congressional district.
-# 
+#
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas `dtype` for later analysis.
-# 
+#
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :------------: |
 # | 0 | year | Numeric (Interval) | Year | int64 |
@@ -52,8 +53,8 @@ elections_df.head(n=2)
 # | 2 | congressional_district | Categorical (Nominal) | Congressional district | int64 |
 # | 3 | party | Categorical (Nominal) | Winning party fort the corresponding congressional_district in the state, in the corresponding year | object |
 # | 4 | candidatevotes | Numeric (Ratio) | Number of votes obtained by the winning party in the corresponding election | int64 |
-# | 5 | totalvotes | Numeric (Ratio)| Number total votes for the corresponding election | int64 |
-# 
+# | 5 | totalvotes | Numeric (Ratio)| Number of total votes for the corresponding election | int64 |
+#
 # We display a concise summary of the DataFrame:
 
 # %%
@@ -63,7 +64,7 @@ elections_df.info()
 # We notice that:
 # - the inferred types are correct
 # - there are no missing values (however, we should still assess whether there are any missing rows for specific years, states, or congressional districts)
-# 
+#
 # We display descriptive statistics:
 
 # %%
@@ -74,7 +75,7 @@ elections_df.describe(include='all')
 # - year spans from 2004 to 2020
 # - there are 6 unique parties
 # - the minimum of candidatevotes and totalvotes are negative numbers, meaning that there are actually missing values
-# 
+#
 # First we check if the triple <`year`, `state`, `congressional_district`> uniquely identifies each row:
 
 # %%
@@ -97,8 +98,8 @@ print(f'Number of states: {states.size}')
 
 # %% [markdown]
 # All the states (District of Columbia included) are present.
-# 
-# We now display the states and the years for which there are missing rows:
+#
+# We display the states and the years for which there are missing rows:
 
 # %%
 years = [i for i in range(elections_df['year'].min(), elections_df['year'].max(), 2)]
@@ -115,8 +116,8 @@ for year in years:
 elections_df[elections_df['state']=='DISTRICT OF COLUMBIA']
 
 # %% [markdown]
-# Missing values are probably due to the fact that District of Columbia is a non voting delegate district. Anyway, we gathered the missing values from Wikipedia. We noticed that as for the 2020 elecetions, the number of votes received by the winning party coincides, but the number of totalvotes is different (see [here](https://en.wikipedia.org/wiki/2020_United_States_House_of_Representatives_election_in_the_District_of_Columbia)). To be consistent with the other data, we replace the totalvotes value from 2020 with the one from Wikipedia.
-# 
+# Missing values are probably due to the fact that District of Columbia is a non voting delegate district. Anyway, we gathered the missing values from Wikipedia. We noticed that as for the 2020 elections, the number of votes received by the winning party coincides, but the number of totalvotes is different (see [here](https://en.wikipedia.org/wiki/2020_United_States_House_of_Representatives_election_in_the_District_of_Columbia)). To be consistent with the other data, we replace the totalvotes value from 2020 with the one from Wikipedia.
+#
 # Now we import those data:
 
 # %%
@@ -131,8 +132,8 @@ dc_elections_df.info()
 
 # %% [markdown]
 # The inferred types are correct.
-# 
-# We now merge the two dataframes:
+#
+# We merge the two dataframes:
 
 # %%
 elections_df.drop(elections_df[elections_df['state']=='DISTRICT OF COLUMBIA'].index, inplace=True)
@@ -160,7 +161,7 @@ for state in states:
 correct_numbering
 
 # %% [markdown]
-# We now plot the distribution of `totalvotes` for each state in the years of interest, excluding 0 and negative values (this plot makes sense because congressional districts are redrawn so that the population of each district is roughly equal):
+# We plot the distribution of `totalvotes` for each state in the years of interest, excluding 0 and negative values (this plot makes sense because congressional districts are redrawn so that the population of each district is roughly equal):
 
 # %%
 elections_df[
@@ -172,7 +173,7 @@ plt.tight_layout()
 
 # %% [markdown]
 # We can observe that for both total and candidate votes Florida, Louisian and Oklahoma have lower outliers, while Maine has an upper outlier. 
-# 
+#
 # We display the rows relative to Maine:
 
 # %%
@@ -192,6 +193,9 @@ elections_df.loc[
     (elections_df['year']==2022) &
     (elections_df['congressional_district']==2),
     'totalvotes'] = 311278
+
+# %% [markdown]
+# We display data relative to Florida, Louisiana and Oklahoma:
 
 # %%
 elections_df[
@@ -228,7 +232,7 @@ plt.tight_layout()
 
 # %% [markdown]
 # It is evident that in some states the number of votes fluctuates significantly from year to year.
-# 
+#
 # We get the unique names of the parties for the years of interest:
 
 # %%
@@ -245,12 +249,10 @@ elections_df['party'] = elections_df['party'].apply(
 )
 
 # %% [markdown]
-# We now compute the percentage of votes obtained by the winner party and we plot the distribution of these percentages for the years of interest:
+# We compute the percentage of votes obtained by the winner party and we plot the distribution of these percentages for the years of interest:
 
 # %%
 elections_df['candidateperc'] = (elections_df['candidatevotes']/elections_df['totalvotes'])*100
-
-# %%
 hist_box_plot(elections_df[elections_df['year']>2012], col='candidateperc', title='Percentage of winner votes')
 
 # %% [markdown]
@@ -261,19 +263,18 @@ elections_df[(elections_df['candidateperc']==100) & (elections_df['year']>2012)]
 
 # %% [markdown]
 # Wikipedia reports the same data, in those cases there was not an opponent party.
-# 
+#
 # The histogram above also shows that in some disticts the winner party obtained less than 50% of the votes. We display some of those districts:
 
 # %%
 elections_df[(elections_df['candidateperc']<=30) & (elections_df['year']>2012)]
 
 # %% [markdown]
-# Searching in [Wikipedia](https://en.wikipedia.org/wiki/2016_United_States_House_of_Representatives_elections_in_Louisiana) we found that the number of candidatevotes refers to the votes obtained by the winner at the final runoff (in which less people went to vote) while the number of totalvotes refers to the voter at the runoff plus the votes for the other candidates at the primary election. We won't correct these errors but we will keep it in mind for later analysis.
-# 
-# Now we compute, for each year and state, the party with the highest percentage of votes, so to have a better understanding of the political orientation of each state:
+# Searching in [Wikipedia](https://en.wikipedia.org/wiki/2016_United_States_House_of_Representatives_elections_in_Louisiana) we found that the number of candidatevotes refers to the votes obtained by the winner at the final runoff (in which less people went to vote), while the number of totalvotes refers to the voter at the runoff plus the votes for the other candidates at the primary election. We won't correct these errors but we will keep it in mind for later analysis.
+#
+# Now we compute, for each year and state, the party with the highest percentage of votes, so to have a better understanding of the political orientation of each state (NOTE: given the observation above this computation may lead to wrong results).
 
 # %%
-# FIX: data l'osservazione sopra questo dato e questo plot non hanno più significato
 usa_states_df = pd.read_csv(
     'https://www2.census.gov/geo/docs/reference/state.txt',
     sep='|',
@@ -285,11 +286,11 @@ winning_party_per_state = winning_party_per_state.groupby(['year', 'state']).idx
 winning_party_per_state = winning_party_per_state.to_frame()
 winning_party_per_state.reset_index(inplace=True)
 winning_party_per_state.rename(columns={'candidateperc': 'majority_state_party'}, inplace=True)
-winning_party_per_state['px_code'] = winning_party_per_state['state'].str.title().map(usa_name_alphcode) # District of Columbia won't be plotted because 'of' is written with capital 'O'
+winning_party_per_state['px_code'] = winning_party_per_state['state'].str.title().map(usa_name_alphcode)
 winning_party_per_state
 
 # %% [markdown]
-# We now plot on a map the winning party over the years:
+# We plot on a map the winning party over the years:
 
 # %%
 fig = px.choropleth(

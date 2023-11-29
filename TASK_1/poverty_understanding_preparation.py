@@ -1,10 +1,10 @@
 # %% [markdown]
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
-# 
+#
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
-# 
-# # Poverty data understanding and preparation
-# 
+#
+# # Poverty percentage in the USA - Data Understanding and Preparation
+#
 # We import the libraries:
 
 # %%
@@ -36,15 +36,15 @@ poverty_df.head(n=2)
 
 # %% [markdown]
 # This dataset contains information about the poverty percentage for each USA state and year.
-# 
+#
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas dtype for later analysis.
-# 
+#
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :------------: |
 # | 0 | state | Categorical (Nominal) | Name of the state | object |
 # | 1 | year | Numeric (Interval) | Year | int64 |
 # | 2 | povertyPercentage | Numeric (Ratio) | Poverty percentage for the corresponding state and year | float64 |
-# 
+#
 # We display a concise summary of the DataFrame:
 
 # %%
@@ -54,7 +54,7 @@ poverty_df.info()
 # We notice that:
 # - the inferred types of the attributes are correct
 # - the presence of missing values within the attribute `povertyPercentage`
-# 
+#
 # We display descriptive statistics:
 
 # %%
@@ -64,8 +64,8 @@ poverty_df.describe(include='all')
 # We notice that:
 # - the data are provided also for the United States as a whole
 # - `year` spans from 2004 to 2020
-# 
-# We check whether the tuple <`state`, `year`> uniquely identify each row:
+#
+# We check whether the tuple <`state`, `year`> uniquely identifies each row:
 
 # %%
 poverty_df.groupby(['state', 'year']).size().max()==1
@@ -100,7 +100,7 @@ poverty_df.loc[
 
 # %% [markdown]
 # Since the tuple <`state`, `year`> uniquely identifies each row we can conclude that there are no missing rows.
-# 
+#
 # Now, we count how many rows have missing values:
 
 # %%
@@ -114,7 +114,7 @@ poverty_df[poverty_df['povertyPercentage'].isnull()]['year'].unique()
 
 # %% [markdown]
 # As expected we have no data from 2012. Later we will fix this issue.
-# 
+#
 # Now we visualize the distribution of poverty percentage for each state.
 
 # %%
@@ -137,6 +137,8 @@ plt.title('Poverty (%) over the years')
 
 # %% [markdown]
 # The plot above shows that those fliers could be realistic values, we don't need to correct them.
+#
+# We plot the average poverty percentage over the years highlighting the standard deviation:
 
 # %%
 poverty_df.groupby('year')['povertyPercentage'].mean().plot(kind='line', figsize=(15, 5), label='USA average', color='black', style='--')
@@ -163,7 +165,7 @@ plt.ylabel('Average Poverty (%)')
 
 # %% [markdown]
 # It is evident that New Hampshire's average poverty rate is markedly lower than that of the other states, whereas Mississippi's average poverty rate is notably higher than the rest. 
-# 
+#
 # To inspect and compare the poverty percentage of each state over the year, we plot an interactive line chart:
 
 # %%
@@ -174,7 +176,7 @@ fig.show()
 
 # %% [markdown]
 # We can oberserve that New Hampshire always had the lowest poverty percentage, whereas Mississippi had the highest till 2009, then it was surpassed by New Mexico and Louisiana.
-# 
+#
 # To imputate the missing data from 2012, we calculate the average of the `povertyPercentage` values for the preceding and succeeding year.
 
 # %%
@@ -204,7 +206,7 @@ usa_states_df = pd.read_csv(
 )
 usa_name_alphcode = usa_states_df.set_index('STATE_NAME').to_dict()['STUSAB']
 poverty_df.sort_values(by=['state', 'year'], inplace=True)
-poverty_df['px_code'] = poverty_df['state'].map(usa_name_alphcode) # retrieve the code associated to each state (the map is defined in the file data_preparation_utils.py)
+poverty_df['px_code'] = poverty_df['state'].map(usa_name_alphcode)
 fig = px.choropleth(
     poverty_df[poverty_df['state']!='United States'],
     locations='px_code',
