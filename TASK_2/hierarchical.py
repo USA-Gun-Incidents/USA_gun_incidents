@@ -16,7 +16,7 @@ from scipy.cluster.hierarchy import linkage, cophenet, cut_tree
 from clustering_utils import *
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import silhouette_score, silhouette_samples
 import seaborn as sns
 import utm
 
@@ -204,6 +204,75 @@ results_df.set_index(['method'], inplace=True)
 results_df
 
 # %% [markdown]
+# We plot the silhouette scores for each point to visualize the distribution of the score values for each cluster of the algorithms.
+
+# %%
+for i in range(len(algorithms)):
+    fig, axs = plt.subplots(1, figsize=(20,15))
+    silhouette_per_point = silhouette_samples(X=incidents_df, labels=clusters_info_df.loc[i]['cluster_labels'])
+    plot_scores_per_point(
+        score_per_point=silhouette_per_point,
+        clusters=clusters_info_df.loc[i]['cluster_labels'],
+        score_name='Silhouette score',
+        ax=axs,
+        title=('Silhouette score for Hierachical Clustering - ' + algorithms[i]),
+        color_palette=sns.color_palette(n_colors=clusters_info_df.loc[i]['n_clusters']),
+        minx=-0.02
+    )
+
+# %% [markdown]
+# For single and average we see that the main cluster is esemplificative of the situation of the entire data. In complete we see that almost every cluster have some points which are below 0, and the distributions are quite similar. In ward clusters 6, 5 and 2 which don't have any negative points with negative silhouette score, the average value is taken down by cluster 0.
+
+# %% [markdown]
+# We create 2 csv files which respectively contains the labels of the ward algorithm and the associated average silhouette score.
+
+# %%
+labels_df = pd.DataFrame(clusters_info_df.loc[3]['cluster_labels'], index=incidents_df.index, columns=['cluster'])
+
+folderpath = "../data/clustering_labels/"
+labels_df.to_csv(folderpath + "hierarchical.csv")
+
+# %%
+silhouette_df_avg = pd.DataFrame([results_df.loc['ward']['silhouette score']], index=[0], columns=['silhouette_score'])
+silhouette_df_avg.to_csv(folderpath + "hierarchical_internal_scores.csv")
+
+
+# %% [markdown]
+# We create a csv file with some internal scores, useful to compare different clustering algorithms.
+
+# %%
+internal_scores_df = pd.DataFrame(columns=['hierarchical'])
+metrics = ['BBS', 'SSE', 'calinski_harabasz_score', 'davies_bouldin_score', 'model', 'n_iter', 'silhouette_score']
+
+for metric in metrics:
+    if(metric == 'silhouette_score'):
+        internal_scores_df.loc[metric] = results_df.loc['ward']['silhouette score']
+    else:
+        internal_scores_df.loc[metric] = pd.NA
+
+internal_scores_df.to_csv(folderpath + "hierarchical_internal_scores.csv")
+
+# %% [markdown]
+# We create a csv file with some external scores, useful to compare different clustering algorithms.
+
+# %%
+incidents_df_external = incidents_df_full[incidents_df_full.index.isin(incidents_df.index)]
+incidents_df_external['cluster'] = clusters_info_df.loc[3]['cluster_labels']
+
+incidents_df_external['unharmed'] = incidents_df_full['n_unharmed'] > 0
+incidents_df_external['arrested'] = incidents_df_full['n_arrested'] > 0
+incidents_df_external['males'] = incidents_df_full['n_males'] > 0
+incidents_df_external['females'] = incidents_df_full['n_females'] > 0
+
+external_scores_df = compute_permutation_invariant_external_metrics(
+    incidents_df_external,
+    'cluster',
+    ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested','males', 'females']
+)
+
+external_scores_df.to_csv(folderpath + "hierarchical_external_scores.csv")
+
+# %% [markdown]
 # Here we plot the same dendrograms but applying the threshold we found.
 
 # %%
@@ -228,6 +297,9 @@ X = incidents_df.values
 # display only complete and ward
 plot_distance_matrices(X=X, n_samples=500, clusters=clusters_info_df.loc[1]['cluster_labels'], random_state=RANDOM_STATE)
 plot_distance_matrices(X=X, n_samples=500, clusters=clusters_info_df.loc[3]['cluster_labels'], random_state=RANDOM_STATE)
+
+# %% [markdown]
+# We can see for both algorithms that there is an evdent correlation between points in the same cluster, in particular in ward algorithm which hasn't tiny cluster as complete. Moreover, we can se that there are at least 4 clusters in ward with very low distance between all the the internal points.
 
 # %% [markdown]
 # Here we plot, in a histogram, the size of each cluster for all the linkage methods we used.
@@ -255,6 +327,9 @@ for i, algorithm in enumerate(algorithms):
 fig.suptitle('Distance between merged clusters', fontweight='bold')
 
 # %% [markdown]
+# From now on we restrict our analisys only to one cluster algorithm. We choose **ward** becouse it has the best silhouette score and it distributes moro homougeneously the data points among all the clusters.
+
+# %% [markdown]
 # Here we display a **scatter plot** of all the features used for clustering combined two by two. We use these plots to understand better what are the criteria of separation and wich spaces of the data are included in each cluster.
 
 # %%
@@ -265,19 +340,23 @@ incidents_df_cluster = incidents_df.copy()
 for i in range(len(algorithms)):
     incidents_df_cluster[algorithms[i]] = clusters_info_df.loc[i]['cluster_labels']
 
+# we plot taking in consideration only the features wich are
+# significative for clustering separation
+features = ['location_imp', 'n_unharmed_prop', 'n_child_prop', 'n_teen_prop', 'n_injured_prop', 'n_killed_prop', 'n_males_prop',
+            'age_range', 'avg_age', 'n_arrested_prop', 'surprisal_age_groups', 'surprisal_n_males']
 scatter_by_cluster(incidents_df_cluster,
-                   incidents_df.columns,
+                   #incidents_df.columns,
+                   features,
                    algorithms[3],
-                   figsize=(20, 180),
+                   figsize=(20, 100),
                    color_palette=sns.color_palette(n_colors=clusters_info_df.loc[3]['n_clusters']))
 
 # %% [markdown]
 # Here we tell, for each cluster, which are the distinguishing attributes and their associated values:<br>
 # 
-# cluster 0: **n_unharmed_prop** > 0 with **location_imp** = 0 & **location_imp** = 0 with all possible values of **n_child_prop**, but in general **n_child_prop** > 0.2 & the majority of the points in  0.2 < **n_injured_prop** < 0.8 & **age_range** <  0.2 & **n_arrested** = 0.2
+# cluster 0: **n_unharmed_prop** > 0 with **location_imp** = 0 & **location_imp** = 0 with all possible values of **n_child_prop**, but in general **n_child_prop** > 0.2 & the majority of the points in  0.2 < **n_injured_prop** < 0.8 & **age_range** <  0.2 & **n_arrested_prop** = 0.2
 # 
-# 
-# cluster 1: some points **avg_age** = 0.2 & **surprisal_age_groups** < 0.3 with **n_injured_prop** = 1. Since it's a small cluster it's difficoult to find dominant patterns in the dataset for this cluster
+# cluster 1: some points **avg_age** = 0.2 & **surprisal_age_groups** < 0.3 with **n_injured_prop** = 1. Since it has a small size, it's difficoult to find dominant patterns in the dataset for this cluster
 # 
 # cluster 2: **surprisal age_groups** = 0.1 & **n_injured_prop** = 1
 # 
@@ -287,51 +366,65 @@ scatter_by_cluster(incidents_df_cluster,
 # 
 # cluster 5: **n_killed_prop** = 1
 # 
-# cluster 6: **surprisal_n_males** = 0.5 & **n_male_prop** = 0
+# cluster 6: **surprisal_n_males** = 0.5 & **n_males_prop** = 0
 
 # %% [markdown]
-# We display, for each feature, a **boxplot** and a **violin plot** in order to check the distribution of the data and get some statistical insights for that feature in a specific cluster.<br>
-# We restrict to complete-link and ward, becouse for single and average link we have a big cluster which contains almost all records, so the distribuition of the features will be the same we have in the entire dataset.
+# We display, for each feature, a **boxplot** and a **violin plot** in order to check the distribution of the data and get some statistical insights for that feature in a specific cluster.
 
 # %%
-for algorithm in ["complete", "ward"]:
-    plot_boxes_by_cluster(incidents_df_cluster,
-                        incidents_df.columns,
-                        algorithm,
-                        figsize=(15, 65),
-                        title=('Box plots of features by cluster - ' + algorithm))
+plot_boxes_by_cluster(incidents_df_cluster,
+                    incidents_df.columns,
+                    algorithms[3],
+                    figsize=(15, 65),
+                    title=('Box plots of features by cluster - ward'))
+
+# %%
+plot_violin_by_cluster(
+    incidents_df_cluster,
+    incidents_df.columns,
+    algorithms[3],
+    figsize=(15, 35),
+    title=('Violin plots of features by cluster - ward')
+)
 
 # %% [markdown]
-# behaviur for each feature:
-# - location_imp:
-# - surprisal_address_type:
-# - age_range:
-# - avg_age:
-# - surprisal_min_age:
-# - n_child_prop:
-# - n_teen_prop:
-# - surprisal_age_groups:
-# - n_killed_prop:
-# - n_injured_prop:
-# - surprisal_n_injured:
-# - n_unharmed_prop:
-# - n_males_prop:
-# - surprisal_n_males:
-# - surprisal_characteristics:
-# - n_arrested_prop:
-# - n_participants:
-# - surprisal_day:
+# For each feature we can see the following behaviour:
 # 
-
-# %%
-for algorithm in ["complete", "ward"]:
-    plot_violin_by_cluster(
-        incidents_df_cluster,
-        incidents_df.columns,
-        algorithm,
-        figsize=(15, 35),
-        title=('Violin plots of features by cluster- ' + algorithm)
-    )
+# - location_importance: distributions are grouped around 0 and points arer mainly classified as outlier by boxplot.
+# 
+# - surprisal_address_type: we have similar distributions, points are a little bit more accumulated around the median in **clusters 0** and **2**. There are plenty of outliers.
+# 
+# - age range: all distributions have mostly points near 0 and lots of outliers. In **clusters 0**, **3** and **4** points are less concentrated around the median.
+# 
+# - avg age: we have mostly wide distributions around 0.3, and some more compact one with median slightly below 0.2 (**clusters 1** and **4**).
+# 
+# - surprisal_min_age: points are equally distributed through the clusters and there are a lot of outliers.
+# 
+# - n_child prop: same as *location_imp*.
+# 
+# - n_teen_prop: we have just points classifed as outliers except for **cluster 4**.
+# 
+# - surprisal_age_groups: we have different distributions with different median values and plenty of outliers. All distributions with low median accumulate points around it.
+# 
+# - n_killed_prop: most of the points are outliers, except for **cluster 4**.
+# 
+# - n_injured_prop: **cluster 1** has values distributed around 0.4. **Cluster 4** has a distribution with values between 0 and 5. In the other clusters points are accumulated around the median, which is 0 or 1.
+# 
+# - n_hunarmed_prop: same as *n_injured_prop*.
+# 
+# - n_males_prop: the only cluster which as non-outlier points is **0**, which has values from 0.7 and 1.
+# 
+# - surprisal_n_males: distributions have mostly values below 0.4, except for **cluster 6** which has values around 0.5 and has less outliers.
+# 
+# - surprisal_characteristics: **clusters 1**, **2** and **6** have a distribution with median under 0.2 and points distributed from 0.1 to 0.3. In the other clusters points are distributed between 0.3 and 0.6 (from less than 0.2 for **cluster 0**)
+# 
+# - n_arrested_prop: the only distributions which don't show mainly outliers are the ones from **cluster 3** and **4**; the first has values from 0 to 0.5 while the second from 0.5 to 1.
+# 
+# - n_participants: distributions from **clusters 1**, **3** and **4** have median = 0 and points distributed until 0.05; while **clusters 2**, **5** and **6** are all centered in 0. The only exception is **cluster 0** which has points from 0.05 to 0.1.
+# 
+# - surprisal_day: distribution are quite similar with lots of outliers and values from 0.6 to 0.8, with median 0.7. The only exception is **cluster 3** which has a distribution with median 0.6 and takes values from 0.5 to 0.7.
+# 
+# From this we can see that **cluster 3** and **4** separate very well for *n_arrested_prop*. **Cluster 6** is the only one which captures the records with *surprisal_n_males* around 0.5. **Cluster 1** includes most of the records where *n_injured_prop* = 1 and *n_killed_prop* = 0, while **cluster 5** do the same for *n_killed_prop* = 1.
 
 # %% [markdown]
 # Finally we check again but with an histogram, just for the algorithm "ward" (we take it as exemplification just to avoid huge and messy outputs), the distribution of the values in each cluster. This time we compare it with the distribution on all the dataset.
@@ -347,7 +440,7 @@ for feature in incidents_df.columns:
     )
 
 # %% [markdown]
-# What we see it that when data is homogeneously distributed in the dataset, it will be the same on each cluster. Differences among groups arise when there are distributions with more than one local maximum (ex: n_arrested_prop); in these cases it may happen that clusters cover different and separated ranges of that data.
+# What we see it that information retived before are confermed, moreover we discover that when data is homogeneously distributed in the dataset, it will be the same on each cluster. Differences among groups arise when there are distributions with more than one local maximum (ex: n_arrested_prop); in these cases it may happen that clusters cover different and separated ranges of that data.
 
 # %% [markdown]
 # Now we analyze the clustering by looking at the feature of the original dataset. This can helps us identify the atributes that better separate each record
@@ -386,7 +479,7 @@ incidents_df_full_state.head(2)
 scatter_by_cluster(incidents_df_full_state,
                    numerical_features,
                    algorithms[3],
-                   figsize=(20, 180),
+                   figsize=(20, 80),
                    color_palette=sns.color_palette(n_colors=clusters_info_df.loc[3]['n_clusters']))
 
 # %% [markdown]
@@ -412,25 +505,54 @@ scatter_by_cluster(incidents_df_full_state,
 # Again, we display, for each feature, a **boxplot** and a **violin plot** in order get information on data distribution and statistical insights about the attributes for each cluster.<br>
 
 # %%
-for algorithm in ["complete", "ward"]:
-    plot_boxes_by_cluster(incidents_df_full_state,
-                        numerical_features,
-                        algorithm,
-                        figsize=(15, 65),
-                        title=('Box plots of features by cluster - ' + algorithm))
+plot_boxes_by_cluster(incidents_df_full_state,
+                    numerical_features,
+                    algorithms[3],
+                    figsize=(15, 65),
+                    title=('Box plots of features by cluster - ward'))
 
 # %%
-for algorithm in ["complete", "ward"]:
-    plot_violin_by_cluster(
-        incidents_df_full_state,
-        numerical_features,
-        algorithm,
-        figsize=(15, 35),
-        title=('Violin plots of features by cluster- ' + algorithm)
-    )
+plot_violin_by_cluster(
+    incidents_df_full_state,
+    numerical_features,
+    algorithms[3],
+    figsize=(15, 35),
+    title=('Violin plots of features by cluster - ward')
+)
 
 # %% [markdown]
-# At the end we check again for the algorithm "ward", the distribution of the values in each cluster by histograms, including the distribution over all the dataset.
+# For each feature we can see the following behaviour:
+# 
+# - latitude and longitude: we always have the same distributions except for **cluster 3** where points are not accumulated around the median. There are very much point classified as outliers. most of the points are outliers, except for **cluster 4**.
+# 
+# - location_importance: all distributions have median 0 and points accumulated arount it
+# 
+# - n_participants_child: all the distributions have median 0 and most of the points are classified as outliers.
+# 
+# - n_participants_teen: all distributions mainly consists in outliers except for **cluster 4** which contains pints with value 1 and 2.
+# 
+# - n_participants_adult: we have different shaped distributions, but all of them fitted in lower values.
+# 
+# - n_males: the situation is very similar to *n_participants_adult*
+# 
+# - n_females: distributions mainly consist of outliers. For every cluster median is 0 except for **6** where it's 1.
+# 
+# - n_killed: all the distributions have points where the value is 0 (1 for **cluster 5**). Only **cluster 4** has values both from 0 and 1. All the records with other values are considered outliers
+# 
+# - n_injured: **clusters 0**, **1**, **2** and **6** contains mainly points with value 1, while **3** and **5** with value 0. Only **cluster 4** contains values from both 0 and 1 values. All the other record are classified as outliers. **Cluster 0** contains the incidents with value >= 6
+# 
+# - n_arrested: **clusters 0**, **1**, **2** , **5** and **6** contains mainly points with value 0, while **3** with value 1. Only **cluster 4** contains values from both 0 and 1 values. All the other record are classified as outliers.
+# 
+# - n_unharmed: **clusters 1**, **2**, **3**, **5** and **6** contains mainly points with value 1, while **0** with value 0. Only **cluster 4** contains values from both 0 and 1 values. All the other record are classified as outliers. **Cluster 0** contains the incidents with value >= 5
+# 
+# - n_participants: **cluster 2**, **5** and **6** contain distribution with median 0 and points accumulated around it. **Clusters 1**, **3**, **4** have values in distribution until 2, while **cluster 0** has a distribution whit mainly values 2 and 3.
+# 
+# - poverty_perc: we have very similar distributions for all the clusters.
+# 
+# From this we can see that **cluster 0** discriminates well the incidents with high *n_injured*, high *n_unharmed* and high *n_females*. *n_injured* in particular present different distributions for all the clusters and could be very useful for splitting the dataset.
+
+# %% [markdown]
+# At the end we check the distribution of the values in each cluster by histograms, including the distribution over all the dataset.
 
 # %%
 for feature in numerical_features:
@@ -445,5 +567,14 @@ for feature in numerical_features:
 
 # %% [markdown]
 # We can observe the same behaviour as before, with the difference that here we have more fragmented and non-homogeneus distribuitions. So, what we can get, as in poverty_perc, is that the distribution of values in each cluster could be very different from the ones of the other groups and from the one over all the dataset.
+
+# %% [markdown]
+# ## Conclusions
+# As we expected ward is the more stable and homogeneous algorithm between the four. In fact, we maximized the silhouette score without neither obtaining one huge cluster with almost all the records, neither lots of clusters where some have very tiny size. <br>
+# 
+# We are pretty satisfied with the similarity between points in each cluster, since the metrics show us that the intra distance of the points is quite small.<br>
+# 
+# Moreover we can tell that there are patterns from clustering based on indicators and the value of the original attributes of the dataset. In particular we saw that attribuites regarding the age, when refearing to non adults, are the most involved in some clustering characterization, while others could be described better by looking at the number of killed, injured or arrested people in the incident. More homogeneous, instead, are the distributions in each clusters of attributes regarding locality and other side information.
+# 
 
 
