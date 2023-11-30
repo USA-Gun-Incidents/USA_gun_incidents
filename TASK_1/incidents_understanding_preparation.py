@@ -14,11 +14,13 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.legend_handler import HandlerPathCollection
 import seaborn as sns
 import matplotlib.dates as mdates
 import plotly.express as px
 import plotly.offline as pyo
 import plotly.subplots as sp
+from plotly_calplot import calplot
 import plotly.graph_objs as go
 import math
 import os
@@ -47,7 +49,7 @@ pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 
 # %% [markdown]
-# We load the dataset:
+# We load the datasets:
 
 # %%
 incidents_path = DATA_FOLDER_PATH + 'incidents.csv'
@@ -58,7 +60,7 @@ elections_df = pd.read_csv(elections_path, low_memory=False)
 poverty_df = pd.read_csv(poverty_path, low_memory=False)
 
 # %% [markdown]
-# We assess the correct loading of the dataset printing the first 2 rows:
+# We assess the correct loading of the dataset printing 2 random rows:
 
 # %%
 incidents_df.sample(n=2, random_state=1)
@@ -108,7 +110,7 @@ incidents_df.info()
 # %% [markdown]
 # We notice that:
 # - `congressional_district`, `state_house_district`, `state_senate_district`, `participant_age1`, `n_males`, `n_females`, `n_arrested`, `n_unharmed`, `n_participants` are stored as `float64` while should be `int64`
-# - `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` are stored as `object` while should be `int64`, this probably indicates the presence of out of syntactic errors (not in the domain)
+# - `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` are stored as `object` while should be `int64`, this probably indicates the presence of syntactic errors (not in the domain)
 # - the presence of missing values within many attributes; the only attributes without missing values are the following: `date`, `state`, `city_or_county`, `n_killed`, `n_injured`, `n_participants`
 #
 # We display descriptive statistics of the DataFrame so to better understand how to cast the data:
@@ -161,8 +163,6 @@ incidents_df['participant_age_group1'] = incidents_df['participant_age_group1'].
 incidents_df.info()
 
 # %% [markdown]
-# We observe that the downcasting of many attributes has not succeeded. This is due to the presence of missing or out of range values.
-#
 # We drop duplicates:
 
 # %%
@@ -203,7 +203,7 @@ incidents_df.describe(include='all')
 # %% [markdown]
 # We can already make some considerations about the dataset:
 # - incidents happened in 51 different states (we probably have at least one incident for each state)
-# - the most frequent value for the attrbute `state` is Illinois and the most frequent value for  `city_or_county` is Chicago (which is in illinois, it is consistent)
+# - the most frequent value for the attrbute `state` is Illinois and the most frequent value for  `city_or_county` is Chicago (which is in Illinois, it is consistent)
 # - 148 incidents happened at the address "2375 International Pkwy" (an airport in Dallas, Texsas)
 # - the majority of incidents involved males
 # - there are 52 unique values for the attribute `incidents_characteristics1` and the most frequent is "Shot - Wounded/Injured" (at the time of data collection, it is likely that the values this attribute could take on were limited to a predefined set)
@@ -250,9 +250,7 @@ def plot_dates(df_column, title=None, color=None):
         u = x.max()
         l = x.min()
         Lower_Fence = builtins.max(builtins.min(x[x > q1 - (1.5 * IQR)], default=pd.Timestamp.min), l)
-        #Lower_Fence = builtins.max(q1 - (1.5 * IQR), l)
         Upper_Fence = builtins.min(builtins.max(x[x < q3 + (1.5 * IQR)], default=pd.Timestamp.max), u)
-        #Upper_Fence = builtins.min(q3 + (1.5 * IQR), u)
         return [Lower_Fence, q1, med, q3, Upper_Fence]
     relevant_positions = iqr_fence(df_column)
     n_items = len(df_column.index)
@@ -325,14 +323,13 @@ incidents_df['date_mean'] = pd.to_datetime(incidents_df['date_mean'], format='%Y
 incidents_df['date_median'] = incidents_df['date']
 incidents_df['date_median'] = incidents_df['date'].apply(lambda x : median_date if x.year>2018 else x)
 
-# %%
 plot_dates(incidents_df['date_minus10'], 'Dates distribution (year - 10 for oor)')
 plot_dates(incidents_df['date_minus11'], 'Dates distribution (year - 11 for oor)', color='orange')
 plot_dates(incidents_df['date_mean'], 'Dates distribution (oor replaced with mean)', color='green')
 plot_dates(incidents_df['date_median'], 'Dates distribution (oor replaced with median)', color='red')
 
 # %% [markdown]
-# Unfortunately, these methods lead to unsatisfactory results, as they significantly alter the distribution. Therefore, we have decided to delete dates after 2018 and still consider the incorrect data in subsequent analyses.
+# Unfortunately, these methods lead to unsatisfactory results, as they significantly alter the distribution. Therefore, we decided to split the date attribute into year, month and day, and set to nan the date attribute if larger than 2018. We also recover the day of the week in which the incident occurred.
 
 # %%
 incidents_df.drop(columns=['date_minus10', 'date_minus11', 'date_mean', 'date_median'], inplace=True)
@@ -345,6 +342,9 @@ incidents_df['day'] = incidents_df['date'].dt.day.astype('UInt64')
 incidents_df['day_of_week'] = incidents_df['date'].dt.dayofweek.astype('UInt64')
 incidents_df['day_of_week_name'] = incidents_df['date'].dt.day_name()
 
+# %% [markdown]
+# We visualize the number of incidents per month:
+
 # %%
 incidents_df.groupby('month').size().plot(
     kind='bar',
@@ -354,6 +354,9 @@ incidents_df.groupby('month').size().plot(
     ylabel='Number of incidents'
 )
 plt.xticks(range(12), calendar.month_name[1:13], rotation=45);
+
+# %% [markdown]
+# We visualize the number of incidents per day of the week:
 
 # %%
 incidents_df.groupby('day_of_week').size().plot(
@@ -365,12 +368,15 @@ incidents_df.groupby('day_of_week').size().plot(
 )
 plt.xticks(range(7), calendar.day_name[0:7], rotation=45);
 
+# %% [markdown]
+# We display the number of incidents per day over the years:
+
 # %%
 def group_by_day(df, date_col):
     counts_by_day = df[date_col].groupby([df[date_col].dt.year, df[date_col].dt.month, df[date_col].dt.day]).size().rename_axis(['year', 'month', 'day']).to_frame('Number of incidents').reset_index()
     counts_by_day[['year', 'month', 'day']] = counts_by_day[['year', 'month', 'day']].astype('int64')
     # add missing days
-    for day in pd.date_range(start='2017-01-01', end='2017-12-31'): # 2017%4!=0, has not 29 days in February
+    for day in pd.date_range(start='2017-01-01', end='2017-12-31'): # 2017%4!=0, this will exclude 29 February
         for year in counts_by_day['year'].unique():
             row_exists = (
                 (counts_by_day['year']==year) &
@@ -404,14 +410,14 @@ fig = px.line(
 )
 fig.update_xaxes(tickangle=-90)
 fig.show()
-pyo.plot(fig, filename='../html/incidents_per_day_scatter.html', auto_open=False);
+pyo.plot(fig, filename='../html/incidents_per_day_line.html', auto_open=False);
+
+# %% [markdown]
+# We display the number of incidents per day over the years as heatmap, using a calendar plot:
 
 # %%
 incidenst_per_day = incidents_df.groupby('date').size()
 
-# %%
-from plotly_calplot import calplot
-# creating the plot
 fig = calplot(
          incidenst_per_day.reset_index(),
          x="date",
@@ -424,9 +430,8 @@ pyo.plot(fig, filename='../html/incidents_per_day_heatmap.html', auto_open=False
 # #### Incidents During Festivities
 
 # %% [markdown]
-# We visualized the number of incidents during various festivities, including federal holidays in the USA. Here is a reference to the Federal Holiday calendar:
-#
-# [Federal Holiday Calendar in USA](https://www.commerce.gov/hr/employees/leave/holidays)
+# We visualize the frequency of incidents occurring across different festivities.
+# We consider the following holidays (most of them are [federal holidays]((https://www.commerce.gov/hr/employees/leave/holidays)))
 #
 # | Holiday | Date |
 # | :------------: | :------------: |
@@ -441,11 +446,6 @@ pyo.plot(fig, filename='../html/incidents_per_day_heatmap.html', auto_open=False
 # | Veterans’ Day | November 11 |
 # | Thanksgiving Day | 4th Thursday in November |
 # | Christmas Day | December 25 |
-#
-# Additionally, we considered the following holidays or days:
-#
-# | Holiday | Date |
-# | :------------: | :------------: |
 # | Easter | Sunday (based on moon phase) |
 # | Easter Monday | Day after Easter |
 # | Black Friday | Day after Thanksgiving |
@@ -469,9 +469,7 @@ holiday_dict = {'New Year': ['2013-01-01', '2014-01-01', '2015-01-01', '2016-01-
     'Christmas Day': ['2013-12-25', '2014-12-25', '2015-12-25', '2016-12-26', '2017-12-25', '2018-12-25']}
 
 # %% [markdown]
-# In the cells below, we have displayed the number of samples for each holiday, divided by year, and then as a percentage of the total incidents that occurred in the same year. 
-#
-# Note that for the year 2018, we only have data until the end of March.
+# We display the number of incidents occurring on each holiday for each year:
 
 # %%
 dfs = []
@@ -499,10 +497,13 @@ dfs.append(pd.DataFrame([{
     'n_incidents_2018': incidents_df[incidents_df['date'].dt.year==2018].shape[0],
     'n_incidents_total': incidents_df.shape[0]}]))
 holidays_df = pd.concat(dfs, ignore_index=True)
+holidays_df.sort_values(by=['n_incidents_2017'], ascending=False, inplace=True)
 holidays_df
 
+# %% [markdown]
+# We display the number of incidents occurring on each holiday for each year as a percentage:
+
 # %%
-# same df as above, but with percentages
 holidays_df_percents = holidays_df.copy()
 
 holidays_df_percents['n_incidents_2013'] = holidays_df_percents['n_incidents_2013'] / holidays_df_percents[
@@ -517,16 +518,17 @@ holidays_df_percents['n_incidents_2017'] = holidays_df_percents['n_incidents_201
     holidays_df_percents['holiday']=='Total incidents during the year']['n_incidents_2017'].values[0] * 100
 holidays_df_percents['n_incidents_2018'] = holidays_df_percents['n_incidents_2018'] / holidays_df_percents[
     holidays_df_percents['holiday']=='Total incidents during the year']['n_incidents_2018'].values[0] * 100
-holidays_df_percents.drop(holidays_df.index[-1], inplace=True)
+holidays_df_percents.drop(holidays_df.index[0], inplace=True)
 
+holidays_df_percents.sort_values(by=['n_incidents_2017'], ascending=False, inplace=True)
 holidays_df_percents
 
 # %% [markdown]
-# Visualize data in a bar plot:
+# We visualize the data using a bar plot:
 
 # %%
 fig = px.bar(
-    holidays_df.drop(holidays_df.index[-1]),
+    holidays_df.drop(holidays_df.index[0]),
     x='holiday',
     y=['n_incidents_2013', 'n_incidents_2014', 'n_incidents_2015', 'n_incidents_2016', 'n_incidents_2017', 'n_incidents_2018'],
     title='Number of incidents per holiday',
@@ -537,11 +539,9 @@ fig.show()
 pyo.plot(fig, filename='../html/incidents_per_holiday.html', auto_open=False);
 
 # %% [markdown]
-# In summary, the analysis reveals that there are not many incidents during any holiday. The distribution of the number of incidents during each holiday, relative to the total number of incidents in that year, remains consistent over the years. This consistency aligns with our expectations, given the similarity in the distribution of incidents across days throughout the years.
+# We notice that the distribution of the number of incidents during each holiday remains consistent over the years. This consistency aligns with our expectations, given the similarity in the distribution of incidents across days throughout the years.
 #
-# New Year's Eve is the holiday with the highest number of incidents, but they still account for less than 2% of the total annual incidents.
-#
-# Given that these analyses did not yield significant findings, we have decided not to incorporate the holiday-related information into subsequent analyses.
+# New Year's Eve, followed by the Independence day are the holiday with the highest number of incidents, while Christmas and Thanksgiving are the holidays with the lowest number of incidents.
 
 # %% [markdown]
 # ### Geospatial features: exploration and preparation
@@ -628,9 +628,7 @@ geopy_df.sample(2, random_state=1)
 # The rows in this dataframe correspond to the rows in the original dataset. Its column *coord_presence* is false if the corresponding row in the original dataset did not have latitude and longitude values.
 #
 # Among all the attributes returned by GeoPy, we selected and used the following:
-#
-# - *lat* and *lon*: Latitude and longitude of the location
-# - *importance*: Numerical value $\in [0,1]$, indicates the importance of the location (in comparison to other locations)
+# - *importance*: Numerical value $\in [0,1]$, indicating the importance of the location (compared to other locations)
 # - *addresstype*: Address type (e.g., "house," "street," "postcode")
 # - *state*: State of the location
 # - *county*: County of the location
@@ -638,7 +636,7 @@ geopy_df.sample(2, random_state=1)
 # - *city*: City of the location
 # - *town*: Town of the location
 # - *village*: Village of the location
-# - *display_name*: User-friendly representation of the location, often formatted as a complete address. Used by us to cross-reference with the address in case we are unable to find a match between our data and the GeoPy data set using other information from the address.
+# - *display_name*: User-friendly representation of the location, often formatted as a complete address
 
 # %%
 print(f"Number of rows in which surburb is null: {geopy_df.loc[geopy_df['suburb_geopy'].isna()].shape[0]}\n")
@@ -654,9 +652,7 @@ print(f"\nNumber of rows in which addresstype is null: {geopy_df[geopy_df['addre
 # %% [markdown]
 # We also downloaded from [Wikipedia](https://en.wikipedia.org/wiki/County_(United_States)) the list of the counties (or their equivalent) in each state. 
 #
-# This data was used in cases where no consistency was found with GeoPy data.
-#
-# When latitude and longitude where not available we used this information to check whether the county actually belonged to the state.
+# This data was used in case incidents data did not match GeoPy data and when latitude and longitude where not available to check whether the county actually belonged to the state.
 
 # %%
 counties_path = os.path.join(DATA_FOLDER_PATH, 'external_data/counties.csv')
@@ -681,27 +677,20 @@ else:
 # %% [markdown]
 # The function called above performs the following operations:
 #
-# - Converts to lowercase the values for *state*, *county*, and *city* in all the dataframes
-# - If *city_or_county* contains values for both city and county, splits them into two different fields
-# - Removes from *city_or_county* the words 'city of' and 'county' to avoid potential inconsistencies during distance calculations (this precaution is taken to identify if two strings are the same but contain typos, ensuring more accurate and consistent comparisons)
-# - Removes from *city_or_county* punctuation and numerical values
-# - Removes frequent words from *address* and *display_name* (e.g., "Street," "Avenue," "Boulevard") to avoid potential inconsistencies during distance calculations
+# - converts to lowercase the attributes *state*, *county*, and *city*
+# - if *city_or_county* contains values for both city and county, splits them into two different fields
+# - removes from *city_or_county* the words 'city of' and 'county'
+# - removes from *city_or_county* punctuation and numerical values
+# - removes frequent words from *address* and *display_name* (e.g., "Street," "Avenue," "Boulevard")
 #
 # When latitude and longitude are available and therefore Geopy provided information for the corresponding location:
 # - checks for equality between *state* and *state_geopy*
 # - checks for equality between *county* and *county_geopy* or between *county* and *suburb_geopy*
 # - checks for equality between *city* and *city_geopy*, or between *city* and *town_geopy*, or between *city* and *village_geopy*
 #
-# If these comparison fails, it checks for potential typos in the string. This is done using the Damerau-Levenshtein distance (see the definition below), with a threshold to decide the maximum distance for two strings to be considered equal. The thresholds were set after several preliminary tests. We decided to use different thresholds for state and city/county.
+# If these comparisons fail, it checks for potential typos in the string. This is done using the Damerau-Levenshtein distance (defined below), with a threshold to decide the maximum distance for two strings to be considered equal. The thresholds were set after several preliminary tests. We decided to use different thresholds for state and city or county.
 #
-# If the comparison still fails, it compares the *address* field from our dataset with GeoPy's *display_name*. Again, the Damerau-Levenshtein distance with an appropriate threshold is used to verify address consistency.
-#
-# In cases where we were able to evaluate data consistency through these comparisons, we set the values for the fields *state*, *county*, *city*, *latitude*, *longitude*, *importance*, *address_type* using GeoPy values. Additionally, we also saved values reflecting the consistency with the fields evaluated earlier in: *state_consistency*, *county_consistency*, *address_consistency* (0 if not consistent, 1 if consistent, -1 if null values are presents)
-#
-# If the fields in our dataset were not consistent through the previously described checks or could not be verified due to the absence of latitude and longitude values, we attempted to assess consistency using Wikipedia data, with similar checks as before. In this case, we could only retrieve the *state* and *county* fields.
-
-# %% [markdown]
-# General formula for calculating the **Damerau-Levenshtein distance** between two strings $s$ and $t$ \
+# The **Damerau-Levenshtein distance** between two strings $s$ and $t$ is define as\
 # $D(i, j) = \min
 # \begin{cases}
 # D(i-1, j) + 1 \\
@@ -711,14 +700,18 @@ else:
 # \end{cases}$
 #
 # where:
-# - $D(i, j)$ is the Damerau-Levenshtein distance between the first $i$ letters of a string $s$ and the first $j$ letters of a string $t$.
-# - $\delta$ is 0 if the current letters $s[i]$ and $t[j]$ are equal, otherwise, it is 1.
-# - $D(i-2, j-2) + \delta$ represents transposition (swapping two adjacent letters) if the current letters $s[i]$ and $t[j]$ are equal, and the preceding letters $s[i-1]$ and $t[j-1]$ are also equal.
+# - $D(i, j)$ is the Damerau-Levenshtein distance between the first $i$ letters of a string $s$ and the first $j$ letters of a string $t$
+# - $\delta$ is 0 if the current letters $s[i]$ and $t[j]$ are equal, otherwise, it is 1
+# - $D(i-2, j-2) + \delta$ represents transposition (swapping two adjacent letters) if the current letters $s[i]$ and $t[j]$ are equal, and the preceding letters $s[i-1]$ and $t[j-1]$ are also equal
 #
+# If the comparison still fails, it compares the *address* field from our dataset with GeoPy's *display_name* (using again the Damerau-Levenshtein distance).
 #
+# In case of a match with GeoPy data, we set the values for the fields *state*, *county*, *city*, *latitude*, *longitude*, *importance*, *address_type* to the corresponding fileds provided by GeoPy. Otherwise we check for matches with the Wikipedia data (using again the Damerau-Levenshtein distance).
 
 # %% [markdown]
-# #### Visualize Consistent Geographical Data
+# #### Geographical Data Quality
+#
+# In the following chunks of code we assess the quality of the geographical data. We denote with '1' consistent values, with '0' not consistent values, with -1 null values:
 
 # %%
 tot_row = incidents_df.index.size
@@ -733,10 +726,7 @@ print('Number of rows with null value for longitude: ', incidents_df['longitude'
 sns.heatmap(incidents_df.isnull(), cbar=False, xticklabels=True);
 
 # %% [markdown]
-# After this check, all the entries in the dataset have at least the state value not null and consistent. Only 12,796 data points, which account for 5.34% of the dataset, were found to have inconsistent latitude and longitude values.
-
-# %% [markdown]
-# Below, we have included some plots to visualize the inconsistent values in the dataset.
+# Now all the entries in the dataset have at least the state value not null and consistent. Only 12,796 data points, which account for 5.34% of the dataset, were found to have inconsistent latitude and longitude values.
 
 # %%
 incidents_df.groupby(['state_consistency','county_consistency','address_consistency']).size().to_frame().rename(columns={0:'count'}).sort_index(ascending=False)
@@ -763,16 +753,13 @@ incidents_df[['latitude']].isna().groupby(['latitude']).size().to_frame().rename
 # %%
 incidents_df_not_null = incidents_df[incidents_df['latitude'].notna()]
 print('Number of entries with not null values for latitude and longitude: ', len(incidents_df_not_null))
-plot_scattermap_plotly(incidents_df_not_null, 'state', zoom=2,)
+plot_scattermap_plotly(incidents_df_not_null, 'state', zoom=2, title='Incidents distribution by state')
 
 # %%
-dummy_df = incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].isna()) & 
+incidents_df_nan_county = incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].isna()) & 
     (incidents_df['city'].notna())]
-print('Number of entries with not null values for county but not for lat/lon and city: ', len(dummy_df))
-plot_scattermap_plotly(dummy_df, 'state', zoom=2, title='Missing county')
-
-# %% [markdown]
-# Visualize the number of entries for each city where we have the *city* value but not the *county*
+print('Number of entries with not null values for county but not for lat/lon and city: ', len(incidents_df_nan_county))
+plot_scattermap_plotly(incidents_df_nan_county, 'state', zoom=2, title='Missing county')
 
 # %%
 incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].isna()) & (incidents_df['city'].notna())].groupby('city').count()
@@ -781,43 +768,33 @@ incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].is
 incidents_df[(incidents_df['latitude'].notna()) & (incidents_df['city'].isna()) & (incidents_df['county'].isna())]
 
 # %%
-dummy_df = incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].notna()) & (incidents_df['city'].isna())]
-print('Number of rows with null values for city, but not for lat/lon and county: ', len(dummy_df))
-plot_scattermap_plotly(dummy_df, 'state', zoom=2, title='Missing city')
+incidents_df_nan_city = incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].notna()) & (incidents_df['city'].isna())]
+print('Number of rows with null values for city, but not for lat/lon and county: ', len(incidents_df_nan_city))
+plot_scattermap_plotly(incidents_df_nan_city, 'state', zoom=2, title='Missing city')
 
 # %% [markdown]
-# **Final evaluation**:
-# We segmented the dataset into distinct groups based on the consistency we could establish among the latitude, longitude, state, county, and city fields. We also considered the address field in our analysis, but its variability and limited identifiability led us to set it aside for further use. In the end, we formulated strategies to address the missing data in these groups, considering the quality of available information.
+# **Final considerations**
 #
-# Below, we provide a breakdown of these groups, along with their sizes:
+# From this analysis we found that:
+# - 174,796 entries are fully consistent
+# - in 26,635 entries only the city is missing, but it can be inferred from latitude and longitude
+# - in 15,000 entries only the county is missing, but it can be inferred from latitude and longitude
+# - in 33 entries both the city and county are missing. Even in this group, the missing information can be inferred from latitude and longitude, as they are all closely clustered around Baltimore
+# - in 3,116 entries latitude, longitude, and city are missing. They can be inferred (though not perfectly) from the county-state pair
+# - in 19,844 entries only the state field is present
 #
-# ---------- GOOD GROUPS ----------
-# * 174,796 entries: These are the fully consistent and finalized rows in the dataset.
-# * 26,635 entries: Rows where only the city is missing, but it can be inferred from the location (k-nn).
-# * 15,000 entries: Rows where only the county is missing, but it can be inferred from the location (k-nn).
-# * 33 entries: Rows where both the city and county are missing. Even in this group, the missing information can be inferred from the location, as they are all closely clustered around Baltimore.
+# The dataset does not contain any other combinations beyond the ones just mentioned.
 #
-# ---------- BAD GROUPS ----------
-# * 3,116 entries: Rows where latitude, longitude, and city are missing. They can be inferred (though not perfectly) from the county-state pair.
-# * 19,844 entries: Rows where only the state field is present, making it challenging to retrieve missing information.
-#
-# The dataset does not contain any missing combinations beyond those mentioned.
-# Out of the total of 216,464 lines, either the information is definitive or can be derived with a high degree of accuracy.
+# In the following we will recover the missing information using the latitude and longitude values.
 
 # %% [markdown]
 # #### Infer Missing City Values
 
 # %% [markdown]
-# For entries where we have missing values for *city* but not for *latitude* and *longitude*, we attempt to assign the *city* value based on the entry's distance from the centroid.
+# To recover missing values for the attribute *city* when *latitude* and *longitude* are available we will compute the closest city centroid and assign the corresponding city if the distance is below a certain threshold.
 
 # %% [markdown]
-# Visualize data group by *state*, *county* and *city*
-
-# %%
-incidents_df.groupby(['state', 'county', 'city']).size().reset_index(name='count').sample(3,random_state=1)
-
-# %% [markdown]
-# Compute the centroid for each city and visualize the first 10 centroids in alphabetical order.
+# First we Compute the centroid for each city and visualize the first 10 centroids in lexicographic order:
 
 # %%
 centroids = incidents_df.loc[incidents_df['latitude'].notna() & incidents_df['city'].notna()][[
@@ -828,25 +805,15 @@ centroids.head(10)
 print('Number of distinct cities:', len(centroids.index.to_list()))
 
 # %% [markdown]
-# Create new DataFrame:
+# For each tuple <state, county, city> in 'centroids', we extract the corresponding latitude and longitude coordinates from the 'clean_geo_data' DataFrame. We then compute the distance between these coordinates and the centroids using the geodesic distance (in kilometers). We also compute percentiles (at 0.05 intervals), maximum, minimum, and average distances of the points in each city.
 
 # %%
 info_city = pd.DataFrame(columns=['5', '15', '25', '35', '45', '55', '65', '75', '85', '95',
     'tot_points', 'min', 'max', 'avg', 'centroid_lat', 'centroid_lon'], index=centroids.index)
 info_city.head(2)
 
-# %% [markdown]
-# The code below generates descriptive statistics related to geographical distances and updates the 'info_city' DataFrame for different city, county, and state combinations with the aim of using this data to infer missing city values.
-#
-# For each tuple (state, county, city) in 'centroids', it extracts all values for latitude and longitude corresponding coordinates from the 'clean_geo_data' DataFrame, if present. 
-#
-# It then calculates the distance between these coordinates and the centroid using the geodesic distance (in kilometers) and saves this distance in a sorted list. 
-#
-# After calculating percentiles (at 0.05 intervals), maximum, minimum, and average distances, all of these values are saved in the new DataFrame along with latitude and longitude coordinates.
-
-# %%
 if LOAD_DATA_FROM_CHECKPOINT: # load data
-    info_city = load_checkpoint('checkpoint_cities') # FIXME: uniformare ad altri?
+    info_city = load_checkpoint('checkpoint_cities')
 else: # compute data
     for state, county, city in centroids.index:
         dummy = []
@@ -870,25 +837,24 @@ else: # compute data
         info_city.loc[state, county, city][len(info_city.columns) - 1] = centroids.loc[state, county, city]['longitude']
     save_checkpoint(info_city, 'checkpoint_cities') # save data 
 
+# %% [markdown]
+# We display the resulting dataframe:
+
 # %%
 info_city.head()
-
-# %% [markdown]
-# We display a concise summary of the DataFrame:
 
 # %%
 info_city.loc[info_city['tot_points'] > 1].info()
 
-# %%
-#import matplotlib.pyplot as plt
-from matplotlib.legend_handler import HandlerPathCollection
 
+# %%
 def plot_info_city(df, lat, lon, info_circle, prop_rad=True):
     def update_legend_marker_size(handle, orig):
         "Customize size of the legend marker"
         handle.update_from(orig)
         handle.set_sizes([20])
 
+    fig = plt.figure(figsize=(20, 15))
     plt.scatter(df[lon], df[lat], color="k", s=3.0, label="Data points")
     # plot circles with radius proportional to the outlier scores
     if prop_rad:
@@ -912,6 +878,10 @@ def plot_info_city(df, lat, lon, info_circle, prop_rad=True):
     )
     plt.title("coordinates of city centroids + " + info_circle)
     plt.show()
+
+# %%
+# per ogni stato, colora per numero di incidenti
+plot_scattermap_plotly(incidents_df, size_attribute='state', zoom=2, title='Incidents distribution')
 
 # %%
 plot_info_city(info_city, 'centroid_lat', 'centroid_lon', 'tot_points')

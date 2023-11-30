@@ -1,7 +1,7 @@
 # %% [markdown]
 # # Preparation of Mortality Data
 #
-# Mortality data was downloaded from [CDC WONDER](https://wonder.cdc.gov) through the request form. Since the number of records we wanted to dowload exceeded the maximum number of records that can be downloaded at once, we had to do two queries, one for males and one for females. This notebook combines the two datasets and prepares the data for the analysis.
+# Mortality data was downloaded from [CDC WONDER](https://wonder.cdc.gov) through the request form. Since the number of records we wanted to download exceeded the maximum number of records that can be downloaded at once, we had to do two queries, one for males and one for females. This notebook combines the two datasets and prepares the data for the analysis.
 #
 # More information about the data can be found at the following URL: [Multiple Cause of Death 1999 - 2020](https://wonder.cdc.gov/wonder/help/mcd.html).
 
