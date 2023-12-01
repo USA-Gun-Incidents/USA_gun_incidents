@@ -287,6 +287,7 @@ winning_party_per_state = winning_party_per_state.to_frame()
 winning_party_per_state.reset_index(inplace=True)
 winning_party_per_state.rename(columns={'candidateperc': 'majority_state_party'}, inplace=True)
 winning_party_per_state['px_code'] = winning_party_per_state['state'].str.title().map(usa_name_alphcode)
+winning_party_per_state.to_csv('../data/winning_party_per_state.csv', index=False)
 winning_party_per_state
 
 # %% [markdown]

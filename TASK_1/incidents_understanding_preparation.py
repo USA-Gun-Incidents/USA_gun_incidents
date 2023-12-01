@@ -788,7 +788,7 @@ plot_scattermap_plotly(incidents_df_nan_city, 'state', zoom=2, title='Missing ci
 # In the following we will recover the missing information using the latitude and longitude values.
 
 # %% [markdown]
-# #### Infer Missing City Values
+# #### Inferring Missing City Values
 
 # %% [markdown]
 # To recover missing values for the attribute *city* when *latitude* and *longitude* are available we will compute the closest city centroid and assign the corresponding city if the distance is below a certain threshold.
@@ -838,7 +838,7 @@ else: # compute data
     save_checkpoint(info_city, 'checkpoint_cities') # save data 
 
 # %% [markdown]
-# We display the resulting dataframe:
+# We display the resulting dataframe and plot it on a map:
 
 # %%
 info_city.head()
@@ -846,45 +846,17 @@ info_city.head()
 # %%
 info_city.loc[info_city['tot_points'] > 1].info()
 
-
 # %%
-def plot_info_city(df, lat, lon, info_circle, prop_rad=True):
-    def update_legend_marker_size(handle, orig):
-        "Customize size of the legend marker"
-        handle.update_from(orig)
-        handle.set_sizes([20])
-
-    fig = plt.figure(figsize=(20, 15))
-    plt.scatter(df[lon], df[lat], color="k", s=3.0, label="Data points")
-    # plot circles with radius proportional to the outlier scores
-    if prop_rad:
-        radius = (df[info_circle].max() - df[info_circle]) / (df[info_circle].max() - df[info_circle].min())
-        radius_scale = 111
-    else:
-        radius = df[info_circle]
-    scatter = plt.scatter(
-        df[lon],
-        df[lat],
-        s=radius*radius_scale,
-        edgecolors="r",
-        facecolors="none",
-        label=info_circle,
-    )
-    plt.axis("tight")
-    plt.xlabel('longitude')
-    plt.ylabel('latitude')
-    plt.legend(
-        handler_map={scatter: HandlerPathCollection(update_func=update_legend_marker_size)}
-    )
-    plt.title("coordinates of city centroids + " + info_circle)
-    plt.show()
-
-# %%
-# per ogni stato, colora per numero di incidenti
-plot_scattermap_plotly(incidents_df, size_attribute='state', zoom=2, title='Incidents distribution')
-
-# %%
-plot_info_city(info_city, 'centroid_lat', 'centroid_lon', 'tot_points')
+fig = plot_scattermap_plotly(
+    info_city,
+    size='tot_points',
+    x_column='centroid_lat',
+    y_column='centroid_lon',
+    hover_name=False, zoom=2,
+    title='Number of incidents per city'
+)
+fig.show()
+pyo.plot(fig, filename='../html/incidents_per_city.html', auto_open=False);
 
 
 # %% [markdown]
@@ -907,11 +879,6 @@ def substitute_city(row, info_city):
     return row
 
 # %%
-dummy_df = incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].notna()) & (incidents_df['city'].notna()) & (incidents_df['state'] == 'FLORIDA')]
-print('Number of rows with null values for city, but not for lat/lon and county: ', len(dummy_df))
-plot_scattermap_plotly(dummy_df, 'city', zoom=2, title='City')
-
-# %%
 if LOAD_DATA_FROM_CHECKPOINT:
     new_incidents_df = load_checkpoint('checkpoint_2', date_cols=['date', 'date_original'])
 else:
@@ -919,35 +886,23 @@ else:
     save_checkpoint(incidents_df, 'checkpoint_2')
 
 # %%
-incidents_df.sample(2, random_state=1)
+n_nan_cities = incidents_df['city'].isnull().sum()
+n_non_nan_cities = new_incidents_df['city'].isnull().sum()
+print('Number of rows with null values for city before the inference: ', n_nan_cities)
+print('Number of rows with null values for city after the inference: ', n_non_nan_cities)
+print(f'Number of city recovered: {n_nan_cities - n_non_nan_cities}')
 
 # %%
-print('Number of rows with null values for city before: ', incidents_df['city'].isnull().sum())
-print('Number of rows with null values for city: ', new_incidents_df['city'].isnull().sum())
-
-# %%
-dummy_df = new_incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].notna()) & (incidents_df['city'].isna())]
-print('Number of rows with null values for city, but not for lat/lon and county: ', len(dummy_df))
-plot_scattermap_plotly(dummy_df, 'city', zoom=2, title='City inferred')
+incidents_df_nan_city = new_incidents_df.loc[(incidents_df['latitude'].notna()) & (incidents_df['county'].notna()) & (incidents_df['city'].isna())]
+print('Number of rows with null values for city, but not for lat/lon and county: ', len(incidents_df_nan_city))
+plot_scattermap_plotly(incidents_df_nan_city, 'city', zoom=2, title='City inferred')
 
 # %%
 incidents_df = new_incidents_df
-
-# %%
-fig = plot_scattermap_plotly(info_city, size='tot_points', x_column='centroid_lat', 
-    y_column='centroid_lon', hover_name=False, zoom=2, title='Number of incidents per city') 
-fig.show()
-pyo.plot(fig, filename='../html/incidents_per_city.html', auto_open=False);
-# FIXME: discretizzare e.g. <x, between(x, y), ...
-
-# %% [markdown]
-# From this process, we infer 2248 *city* values.
-
-# %% [markdown]
-# #### Visualize new data
-
-# %%
 incidents_df[['latitude', 'county', 'city']].isna().groupby(['latitude', 'county', 'city']).size().to_frame().rename(columns={0:'count'})
+
+# %% [markdown]
+# #### Districts attributes
 
 # %% [markdown]
 # We check if the attribute `congressional_district` is numbered consistently (with '0' for states with only one congressional district). To do so we use the dataset containing the data about elections in the period of interest (congressional districts are redrawn when (year%10)==0):
@@ -978,14 +933,8 @@ incidents_df[(incidents_df['state'] == at_large_states.any()) & (incidents_df['c
 # %%
 incidents_df.loc[incidents_df['state'].isin(at_large_states), 'congressional_district'] = 0
 
-# %%
-incidents_df['state'].unique()
-
-# %%
-elections_df['state'].unique()
-
 # %% [markdown]
-# We check if the range of the attributes `congressional_district` is consistent with the number of congressional districts in the dataset containing the data about elections:
+# We check if the range of the attribute `congressional_district` is consistent with the number of congressional districts in the dataset containing the data about elections:
 
 # %%
 incidents_df['state'] = incidents_df['state'].str.upper()
@@ -1004,7 +953,7 @@ incidents_df[
 ]
 
 # %% [markdown]
-# Searching online we found that Kentucky has 6 congressional districts, so we'll set to nan the congressional district for the row above:
+# Searching online we found that Kentucky, in that period, had 6 congressional districts, so we'll set to nan the congressional district for the row above:
 
 # %%
 incidents_df.loc[
@@ -1024,7 +973,7 @@ incidents_df[
 ]
 
 # %% [markdown]
-# Searching online we found that Oregon has 5 congressional districts, so we'll set to nan the congressional district for the rows above:
+# Searching online we found that Oregon, in that period, had 5 congressional districts, so we'll set to nan the congressional district for the rows above:
 
 # %%
 incidents_df.loc[
@@ -1044,7 +993,7 @@ incidents_df[
 ]
 
 # %% [markdown]
-# Searching online we found that West Virginia has 3 congressional districts, so we'll set to nan the congressional district for the row above:
+# Searching online we found that West Virginia, in that period, had 3 congressional districts, so we'll set to nan the congressional district for the row above:
 
 # %%
 incidents_df.loc[
@@ -1054,7 +1003,7 @@ incidents_df.loc[
     'congressional_district'] = np.nan
 
 # %% [markdown]
-# We check whether given a certain value for the attributes `latitude` and a `longitude`, the attribute `congressional_district` has always the same value:
+# We check whether given a certain value for the attributes `latitude` and `longitude`, the attribute `congressional_district` has always the same value:
 
 # %%
 incidents_df[incidents_df['congressional_district'].notnull()].groupby(['latitude', 'longitude'])['congressional_district'].unique()[lambda x: x.str.len() > 1].to_frame().rename(columns={0:'count'}).sample(5, random_state=1)
@@ -1089,7 +1038,7 @@ house_districts
 # %% [markdown]
 # Also this attribute has some errors because the maximum number of state house districts should be 204 (for New Hampshire, see [here](https://ballotpedia.org/State_Legislative_Districts)). For now we won't correct this error beacuse this attribute is not useful for our analysis.
 #
-# We check if given a certain value for the attributes `latitude` and a `longitude`, the attribute `state_house_district` has always the same value:
+# We check if given a certain value for the attributes `latitude` and `longitude`, the attribute `state_house_district` has always the same value:
 
 # %%
 incidents_df[incidents_df['state_house_district'].notnull()].groupby(
@@ -1162,7 +1111,9 @@ plot_scattermap_plotly(
 # %% [markdown]
 # Many points with missing `congressional_district` are often "surrounded" by points belonging to the same congressional district. We could, therefore, use KNN classifier to recover those values.
 #
-# We'll do this first for the state of Alabama, showing the results with some plots. Later we will do the same for all the other states. We plot the distribution of the values of the attribute `congressional_district` for the state of Alabama:
+# We'll do this first for the state of Alabama, showing the results with some plots. Later we will do the same for all the other states. 
+#
+# We plot the distribution of the values of the attribute `congressional_district` for the state of Alabama:
 
 # %%
 plot_scattermap_plotly(
@@ -1360,12 +1311,8 @@ plot_scattermap_plotly(
 
 # %% [markdown]
 # These attributes have a lot of missing values, sometimes spread over large areas where there are no other points. Given this scarcity of training examples, we cannot apply the same method to recover the missing values.
-
-# %% [markdown]
-# ### Age, gender and number of participants: exploration and preparation
-
-# %% [markdown]
-# #### Features
+#
+# Finally we visualize the most frequent addresses:
 
 # %%
 incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
@@ -1374,26 +1321,14 @@ incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
     title='Counts of the addresses with the 50 highest number of incidents'
 );
 
-
+# %% [markdown]
+# Many of the most frequent addresses are located in airports.
 
 # %% [markdown]
-# Columns of the dataset are considered in order to verify the correctness and consistency of data related to age, gender, and the number of participants for each incident:
-# - *participant_age1*
-# - *participant_age_group1*
-# - *participant_gender1*
-# - *min_age_participants*
-# - *avg_age_participants*
-# - *max_age_participants*
-# - *n_participants_child*
-# - *n_participants_teen*
-# - *n_participants_adult*
-# - *n_males*
-# - *n_females*
-# - *n_killed*
-# - *n_injured*
-# - *n_arrested*
-# - *n_unharmed*
-# - *n_participants*
+# ### Age, gender and number of participants: exploration and preparation
+
+# %% [markdown]
+# We display a concise summary of the attributes related to age, gender and number of participants:
 
 # %%
 participants_columns = ['participant_age1', 'participant_age_group1', 'participant_gender1', 
@@ -1403,30 +1338,10 @@ participants_columns = ['participant_age1', 'participant_age_group1', 'participa
     'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 
     'n_participants']
 age_df = incidents_df[participants_columns]
-
-# %%
-age_df.sample(5, random_state=1)
-
-# %% [markdown]
-# We display a concise summary of the DataFrame:
-
-# %%
 age_df.info()
 
 # %%
 age_df['participant_age_group1'].unique()
-
-# %% [markdown]
-# Display the maximum and minimum ages, among the possible valid values, in the dataset. We have set a maximum threshold of 122 years, as it is the age reached by [Jeanne Louise Calment](https://www.focus.it/scienza/scienze/longevita-vita-umana-limite-biologico#:~:text=Dal%201997%2C%20anno%20in%20cui,ha%20raggiunto%20un%20limite%20biologico), the world's oldest person.
-
-# %%
-age_df[['participant_age1', 'min_age_participants', 'max_age_participants', 'avg_age_participants']].describe()
-
-# %%
-age_df[age_df['max_age_participants'] == '101.0']
-
-# %% [markdown]
-# We have set the maximum age threshold at 101 years.
 
 # %% [markdown]
 # We check if we have entries with non-null values for participant_age1 but NaN for participant_age_group1. 
@@ -1438,17 +1353,14 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 # These 126 values can be inferred.
 
 # %% [markdown]
-# #### Studying Data Consistency
+# Below, we provide a brief summary of the operations we performed to correct missing and inconsistent values.
 
 # %% [markdown]
-# We create some functions to identify and, if possible, correct missing and inconsistent data.
-# Below, we provide a brief summary of all the functions used to check data consistency:
+# First of all, we converted all the consistent values to integers. All the out of range values (e.g. nagative values or improbable ages) were set to *NaN*.
+# We considered the maximum possible age to be 122 years, as it is the age reached by [Jeanne Louise Calment](https://www.focus.it/scienza/scienze/longevita-vita-umana-limite-biologico#:~:text=Dal%201997%2C%20anno%20in%20cui,ha%20raggiunto%20un%20limite%20biologico), the world's oldest person.
 
 # %% [markdown]
-# First of all, we convert all the values to type int if the values were consistent (i.e., values related to age and the number of participants for a particular category must be a positive number), all the values that are out of range or contain alphanumeric strings were set to *NaN*.
-
-# %% [markdown]
-# Checks done to evaluate the consistency of data related to the minimum, maximum, and average ages of participants, as well as the composition of the age groups:
+# To identify inconsistencies in the data related to the minimum, maximum, average age of participants, and to the composition of the age groups we checked if:
 #
 # - min_age_participants $<$ avg_age_participants $<$ max_age_participants
 # - n_participants_child $+$ n_participants_teen $+$ n_participants_adult $>$ 0
@@ -1464,7 +1376,7 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 # Note that: child = 0-11, teen = 12-17, adult = 18+
 
 # %% [markdown]
-# Checks done to evaluate the consistency of data related to number of participants per gender and other participants class:
+# To identify inconsistencies in the data related to the number of participants we checked if:
 #
 # - n_participants $\geq$ 0
 # - n_participants $==$ n_males $+$ n_females
@@ -1473,11 +1385,9 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 # - n_unharmed $\leq$ n_participants
 
 # %% [markdown]
-# We also considered data of participants1, a randomly chosen participant whose data related to gender and age are reported in the dataset. For participants, we have the following features: *participant_age1*, *participant_age_group1*, *participant_gender1*.
-#
 # Values related to participant_age_group1 and participant_gender1 have been binarized using one-hot encoding, thus creating the boolean features *participant1_child*, *participant1_teen*, *participant1_adult*, *participant1_male*, *participant1_female*.
 #
-# The following checks are done in order to verify the consistency of the data among them and with respect to the other features of the incident:
+# To identify other potential inconsistencies we did the following checks:
 #
 # - $if$ participant_age1 $<$ 12 $then$ participant_age_group1 $=$ *Child*
 # - $if$ 12 $\leq$ participant_age1 $<$ 18 $then$ participant_age_group1 $=$ *Teen*
@@ -1491,25 +1401,17 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 # - $if$ participant_gender1 $==$ *Female* $then$ n_females $>$ 0
 
 # %% [markdown]
-# In the initial phase, only the values that were not permissible were set to *NaN*. 
+# We kept track of data consistency by using the following variables (the variables were set to *True* if data were consistent, *False* if they were not, or *NaN* when data was missing):
+# - *consistency_age*: to track the consistency between the minimum, maximum, and average ages and the number of participants by age groups
+# - *consistency_n_participant*: to track the consistency between the number of participants
+# - *consistency_gender*: to track the consistency of the gender attribute
+# - *consistency_participant1*: to track the consistency of the attributes related to participant1
+# - *participant1_age_consistency_wrt_all_data*: to track the consistency between the age of participant1 and the other attributes related to ages
+# - *participant1_age_range_consistency_wrt_all_data*: to track the consistency between the age group of participant1 and the other attributes related to age groups
+# - *participant1_gender_consistency_wrt_all_data*: to track the consistency between the gender of participant1 and the other attributes related to gender
+# - *consistency_participants1_wrt_n_participants*: to track the overall consistency between the data about participant1 and the other data
 #
-# We kept track of the consistency of admissible values by using variables (which could take on the boolean value *True* if they were consistent, *False* if they were not, or *NaN* in cases where data was not present). 
-#
-# These variables were temporarily included in the dataframe so that we could later replace them with consistent values, if possible, or remove them if they were outside the acceptable range.
-#
-# Variables:
-# - *consistency_age*: Values related to the minimum, maximum, and average ages consistent with the number of participants by age groups.
-# - *consistency_n_participant*: The number of participants for different categories consistent with each other.
-# - *consistency_gender*: The number of participants by gender consistent with the total number of participants.
-# - *consistency_participant1*: Values of features related to participant1 consistent with each other.
-#
-# - *consistency_participants1_wrt_n_participants*: If *consistency_participants1_wrt_n_participants*, *participant1_age_range_consistency_wrt_all_data*, and *participant1_gender_consistency_wrt_all_data* are all *True*.
-#
-# - *participant1_age_consistency_wrt_all_data*: Age of participant1 consistent with the minimum and maximum age values of the participants.
-# - *participant1_age_range_consistency_wrt_all_data*: Value of the age range (*Child*, *Teen*, or *Adult*) consistent with the age groups of the participants.
-# - *participant1_gender_consistency_wrt_all_data*: Gender value of participant1 consistent with the gender breakdown values of the group.
-#
-# - *nan_values*: Presence of "NaN" values in the row.
+# The chunck of code below performes the specified checks:
 
 # %%
 from TASK_1.data_preparation_utils import check_age_gender_data_consistency
@@ -1521,34 +1423,16 @@ else: # compute data
     save_checkpoint(age_temporary_df, 'checkpoint_tmp') # save data
 
 # %% [markdown]
-# #### Data Exploration without Out-of-Range Data
-
-# %%
-age_temporary_df.head(2)
-
-# %% [markdown]
-# We display a concise summary of the DataFrame:
+# In the following, we will display and visualize statistics about the data consistency.
 
 # %%
 age_temporary_df.info()
-
-# %% [markdown]
-# We assess the correctness of the checks performed by printing the consistency variable for the first 5 rows and providing a concise summary of their most frequent values.
-
-# %%
-age_temporary_df[['consistency_age', 'consistency_n_participant', 'consistency_gender', 
-    'consistency_participant1', 'consistency_participants1_wrt_n_participants',
-    'participant1_age_consistency_wrt_all_data', 'participant1_age_range_consistency_wrt_all_data',
-    'participant1_gender_consistency_wrt_all_data', 'nan_values']].head(5)
 
 # %%
 age_temporary_df[['consistency_age', 'consistency_n_participant', 'consistency_gender', 
     'consistency_participant1', 'consistency_participants1_wrt_n_participants',
     'participant1_age_consistency_wrt_all_data', 'participant1_age_range_consistency_wrt_all_data',
     'participant1_gender_consistency_wrt_all_data', 'nan_values']].describe()
-
-# %% [markdown]
-# Below, we print the number of rows with 'NaN' or inconsistent data.
 
 # %%
 print('Number of rows with null values: ', age_temporary_df[age_temporary_df['nan_values'] == True].shape[0])
@@ -1558,8 +1442,6 @@ print('Number of rows with inconsistent values in number of participants data: '
 print('Number of rows with inconsistent values in gender data: ', age_temporary_df[age_temporary_df['consistency_gender'] == False].shape[0])
 print('Number of rows with inconsistent values in participants1 data: ', age_temporary_df[age_temporary_df[
     'consistency_participant1'] == False].shape[0])
-
-# %%
 print('Number of rows with inconsistent values for participants1: ', age_temporary_df[age_temporary_df[
     'consistency_participant1'] == False].shape[0])
 print('Number of rows with NaN values for participants1: ', age_temporary_df[age_temporary_df[
@@ -1572,45 +1454,22 @@ print('Number of rows with inconsistent values in participants1 wrt age range da
     'participant1_age_range_consistency_wrt_all_data'] == False].shape[0])
 print('Number of rows with inconsistent values in participants1 wrt gender data: ', age_temporary_df[age_temporary_df[
     'participant1_gender_consistency_wrt_all_data'] == False].shape[0])
-
-# %%
-age_temporary_df[(age_temporary_df['consistency_participant1'] == True) & (age_temporary_df[
-    'participant1_age_range_consistency_wrt_all_data'] == False)].shape[0]
-
-# %%
 print('Number of rows with null values in age data: ', age_temporary_df[age_temporary_df['consistency_age'].isna()].shape[0])
 print('Number of rows with null values in number of participants data: ', age_temporary_df[age_temporary_df[
     'consistency_n_participant'].isna()].shape[0])
 print('Number of rows with null values in gender data: ', age_temporary_df[age_temporary_df['consistency_gender'].isna()].shape[0])
 print('Number of rows with null values in participants1 data: ', age_temporary_df[age_temporary_df[
     'consistency_participant1'].isna()].shape[0])
-
-# %%
 print('Number of rows with all null data: ', age_temporary_df.isnull().all(axis=1).sum())
 
 # %% [markdown]
-# We can notice that:
-# - The data in our dataset related to participant1, excluding the 1099 cases where age and age group data were inconsistent with each other and 190 cases where age range is not consistent, always appear to be consistent with the data in the rest of the dataset and can thus be used to fill in missing or incorrect data.
-# - In the data related to age and gender, some inconsistencies are present, but they account for only 1.88% and 6.01% of the total dataset rows, respectively.
-# - In 93779 rows, at least one field had a *NaN* value.
+# We notice that:
+# - The data in our dataset related to participant1, excluding the 1099 cases where age and age group data were inconsistent with each other and 190 cases where age range is not consistent, always appear to be consistent with the data in the rest of the dataset and can thus be used to fill in missing values or correct data
+# - In the data related to age and gender, some inconsistencies are present, but they account for only 1.88% and 6.01% of the total dataset rows, respectively
+# - In 93779 rows, at least one field had a *NaN* value
 
 # %% [markdown]
-# Since we noticed that some age data contained impossible values, we have set the age range between 0 and 100 years old. Below, we have verified this by printing the range.
-
-# %%
-print('Range age: ', age_temporary_df['min_age_participants'].min(), '-', age_temporary_df['max_age_participants'].max())
-
-# %%
-age_temporary_df[age_temporary_df['consistency_participant1'] == False].head(5)
-
-# %% [markdown]
-# We printed the distribution of participants1 in the age range when age was equal to 18 to verify that the majority of the data were categorized as adults.
-
-# %%
-age_df[age_df['participant_age1'] == 18]['participant_age_group1'].value_counts()
-
-# %% [markdown]
-# We plotted the age distribution of participant1 and compared it to the distribution of the minimum and maximum participants' age for each group.
+# We plot the age distribution of participant1 and compare it to the distribution of the minimum and maximum participants' age for each group:
 
 # %%
 fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(20, 6), sharey=True)
@@ -1633,19 +1492,17 @@ ax2.set_title('Distribution of max age participants')
 plt.show()
 
 # %% [markdown]
-# Observing the similar shapes of the distributions provides confirmation that the data pertaining to participant1 is accurate and reliable. Therefore, we can confidently use participant1's data to fill gaps in cases involving groups with a single participant.
+# The similar shapes of the distributions provides confirmation that the data pertaining to participant1 is accurate and reliable. Therefore, we can confidently use participant1's data to fill gaps in cases incidents involved a single participant.
 
 # %% [markdown]
-# We visualized the number of unique values for the cardinality of participants in each incident and provided a brief summary of this feature below.
+# We visualize the number of unique values for the cardinality of participants in each incident and provided a brief summary of this feature:
 
 # %%
 print('Values of n_participants: ', age_temporary_df['n_participants'].unique())
 age_temporary_df['n_participants'].describe().to_frame()
 
 # %% [markdown]
-# From the data above, it is evident that the third quartile is equal to two participants, and the maximum number of participants per incident reaches the value of 103.
-#
-# Below, we have presented the distribution of the number of participants for each incident.
+# We visualize the distribution of the number of participants for each incident using a log scale:
 
 # %%
 plt.figure(figsize=(20, 5))
@@ -1663,50 +1520,9 @@ plt.legend()
 plt.show()
 
 # %% [markdown]
-# Note that: y-axes is in logaritmic scale.
-
-# %% [markdown]
-# In the table below, we can see how many data related to the *number of participants* are clearly out of range, per age groups.
-
-# %%
-age_temporary_df[age_temporary_df['n_participants_adult'] >= 103][['n_participants', 'n_participants_adult', 
-    'n_participants_child', 'n_participants_teen']]
-
-# %%
-age_temporary_df[age_temporary_df['n_participants_teen'] >= 103][['n_participants', 'n_participants_adult', 
-    'n_participants_child', 'n_participants_teen']]
-
-# %%
-age_temporary_df[age_temporary_df['n_participants_child'] >= 103][['n_participants', 'n_participants_adult', 
-    'n_participants_child', 'n_participants_teen']]
-
-# %% [markdown]
-# Based on the tables above, we have evidence to set the maximum number of participants to 103.
-
-# %% [markdown]
-# We have provided additional information below for two of the rows with values out of range.
-
-# %%
-age_temporary_df.loc[35995].to_frame()
-
-# %%
-age_temporary_df.iloc[42353].to_frame()
-
-# %% [markdown]
-# This data visualization has been helpful in understanding the exceptions in the dataset and correcting them when possible, using other data from the same entry.
-#
-# In cases where we were unable to obtain consistent data for a certain value, we have set the corresponding field to *NaN*.
-
-# %% [markdown]
-# #### Fix Inconsistent Data
-
-# %% [markdown]
-# We have created a new DataFrame in which we have recorded the corrected and consistent data. Note that all these checks are performed based on the assumptions made in previous stages of the analysis.
-#
-# For entries with missing or inconsistent data, when possible, we have inferred or derived the missing values from other available data. Specifically:
-#
-# - In cases where we had the number of males (n_males) and number of females (n_females), we calculated the total number of participants as n_participants = n_males + n_females.
-# - In instances with a single participant and consistent data for *participants1*, we used that data to derive values related to age (max, min, average) and gender.
+# We will now correct inconsistencies in the following manner:
+# - when having the number of males (n_males) and number of females (n_females), we set the total number of participants as n_participants = n_males + n_females
+# - when having a single participant and consistent data for *participants1*, we use that data to set the attributes related to age (max, min, average) and gender
 
 # %%
 from TASK_1.data_preparation_utils import set_gender_age_consistent_data
@@ -1721,7 +1537,7 @@ else:
     save_checkpoint(incidents_df, 'checkpoint_4')
 
 # %% [markdown]
-# We display the first 2 rows and a concise summary of the DataFrame:
+# We visualize the data after the corrections:
 
 # %%
 incidents_df.sample(2, random_state=1)
@@ -1736,8 +1552,6 @@ print('Number of rows in which number of participants is null: ', incidents_df[i
 print('Number of rows in which number of participants is 0: ', incidents_df[incidents_df['n_participants'] == 0].shape[0])
 print('Number of rows in which number of participants is null and n_killed is not null: ', incidents_df[
     incidents_df['n_participants'].isnull() & incidents_df['n_killed'].notnull()].shape[0])
-
-# %%
 print('Total rows with null value for n_participants: ', incidents_df['n_participants'].isnull().sum())
 print('Total rows with null value for n_participants_child: ', incidents_df['n_participants_child'].isnull().sum())
 print('Total rows with null value for n_participants_teen: ', incidents_df['n_participants_teen'].isnull().sum())
@@ -1745,17 +1559,15 @@ print('Total rows with null value for n_participants_adult: ', incidents_df['n_p
 print('Total rows with null value for n_males: ', incidents_df['n_males'].isnull().sum())
 print('Total rows with null value for n_females: ', incidents_df['n_females'].isnull().sum())
 
-# %% [markdown]
-# We can observe that for any entries in the dataset, all data related to age and gender are *NaN*, while for 98973 entries, almost one value is *NaN*. From the plot below, we can visualize the null values (highlighted).
-#
-# It's important to note that we have complete data for *n_killed* and *n_injured* entries, and the majority of missing data are related to age-related features.
-
 # %%
 sns.heatmap(incidents_df.isnull(), cbar=False)
 
 
 # %% [markdown]
-# Below, we have provided the distribution of the total number of participants and the number of participant per age range for each incident. Once again, to make the histograms more comprehensible use a logaritmic scale for y-axes.
+# We recovered all the data related to age and gender. In 98973 entries, at most a value is missing.
+
+# %% [markdown]
+# We now explore the distribution of the total number of participants and the number of participants per age group. Once again we use a logaritmic scale in the y-axis:
 
 # %%
 def plot_hist(df_column, n_bin=100, density=True, title=None, y_label=None, color=None, y_logscale=False):
@@ -1810,7 +1622,6 @@ def plot_hist(df_column, n_bin=100, density=True, title=None, y_label=None, colo
 plot_hist(incidents_df['n_participants'], title='Distribution of number of participants', n_bin=104, y_label='n_participants', density=False, y_logscale=True);
 
 # %%
-# distribuition number of participants
 plt.figure(figsize=(20, 5))
 plt.hist(incidents_df['n_participants'], bins=104, edgecolor='black', linewidth=0.8)
 plt.xlabel('Number of participants')
@@ -1828,7 +1639,6 @@ incidents_df[incidents_df['n_participants_adult'] > 60][['n_participants', 'n_pa
     'n_participants_child', 'n_participants_teen']]
 
 # %%
-# distribuition number of participants per age group 
 fig, (ax0, ax1, ax2) = plt.subplots(3, 1, figsize=(20, 12), sharex=True, sharey=True)
 
 ax0.bar(incidents_df['n_participants_child'].value_counts().index, incidents_df['n_participants_child'].value_counts(),
@@ -1852,15 +1662,12 @@ ax0.set_title('Number of participants for each incident per age')
 plt.show()
 
 # %% [markdown]
-# We observe that in incidents involving children and teenagers under the age of 18, the total number of participants was less than 7 and 27, respectively. In general, incidents involving a single person are much more frequent than other incidents, and most often, they involve teenagers and children, with a smaller percentage involving adults. On the other hand, incidents with multiple participants mostly consist of adults, and as the number of participants increases, the frequency of such incidents decreases. 
-#
-# Note that the y-axis of the histograms are in logaritmic scale.
+# We observe that in incidents involving children and teenagers under the age of 18, the total number of participants is smaller than 7 and 27, respectively. In general, incidents involving a single person are much more frequent than other incidents, and most often, they involve teenagers and children, with a smaller percentage involving adults. On the other hand, incidents with more than one participant mostly consist of adults, and as the number of participants increases, the frequency of such incidents decreases.
 
 # %% [markdown]
 # We also plot the distribution of the number of incidents per gender:
 
 # %%
-# distribuition number of participants per gender
 plt.figure(figsize=(20, 5))
 plt.bar(incidents_df['n_males'].value_counts().index-0.2, incidents_df['n_males'].value_counts(), 0.4,
     edgecolor='black', linewidth=0.8, label='Males participants')
@@ -1875,23 +1682,16 @@ plt.title('Number of participants for each incident per gender')
 plt.show()
 
 # %% [markdown]
-# Note that for 1567 entries in the dataset, we have the total number of participants, but we do not have the number of males and females
-# and that the y-axis of the histogram is in logaritmic scale.
-
-# %% [markdown]
 # Below, we plot the distribution of the average age of participants in each incident.
 
 # %%
 plot_hist(incidents_df['avg_age_participants'], y_label='avg_age_participants', density=False);
 
-# %%
-incidents_df.describe()
-
 # %% [markdown]
 # ### Incident characteristics features: exploration and preparation
 
-# %%
-# FIXME: aggiungere commenti + ricontrollare quando si usa incedeints_df e quando final_incidents_df
+# %% [markdown]
+# We use a word cloud to display the most frequent words in the attribut notes:
 
 # %%
 nltk.download('stopwords')
@@ -1910,14 +1710,13 @@ plt.axis('off');
 plt.title('Word cloud of notes');
 
 # %% [markdown]
-# We check if given the first characteristic of a record, the second one is different. This to ensure that the info we have are not redundant.
+# We check if given the first characteristic of a record, the second one is different
 
 # %%
-# check if ch1 and ch2 are always different
 incidents_df[incidents_df['incident_characteristics1']==incidents_df['incident_characteristics2']].shape[0]==0
 
 # %% [markdown]
-# We check the frequency of each characteristic in the whole dataset, then we plot it.
+# We plot the frequency of each characteristic:
 
 # %%
 # merge characteristics list
@@ -1952,14 +1751,6 @@ ax.set_ylabel('incident_characteristics2')
 ax.set_title('Counts of incident characteristics')
 plt.tight_layout()
 
-# %% [markdown]
-# We plot, for a specific characteristic, the most common characteristic that is paired to it.
-
-# %%
-'''fig, ax = plt.subplots(figsize=(20, 15)) # FIX: questo plot possiamo toglierlo? dovrebbe contenere la stessa informazione di quello sotto
-sns.heatmap(characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(by="Shot - Dead (murder, accidental, suicide)", inplace=False, ascending=False).tail(-1),
-            cmap='coolwarm', yticklabels=True);'''
-
 # %%
 characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort_values(
     by="Shot - Dead (murder, accidental, suicide)",
@@ -1970,36 +1761,33 @@ characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort
     );
 
 # %% [markdown]
-# We can see that the most of the other characteristics are not paired to the one we're analyzing, in particular there are very few ones which are paired to it for a significant number of times.
-
-# %% [markdown]
 # #### Tags
-# We create some binary tags to standardize the characteristics of each incident, in this way we can easyly get detailed information on the type of all the incidents.<br>
-# We based the tags creation only on the info we could get from the characteristics. The logic behind the conversion is that the tag is true if and only if we could get the semantic information of the tag with 100% certainty; if the tag is false, it means that or the tag represent info wich are false for the specific record, or that we don't have enough data to assume something for that particular incident.<br>
-# The tags we cretaed are the following:
-# - <b>firearm</b>: it tells if a firearm is involved in the incident
-# - <b>air_gun</b>: it tells if an air gun is involved in the incident
-# - <b>shots</b>: it tells if it was an incident involving one or more shootings
-# - <b>aggression</b>: it tells if there was an aggression (both using a gun or not) in the incident
-# - <b>suicide</b>: it tells if the incident involve a suicide (attempts are included)
-# - <b>injuries</b>: it tells if there was one ore more injuried subjects in the incident
-# - <b>death</b>: it tells if there was one ore more deaths in the incident
-# - <b>road</b>: it tells if the incident involves a bad street behavior
-# - <b>illegal_holding</b>: it tells if the incident involve a stealing act or an illegaly possessed gun
-# - <b>house</b>: it tells if the incident is happened in a house
-# - <b>school</b>: it tells if the incident is happened next to a school
-# - <b>children</b>: it tells if the incident involves one or more children
-# - <b>drugs</b>: it tells if the incident involves drug interests
-# - <b>officers</b>: it tells if one or more officiers are involved in the incident
+# We defined the following binary tags to categorize the characteristics of each incident:
+# - <b>firearm</b>: it tells if firearms were involved in the incident
+# - <b>air_gun</b>: it tells if air guns were involved in the incident
+# - <b>shots</b>: it tells if the incident involved shots
+# - <b>aggression</b>: it tells if there was an aggression (both using a gun or not)
+# - <b>suicide</b>: it tells if the incident involved a suicide (attempts are included)
+# - <b>injuries</b>: it tells if one ore more subjects got injured
+# - <b>death</b>: it tells if one ore more subjects died
+# - <b>road</b>: it tells if the incident happened in a road
+# - <b>illegal_holding</b>: it tells if the incident involved a stealing act or if a gun was illegaly possessed
+# - <b>house</b>: it tells if the incident happened in a house
+# - <b>school</b>: it tells if the incident happened next to a school
+# - <b>children</b>: it tells if the incident involved one or more children
+# - <b>drugs</b>: it tells if the incident involved drugs
+# - <b>officers</b>: it tells if one or more officiers were involved in the incident
 # - <b>organized</b>: it tells if the incident was planned by an organization or a group
-# - <b>social_reasons</b>: it tells if the incident involves social discriminations or terrorism
+# - <b>social_reasons</b>: it tells if the incident involved social discriminations or terrorism
 # - <b>defensive</b>: it tells if there was a defensive use of a gun during the incident
 # - <b>workplace</b>: it tells if the incident happened in a workplace
-# - <b>abduction</b>: it tells if the incident involves any form of abduction
+# - <b>abduction</b>: it tells if the incident involved any form of abduction
 # - <b>unintentional</b>: it tells if the incident was unintentional
+#
+# Each tag was set to True if and only if we had enough information to assume that the incident had that particular characteristic. 
 
 # %% [markdown]
-# We set all the tags and check their consistency w.r.t. the other data of the record.
+# We set all the tags and check their consistency w.r.t. the other data:
 
 # %%
 from TASK_1.data_preparation_utils import add_tags, check_tag_consistency, check_characteristics_consistency, IncidentTag
@@ -2022,7 +1810,7 @@ else:
 incidents_df['tag_consistency'].value_counts().to_frame()
 
 # %% [markdown]
-# We correct the inconsistencies and we save again the dataset. Then we check again to see if there are any improvement.
+# We correct the inconsistencies and we save again the dataset.
 
 # %%
 from TASK_1.data_preparation_utils import set_tags_consistent_data
@@ -2041,22 +1829,13 @@ else:
     save_checkpoint(incidents_df, 'checkpoint_6')
 
 # %%
-incidents_df.sample(2, random_state=1)
-
-# %%
 pd.DataFrame(data=incidents_df.dtypes).T
 
 # %%
 incidents_df['tag_consistency'].value_counts().to_frame()
 
-# %%
-incidents_df.loc[incidents_df['tag_consistency'] == False].sample(2, random_state=1)
-
 # %% [markdown]
-# We notice that the inconsistency is given by the fact that the `n_injured` attribute always tells that there is one person injured in the accident, but at the same time we have the characteristic "<b>Home Invasion - No death or injury</b>". In this case we prefer to be consistent with the numerical attribute, since it's a more precise and reliable information on the incident.
-
-# %% [markdown]
-# We create 5 partitions: Murder, Suicide, Defensive, Accidental and Others. Then we show grafically, in percentage, how many incidents belong to each class.
+# We display the frequencies of the tags grouping them:
 
 # %%
 tags_counts = {}
@@ -2088,10 +1867,10 @@ plt.title("Gun incidents")
 plt.show()
 
 # %% [markdown]
-# We can see that the biggest part of the incidents involves Murder, while even if Suicide, Defensive and Accidental are the most common, they're very few compare to murders. The other big slice of the pie belongs to Others, showing that there are a lot of different incidents that are less common.
+# Most of the incidents involved Murder. Suicide, Defensive and Accidental are very few compare to murders. The other big slice of the pie belongs to 'Others', showing that there are a lot of different incidents that are less common.
 
 # %% [markdown]
-# We show which are the most common tags. In particular we display, for each tag, in how many records it's set to True w.r.t. all the records.
+# We show the frequency of the values of each singular tag:
 
 # %%
 ax = (incidents_df[tags_columns].apply(lambda col: col.value_counts()).T.sort_values(by=True)/incidents_df.shape[0]*100).plot(kind='barh', stacked=True, alpha=0.8, edgecolor='black')
@@ -2100,24 +1879,16 @@ for container in ax.containers:
 plt.title("Incidents characteristic (%)")
 
 # %% [markdown]
-# We can see that the most common tags are firearm, shots, aggression and injuries (above 50% of the records), in particular firearm is True for almost every record (97.8 %). On the other hand there are tags that are very rare (less than 1% of the records): air_gun, school, social_reasons and abduction.
+# The most common tags are firearm, shots, aggression and injuries (above 50% of the records), in particular firearm is True for almost every record (97.8 %). On the other hand there are tags (air_gun, school, social_reasons and abduction) that are very rare.
 
 # %% [markdown]
-# We try to see if there are correlations between accidental incidents and the presence of children.
+# We check for correlations between accidental incidents and the presence of children.
 
 # %%
-# compute correlation between accidental incidents and presence of children
-incidents_df['unintentional'].corr(incidents_df['n_participants_child']>0) # not correlated
+incidents_df['unintentional'].corr(incidents_df['n_participants_child']>0)
 
 # %% [markdown]
-# We can see that the two events are not correlated
-
-# %%
-incidents_df.groupby(['address']).size().sort_values(ascending=False)[:50].plot(
-    kind='bar',
-    figsize=(10,6),
-    title='Counts of the addresses with the 50 highest number of incidents'
-); # many airports!!
+# The two events are not correlated.
 
 # %% [markdown]
 # We display the most common characteristics for incidents involving women.
@@ -2132,7 +1903,9 @@ ch_females_counts = ch1_females_counts.add(ch2_females_counts, fill_value=0).sor
 )
 
 # %% [markdown]
-# We can see that the distribution is very similar to the one involving both men and women. Some of the main differences are that, for women, the frequency of suicides is higher than normal, while the officiers involving incidents have the opposite behavior.
+# The distribution is very similar to the one involving both men and women. Some of the main differences are that, for women, the frequency of suicides is higher, while the involvemnte of officiers is lower.
+#
+# We plot on a map the location of mass shootings, incidents involving children and suicides:
 
 # %%
 plot_scattermap_plotly(
@@ -2156,7 +1929,7 @@ plot_scattermap_plotly(
 )
 
 # %% [markdown]
-# We are aware of the fact that we could use classifier to inferr missing values. We chose not to do it because we think such method do not align with the nature of gun incidents. Citando il libro "Classification is the task of learning a target function f that maps each attribute set x to one of the predefined class labels y", il problema è che non può esistere una tale funzione (possono esserci (e immagino siano anche molti comuni) record uguali su tutti gli attributi tranne uno, per cui l'inferenza è impossibile).
+# The dislocation of these kind of incidents is similar to the one of the whole dataset.
 
 # %% [markdown]
 # ## Joint analysis of the datasets
@@ -2180,7 +1953,7 @@ incidents_df = incidents_df.merge(elections_df, on=['state', 'year', 'congressio
 incidents_df.head()
 
 # %% [markdown]
-# We read and join the data about the USA population from the 2010 census downloaded from [Wikipedia](https://en.wikipedia.org/wiki/2010_United_States_census). This time we won't use the ACS population data because we simply need aggregated data for each state over the period of interest.
+# We read and join the data about the USA population from the 2010 census downloaded from [Wikipedia](https://en.wikipedia.org/wiki/2010_United_States_census).
 
 # %%
 usa_population_df = pd.read_csv(DATA_FOLDER_PATH + 'external_data/2010_United_States_census.csv')
@@ -2189,18 +1962,18 @@ usa_population_df = pd.read_csv(DATA_FOLDER_PATH + 'external_data/2010_United_St
 usa_population_df.info()
 
 # %%
-usa_population_df.sample(5, random_state=1)
-
-# %%
-usa_population_df.drop(columns=['Population as of 2000 census', 'Change', 'Percent change', 'Rank'], inplace=True) # FIX: fare solo cu col
+usa_population_df.drop(columns=['Population as of 2000 census', 'Change', 'Percent change', 'Rank'], inplace=True)
 usa_population_df.rename(columns={'Population as of 2010 census':'population_state_2010', 'State': 'state'}, inplace=True)
 usa_population_df['state'] = usa_population_df['state'].str.upper()
 usa_population_df['population_state_2010'] = usa_population_df['population_state_2010'].str.replace(',', '').astype('int64')
 incidents_df = incidents_df.merge(usa_population_df, on=['state'], how='left')
 incidents_df.sample(5, random_state=1)
 
+# %% [markdown]
+# We plot the number of incidents per state per 100k inhabitants:
+
 # %%
-incidents_per_state = incidents_df[incidents_df['year']<=2020].groupby(['state', 'population_state_2010']).size() #FIX non va?!?
+incidents_per_state = incidents_df[incidents_df['year']<=2020].groupby(['state', 'population_state_2010']).size()
 incidents_per_state = ((incidents_per_state / incidents_per_state.index.get_level_values('population_state_2010'))*100000).to_frame(name='incidents_per_100k_inhabitants').sort_values(by='incidents_per_100k_inhabitants', ascending=True)
 incidents_per_state.reset_index(inplace=True)
 incidents_per_state.plot(
@@ -2213,11 +1986,17 @@ incidents_per_state.plot(
     title='Incidents per 100k inhabitants per state'
 )
 
-# %%
-incidents_df[incidents_df['state']=='DISTRICT OF COLUMBIA'].groupby(['latitude', 'longitude', 'date']).size()[lambda x: x > 1].sort_values(ascending=False).to_frame().rename(columns={0:'count'})
+# %% [markdown]
+# District of Columbia has the highest number of incidents per 100k inhabitants.
+
+# %% [markdown]
+# We display the tag frequency for the District of Columbia:
 
 # %%
-incidents_df.groupby(['latitude', 'longitude', 'date']).size()[lambda x: x>1].to_frame().rename(columns={0:'count'})
+incidents_df[incidents_df['state']=='DISTRICT OF COLUMBIA']['incident_characteristics1'].value_counts().plot(kind='barh', figsize=(20, 10))
+
+# %% [markdown]
+# We visualize the number of incidents happened in each state every month:
 
 # %%
 incidents_per_month_per_state = incidents_df.groupby(['state', 'month_name', 'year']).size()
@@ -2248,9 +2027,6 @@ plt.xticks(rotation=90)
 plt.tight_layout()
 
 # %%
-incidents_df[incidents_df['state']=='DISTRICT OF COLUMBIA']['incident_characteristics1'].value_counts().plot(kind='barh', figsize=(20, 10))
-
-# %%
 incidents_per_month_per_state = incidents_df[incidents_df['incident_characteristics1']!='Non-Shooting Incident'].groupby(['state', 'month_name', 'year']).size()
 incidents_per_month_per_state = incidents_per_month_per_state.to_frame(name='incidents').reset_index()
 incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month_name', 'state'], ignore_index=True)
@@ -2279,20 +2055,6 @@ plt.xticks(rotation=90)
 plt.tight_layout()
 
 # %%
-incidents_df[(incidents_df['state']=='DISTRICT OF COLUMBIA') & (incidents_df['year']==2014) & 
-    (incidents_df['month']==1)]
-
-# %%
-incidents_df[(incidents_df['state']=='DISTRICT OF COLUMBIA') & (incidents_df['year']==2014) & 
-    (incidents_df['month']==1)]['incident_characteristics1'].value_counts().plot(kind='barh', figsize=(20, 10))
-
-# %%
-incidents_df[(incidents_df['state']=='DISTRICT OF COLUMBIA')& (incidents_df['date']=="2014-01-01")]
-
-# %% [markdown]
-# https://mpdc.dc.gov/sites/default/files/dc/sites/mpdc/publication/attachments/MPD%20Annual%20Report%202017_lowres.pdf
-
-# %%
 fig, ax = plt.subplots(figsize=(20, 10))
 sns.heatmap(
     incidents_per_month_per_state[(incidents_per_month_per_state.year<=2020) & (incidents_per_month_per_state['state']!='DISTRICT OF COLUMBIA')].pivot(
@@ -2308,36 +2070,38 @@ sns.heatmap(
 )
 ax.set_xlabel('Month-Year')
 ax.set_ylabel('State')
-ax.set_title('Number of incidents per month per state')
+ax.set_title('Number of incidents per month per state (excluding District of Columbia)')
 
 
 plt.xticks(rotation=90)
 plt.tight_layout()
 
 # %%
-# # merge data about the winning party # TODO: prendere dati giusti...
-# winning_party_per_state_copy = winning_party_per_state.copy()
-# winning_party_per_state_copy['year'] = winning_party_per_state['year'] + 1
-# winning_party_per_state = pd.concat([winning_party_per_state, winning_party_per_state_copy], ignore_index=True)
-# incidents_df = incidents_df[incidents_df['year'].notna()].merge(winning_party_per_state[['state', 'year', 'majority_state_party']], on=['state', 'year'], how='left')
+incidents_per_state_2016 = incidents_df[(incidents_df['n_killed']>0)].groupby(['state', 'year', 'population_state_2010', 'povertyPercentage', 'majority_state_party']).size()
+incidents_per_state_2016 = incidents_per_state_2016.to_frame(name='incidents').reset_index()
+incidents_per_state_2016['incidents_per_100k_inhabitants'] = (incidents_per_state_2016['incidents'] / incidents_per_state_2016['population_state_2010'])*100000
+fig = px.scatter(
+    incidents_per_state_2016,
+    x='povertyPercentage',
+    y='incidents_per_100k_inhabitants',
+    color='majority_state_party',
+    hover_name='state',
+    hover_data={'povertyPercentage': True, 'incidents_per_100k_inhabitants': True},
+    title='Mortal gun incidents in the USA',
+    facet_col="year",
+    facet_col_wrap=3
+)
+pyo.plot(fig, filename='../html/scatter_poverty.html', auto_open=False)
+fig.show()
+
+# %% [markdown]
+# We plot the correlations between each attribute:
 
 # %%
-# incidents_per_state_2016 = incidents_df[(incidents_df['n_killed']>0)].groupby(['state', 'year', 'population_state_2010', 'povertyPercentage', 'majority_state_party']).size()
-# incidents_per_state_2016 = incidents_per_state_2016.to_frame(name='incidents').reset_index()
-# incidents_per_state_2016['incidents_per_100k_inhabitants'] = (incidents_per_state_2016['incidents'] / incidents_per_state_2016['population_state_2010'])*100000
-# fig = px.scatter(
-#     incidents_per_state_2016,
-#     x='povertyPercentage',
-#     y='incidents_per_100k_inhabitants',
-#     color='majority_state_party',
-#     hover_name='state',
-#     hover_data={'povertyPercentage': True, 'incidents_per_100k_inhabitants': True},
-#     title='Mortal gun incidents in the USA',
-#     facet_col="year",
-#     facet_col_wrap=3
-# )
-# pyo.plot(fig, filename='../html/scatter_poverty.html', auto_open=False)
-# fig.show()
+numerical_columns = incidents_df.select_dtypes(include=['float64', 'int64']).columns
+plt.figure(figsize=(15, 12))
+corr_matrix = incidents_df[numerical_columns].corr()
+sns.heatmap(corr_matrix, mask=np.triu(corr_matrix));
 
 # %% [markdown]
 # We re-order the columns and we save the cleaned dataset:
@@ -2365,10 +2129,6 @@ characteristic_columns = ['notes', 'incident_characteristics1', 'incident_charac
 
 external_columns = ['povertyPercentage', 'party', 'candidatevotes', 'totalvotes', 'candidateperc', 'population_state_2010']
 
-# %% [markdown]
-# We re-order the columns and we save the cleaned dataset:
-
-# %%
 incidents_df = incidents_df[time_columns + geo_columns + participants_columns + characteristic_columns + external_columns]
 incidents_df = incidents_df.rename(
     columns={
@@ -2379,16 +2139,4 @@ incidents_df = incidents_df.rename(
     }
 )
 
-# %%
-incidents_df.shape[0]
-
-# %%
-numerical_columns = incidents_df.select_dtypes(include=['float64', 'int64']).columns
-plt.figure(figsize=(15, 12))
-corr_matrix = incidents_df[numerical_columns].corr()
-sns.heatmap(corr_matrix, mask=np.triu(corr_matrix));
-
-# %%
 incidents_df.to_csv(DATA_FOLDER_PATH +'incidents_cleaned.csv', index=True)
-
-
