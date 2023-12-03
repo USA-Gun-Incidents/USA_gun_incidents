@@ -360,3 +360,27 @@ def continuous_attribute_distribuition_plot(df, attribute, state):
     plt.yscale('log')
     plt.title(f'{attribute} distribuition')
     plt.show()
+
+def scatter_pairs(df, features, figsize=(35,100), ncols=3):
+    '''
+    
+    '''
+    ncols = ncols
+    nplots = len(features)*(len(features)-1)/2
+    nrows = int(nplots / ncols)
+    if nplots % ncols != 0:
+        nrows += 1
+
+    f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
+    id = 0
+    for i in range(len(features)):
+        for j in range(i+1, len(features)):
+            x, y = df[features].columns[i], df[features].columns[j]
+            axs[int(id/ncols)][id%ncols].scatter(df[x], df[y], s=20, edgecolor="k")
+            axs[int(id/ncols)][id%ncols].set_xlabel(x)
+            axs[int(id/ncols)][id%ncols].set_ylabel(y)
+            id += 1
+    if nrows > 1:
+        for ax in axs[nrows-1, id%ncols:]:
+            ax.remove()
+    plt.tight_layout()

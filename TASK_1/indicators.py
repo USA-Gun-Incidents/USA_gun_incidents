@@ -2,7 +2,7 @@
 # # Definition and study of indicators
 
 # %% [markdown]
-# In this notebook, we extract indicators for describing the incidents. First we compute the indicators on different features combinations, visualizing their distributions. Then, we study the correlation between the indicators and choose the most relevant ones. We finally provide a table describing the chosen indicators.
+# In this notebook, we extract indicators for describing the incidents. First we compute the indicators on different features combinations, visualizing their distributions. Then, we analyze the correlation among the indicators and identify the most semantically relevant ones, while excluding those with high correlation. We finally provide a table describing the chosen indicators.
 
 # %% [markdown]
 # We import the libraries:
@@ -16,13 +16,13 @@ import os
 import seaborn as sns
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-# %matplotlib inline
+%matplotlib inline
 
 # %% [markdown]
 # We load the dataset and reaname some columns:
 
 # %%
-incidents_df = pd.read_csv('../data/incidents_cleaned.csv')
+incidents_df = pd.read_csv('../data/incidents_cleaned.csv', index_col=0)
 incidents_df['date'] = pd.to_datetime(incidents_df['date'], format='%Y-%m-%d')
 incidents_df.rename(
     columns={
@@ -39,10 +39,9 @@ incidents_df.rename(
 )
 dataset_original_columns = incidents_df.columns
 
-
 # %% [markdown]
-# First, we compute a set of indicators aimed at highlighting the degree of abnormality of the value of a specific feature of an incident with respect to the values of the same feature in the incidents happened in the same period and/or in the same geographical area. 
-#
+# We compute a set of indicators aimed at highlighting the degree of abnormality of the value of a specific feature of an incident with respect to the values of the same feature in the incidents happened in the same period and/or in the same geographical area. 
+# 
 # The following function computes for each record the ratio between the value of a specific feature in that record and the value of an aggregation function (e.g. sum or mean) applied to the feature restricted to a certain time and space window:
 
 # %%
@@ -59,7 +58,7 @@ def compute_window_ratio_indicator(df, gby, feature, agg_fun, suffix):
 # - as aggregation functions the sum and the mean
 # - as time window the semester of the year or the whole year
 # - as space window the congressional district of the state or the whole state
-#
+# 
 # We chose not to use 'county' or 'city' as space window because not all the records have a value for those features (e.g. incidents happend in rural areas). The values of the congressional districts are instead always present (we have previously inferred the missing ones).
 
 # %%
@@ -126,7 +125,7 @@ for feature in incidents_df.columns:
         window_ratios_wrt_total.append(feature)
 
 # %% [markdown]
-# We visualize the distributions of the ratios w.r.t the mean:
+# We visualize the distributions of the ratios computed diving by the mean:
 
 # %%
 fig, ax = plt.subplots(figsize=(40, 5))
@@ -134,9 +133,9 @@ sns.violinplot(data=incidents_df[window_ratios_wrt_mean], ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
-# All the distributions are highly skewed. The indicators about the number of killed people, the number of teens and the number of child have far outliers.
-#
-# We define a function to apply a logarithmic transformation of a set of features (summing 1% of the minimum value of the feature excluding 0 to avoid infinite values):
+# All the distributions are highly skewed. The indicators about the number of killed people, the number of teens and the number of children have far outliers.
+# 
+# We define a function to apply a logarithmic transformation to a set of features (summing 1% of the minimum value of the feature - excluding 0 - to avoid infinite values):
 
 # %%
 def log_transform(df, features):
@@ -165,8 +164,8 @@ plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
 # As expected the logarithmic transformation reduced the skeweness of the distributions, but outliers are still present.
-#
-# We visualize the distributions of the indicators w.r.t the total:
+# 
+# We visualize the distributions of the indicators computed dividing by the sum:
 
 # %%
 fig, ax = plt.subplots(figsize=(40, 5))
@@ -174,7 +173,7 @@ sns.violinplot(data=incidents_df[window_ratios_wrt_total], ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
-# We apply the logarithmic transformation to the ratio indicators w.r.t the total and visualize the distributions after the transformation:
+# We apply the logarithmic transformation to the ratio computed dividing by the sum and visualize the distributions after the transformation:
 
 # %%
 incidents_df = log_transform(df=incidents_df, features=window_ratios_wrt_total)
@@ -189,7 +188,7 @@ plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
 # We now compute indicators using only the data of each single record.
-# In particulat, we define a function to compute the ratio between the value a feature in a record w.r.t the value of another feature in the same record:
+# In particular, we define a function to compute the ratio between the value a feature in a record and the value of another feature in the same record:
 
 # %%
 def compute_record_level_ratio_indicator(df, num, den):
@@ -214,20 +213,19 @@ fig, ax = plt.subplots(figsize=(15, 5))
 sns.violinplot(data=incidents_df[record_level_ratios], ax=ax)
 plt.xticks(rotation=90, ha='right');
 
-
 # %% [markdown]
-# We now compute a set of indicators with a similar semanthics to the ones computed above, but using the concept of **surprisal**.
-#
+# We now compute a set of indicators with a similar semantics to those computed above, but using the concept of **surprisal**.
+# 
 # This kind of indicator can also be computed for categorical variables, as well as for a set of variables.
-#
+# 
 # The **surprisal** (also called [Information content](https://en.wikipedia.org/wiki/Information_content)) of an event $E$ 
 # with probability $p(E)$ is defined as $log(1/p(E))$ (or equivalently $-log(p(E))$).
-# Surprisal is inversly related to probability (hence the term $1/p(E)$): when $p(E)$ is close to $1$, the surprisal of the event is low, when $p(E)$ is close to $0$, the surprisal of the event is high.
+# Surprisal is inversly related to probability (hence the term $1/p(E)$): when $p(E)$ is close to $1$, the surprisal of the event is low, whereas when $p(E)$ is close to $0$, the surprisal of the event is high.
 # The $log$ gives $0$ surprise when the probability of the event is $1$.
-#
-# The surprisal is closely related to **entropy**, which is the expected value of the information content of a random variable, quantifying how surprising the random variable is "on average".
-#
-# The following function computes the surprisal of a set of features of an incident w.r.t the values of the same features in the incidents happened in the same period and/or geographical area:
+# 
+# The surprisal is closely related to **entropy**, which is the expected value of the information content of a random variable, thus quantifying how surprising the random variable is "on average".
+# 
+# The following function computes the surprisal of a set of features of an incident w.r.t. the values of the same features in the incidents happened in the same period and/or geographical area:
 
 # %%
 def compute_surprisal_indicator(df, fixed_cols, var_cols):
@@ -304,7 +302,7 @@ incidents_df['severity'].replace([np.inf], 0, inplace=True)
 sns.violinplot(data=incidents_df[['severity']])
 
 # %% [markdown]
-# Additionally, we compute the age rage of the participants involved in the incident and we visualize its distribution:
+# Additionally, we compute the age range of the participants involved in the incident and we visualize its distribution:
 
 # %%
 incidents_df['age_range'] = incidents_df['max_age'] - incidents_df['min_age']
@@ -370,7 +368,7 @@ indicators_abbr = {
 incidents_df.rename(columns=indicators_abbr, inplace=True)
 
 # %% [markdown]
-# We visualize pairwise correlations using pearson and spearman correlation coefficients:
+# We visualize pairwise correlations using Pearson and Spearman correlation coefficients:
 
 # %%
 fig, ax = plt.subplots(figsize=(25, 10))
@@ -381,6 +379,22 @@ sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coo
 fig, ax = plt.subplots(figsize=(25, 10))
 corr_matrix = incidents_df[list(indicators_abbr.values())].corr('spearman')
 sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coolwarm')
+
+# %% [markdown]
+# The two measures of correlation have the following properties:
+# 
+# **Pearson Correlation Coefficient:**
+# - Measures the linear relationship between two continuous variables
+# - Assumes that the variables are approximately normally distributed
+# - Sensitive to outliers
+# 
+# **Spearman Rank Correlation Coefficient:**
+# - Measures the strength and direction of the monotonic relationship between two variables
+# - Does not assume that the variables are normally distributed
+# - Based on the ranks of the data rather than the actual values
+# - Less sensitive to outliers than the Pearson correlation
+# 
+# Despite the differences, in this case they provide similar results.
 
 # %% [markdown]
 # We discard correlated indicators and visualize again the correlation matrix:
@@ -409,6 +423,29 @@ corr_matrix = incidents_df[indicators].corr('spearman')
 sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coolwarm')
 
 # %% [markdown]
+# Higher positive or negative correlations are all due to the semantics of the indicators. Pearson correlation coefficients falls within the range of [-0.43, 0.63], while Spearman correlation coefficients falls within the range of [-0.44, 0.7].
+# 
+# We visualize scatter plots for each pair of indicators:
+
+# %%
+scatter_pairs(
+    incidents_df,
+    [indicator for indicator in indicators if indicator not in ['lat_proj', 'long_proj']],
+    figsize=(35,120), ncols=3
+)
+
+# %% [markdown]
+# As expected we not to observe any linear relationship between the indicators.
+
+# %% [markdown]
+# We check for duplicated rows:
+
+# %%
+n_duplicates = incidents_df[indicators].duplicated().sum()
+print(f"Number of duplicated rows: {n_duplicates}")
+print(f"Percentage of duplicated rows: {(n_duplicates/incidents_df[indicators].shape[0])*100:.2f}%")
+
+# %% [markdown]
 # We save the names of the indicators in a json file and we save the dataset with the indicators:
 
 # %%
@@ -431,30 +468,32 @@ print(f'The dataset has {incidents_df.shape[0]} rows')
 print(f'Dropping rows with nan values in the indicators columns, {incidents_df[indicators].dropna().shape[0]} rows remain')
 
 # %% [markdown]
-# We display a summary of the descriptive statistica of the indicators:
+# We display a summary of the descriptive statistics of the indicators:
 
 # %%
 incidents_df[indicators].describe()
 
 # %% [markdown]
-# ## Final Indicators semanthics
-#
+# ## Final Indicators semantics
+# 
 # | Name | Description | Present in the original dataset |
 # | :--: | :---------: | :-----------------------------: |
 # | location_imp | Location importance according to Geopy | No |
-# | surprisal_address_type | Surprisal of the address type w.r.t the address types of incidents happened in the same semester of the same year and in the congressional district of the same state | No |
+# | surprisal_address_type | Surprisal of the address type retrived via Geopy (e.g. "house", "street") w.r.t. the address types of incidents happened in the same semester of the same year and in the same congressional district of the same state | No |
 # | age_range | Difference between the maximum and the minimum age of the participants involved in the incident | No |
 # | avg_age | Average age of the participants involved in the incident | Yes |
-# | surprisal_min_age | Surprisal of the minimum age of the participants involved in the incident w.r.t the minimum age of the participants of incidents happened in the same semester of the same year and in the congressional district of the same state | No |
+# | surprisal_min_age | Surprisal of the minimum age of the participants involved in the incident w.r.t. the minimum age of the participants of incidents happened in the same semester of the same year and in the same congressional district of the same state | No |
 # | n_child_prop | Ratio between the number of child involved in the incident and number of people involved in the incident | No |
 # | n_teen_prop | Ratio between the number of teen involved in the incident and number of people involved in the incident | No |
-# | surprisal_age_groups | Surprisal of the number of child, teen and adult involved in the incident w.r.t the number of child, teen and adult involved in incidents happened in the same semester of the same year and in the congressional district of the same state | No |
-# | n_killed_prop | Ratio between the number of people killed and number of people involved in the incident | No |
-# | n_injured_prop | Ratio between the number of people injured and number of people involved in the incident | No |
-# | n_unharmed_prop | Ratio between the number of people unharmed and number of people involved in the incident | No |
+# | surprisal_age_groups | Surprisal of the number of child, teen and adult involved in the incident w.r.t. the number of child, teen and adult involved in incidents happened in the same semester of the same year and in the same congressional district of the same state | No |
+# | n_killed_prop | Ratio between the number killed people and number of people involved in the incident | No |
+# | n_injured_prop | Ratio between the number of injured people and number of people involved in the incident | No |
+# | n_unharmed_prop | Ratio between the number of unharmed people and number of people involved in the incident | No |
 # | n_males_prop | Ratio between the number of males and the number of people involed in the incident | No |
-# | surprisal_n_males | Surprisal of the number of males involved in the incident w.r.t the number of males involved in incidents happened in the same semester of the same year and in the congressional district of the same state | No |
-# | surprisal_characteristics | Surprisal of the values of the incident characteristic tags extracted from the incident characteristics w.r.t the values of the tags for incidents happened in the same semester of the same year and in the congressional district of the same state | No |
+# | surprisal_n_males | Surprisal of the number of males involved in the incident w.r.t. the number of males involved in incidents happened in the same semester of the same year and in the same congressional district of the same state | No |
+# | surprisal_characteristics | Surprisal of the values of the incident characteristic tags extracted from the incident characteristics w.r.t. the values of the tags for incidents happened in the same semester of the same year and in the same congressional district of the same state | No |
 # | n_arrested_prop | Ratio between the number of people arrested and the number of participants involved in the incident | No |
-# | n_participants | Number of participants in the incident | Yes |
-# | surprisal_day | Surprisal of the day of the month and of the month of the incident w.r.t the days of the month and the months of incidents happened in the same semester of the same year and in the congressional district of the same state | No |
+# | n_participants | Number of participants involved in the incident | Yes |
+# | surprisal_day | Surprisal of the day of the month and of the month in which the incident happened w.r.t. the days of the month and the months of incidents happened in the same semester of the same year and in the same congressional district of the same state | No |
+
+

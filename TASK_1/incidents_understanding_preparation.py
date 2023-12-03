@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
-# 
+#
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
 
 # %% [markdown]
@@ -40,7 +41,7 @@ from plot_utils import *
 # We define constants and settings for the notebook:
 
 # %%
-%matplotlib inline
+# %matplotlib inline
 
 DATA_FOLDER_PATH = '../data/'
 
@@ -66,9 +67,9 @@ incidents_df.sample(n=2, random_state=1)
 
 # %% [markdown]
 # This dataset contains information about gun incidents in the USA.
-# 
+#
 # In the following table we provide the characteristics of each attribute of the dataset. To define the type of the attributes we used the categorization described by Pang-Ning Tan, Michael Steinbach and Vipin Kumar in the book *Introduction to Data Mining*. For each attribute, we also reported the desidered pandas dtype for later analysis.
-# 
+#
 # | # | Name | Type | Description | Desired dtype |
 # | :-: | :--: | :--: | :---------: | :-----------: |
 # | 0 | date | Numeric (Interval) | Date of incident occurrence| datetime |
@@ -111,7 +112,7 @@ incidents_df.info()
 # - `congressional_district`, `state_house_district`, `state_senate_district`, `participant_age1`, `n_males`, `n_females`, `n_arrested`, `n_unharmed`, `n_participants` are stored as `float64` while should be `int64`
 # - `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` are stored as `object` while should be `int64`, this probably indicates the presence of syntactic errors (not in the domain)
 # - the presence of missing values within many attributes; the only attributes without missing values are the following: `date`, `state`, `city_or_county`, `n_killed`, `n_injured`, `n_participants`
-# 
+#
 # We display descriptive statistics of the DataFrame so to better understand how to cast the data:
 
 # %%
@@ -211,9 +212,9 @@ incidents_df.describe(include='all')
 # - there are many inconsistencies and/or erros, for example:
 #     - the maximum value for the attribute `date` is 2030-11-28
 #     - the range of the attributes `age`, `min_age_participants`, `avg_age_participants`, `max_age_participants`, `n_participants_child`, `n_participants_teen`, `n_participants_adult` is outside the domain of the attributes (e.g. the maximum value for the attribute age is 311)
-# 
+#
 # In the following sections of this notebook we will analyze each attribute in detail.
-# 
+#
 # To avoid re-running some cells, we save checkpoints of the dataframe at different stages of the analysis and load the dataframe from the last checkpoint using the following functions:
 
 # %%
@@ -296,7 +297,7 @@ print(f'Number of rows with out of range value for the attribute date: {num_oor}
 # - check if those records have duplicates with a correct date
 # - suppose dates were entered manually using a numeric keypad and that the errors are typos (e.g. 2030 is actually 2020)
 # - replace the errors with the mean or median value
-# 
+#
 # Let's check if there are duplicates with a correct date:
 
 # %%
@@ -431,7 +432,7 @@ pyo.plot(fig, filename='../html/incidents_per_day_heatmap.html', auto_open=False
 # %% [markdown]
 # We visualize the frequency of incidents occurring across different festivities.
 # We consider the following holidays (most of them are [federal holidays](https://en.wikipedia.org/wiki/Federal_holidays_in_the_United_States))
-# 
+#
 # | Holiday | Date |
 # | :------------: | :------------: |
 # | New Year’s Day | January 1 |
@@ -448,7 +449,7 @@ pyo.plot(fig, filename='../html/incidents_per_day_heatmap.html', auto_open=False
 # | Easter | Sunday (based on moon phase) |
 # | Easter Monday | Day after Easter |
 # | Black Friday | Day after Thanksgiving |
-# 
+#
 
 # %%
 holiday_dict = {'New Year\'s Day': ['2013-01-01', '2014-01-01', '2015-01-01', '2016-01-01', '2017-01-01', '2018-01-01'],
@@ -539,7 +540,7 @@ pyo.plot(fig, filename='../html/incidents_per_holiday.html', auto_open=False);
 
 # %% [markdown]
 # We notice that the distribution of the number of incidents during each holiday remains consistent over the years. This consistency aligns with our expectations, given the similarity in the distribution of incidents across days throughout the years.
-# 
+#
 # New Year's Eve, followed by the Independence day are the holiday with the highest number of incidents, while Christmas and Thanksgiving are the holidays with the lowest number of incidents.
 
 # %% [markdown]
@@ -591,7 +592,7 @@ incidents_df.groupby(['latitude', 'longitude'])['address'].unique()[lambda x: x.
 
 # %% [markdown]
 # Still this attribute may be written in different ways (e.g. "Avenue" may also be written as "Ave", or "Highway" as "Hwy"). There could also be some errors (e.g. the same point corresponds to the address "33rd Avenue", "Kamehameha Highway" and "Kilauea Avenue extension").
-# 
+#
 # We plot on a map the location of the incidents:
 
 # %%
@@ -625,10 +626,10 @@ geopy_df.sample(2, random_state=1)
 
 # %% [markdown]
 # The rows in this dataframe correspond to the rows in the original dataset. Its column *coord_presence* is false if the corresponding row in the original dataset did not have latitude and longitude values.
-# 
+#
 # Among all the attributes returned by GeoPy, we selected and used the following:
 # - *importance*: Numerical value $\in [0,1]$, indicating the importance of the location (compared to other locations)
-# - *addresstype*: Address type (e.g., "house," "street," "postcode")
+# - *addresstype*: Address type (e.g., "house", "street", "postcode")
 # - *state*: State of the location
 # - *county*: County of the location
 # - *suburb*: Suburb of the location
@@ -650,7 +651,7 @@ print(f"\nNumber of rows in which addresstype is null: {geopy_df[geopy_df['addre
 
 # %% [markdown]
 # We also downloaded from [Wikipedia](https://en.wikipedia.org/wiki/County_(United_States)) the list of the counties (or their equivalent) in each state. 
-# 
+#
 # This data was used in case incidents data did not match GeoPy data and when latitude and longitude where not available to check whether the county actually belonged to the state.
 
 # %%
@@ -675,20 +676,20 @@ else:
 
 # %% [markdown]
 # The function called above performs the following operations:
-# 
+#
 # - converts to lowercase the attributes *state*, *county*, and *city*
 # - if *city_or_county* contains values for both city and county, splits them into two different fields
 # - removes from *city_or_county* the words 'city of' and 'county'
 # - removes from *city_or_county* punctuation and numerical values
 # - removes frequent words from *address* and *display_name* (e.g., "Street," "Avenue," "Boulevard")
-# 
+#
 # When latitude and longitude are available and therefore Geopy provided information for the corresponding location:
 # - checks for equality between *state* and *state_geopy*
 # - checks for equality between *county* and *county_geopy* or between *county* and *suburb_geopy*
 # - checks for equality between *city* and *city_geopy*, or between *city* and *town_geopy*, or between *city* and *village_geopy*
-# 
+#
 # If these comparisons fail, it checks for potential typos in the string. This is done using the Damerau-Levenshtein distance (defined below), with a threshold to decide the maximum distance for two strings to be considered equal. The thresholds were set after several preliminary tests. We decided to use different thresholds for state and city or county.
-# 
+#
 # The **Damerau-Levenshtein distance** between two strings $s$ and $t$ is define as\
 # $D(i, j) = \min
 # \begin{cases}
@@ -697,14 +698,14 @@ else:
 # D(i-1, j-1) + \delta \\
 # D(i-2, j-2) + \delta & \text{if } s[i] = t[j] \text{ and } s[i-1] = t[j-1]
 # \end{cases}$
-# 
+#
 # where:
 # - $D(i, j)$ is the Damerau-Levenshtein distance between the first $i$ letters of a string $s$ and the first $j$ letters of a string $t$
 # - $\delta$ is 0 if the current letters $s[i]$ and $t[j]$ are equal, otherwise, it is 1
 # - $D(i-2, j-2) + \delta$ represents transposition (swapping two adjacent letters) if the current letters $s[i]$ and $t[j]$ are equal, and the preceding letters $s[i-1]$ and $t[j-1]$ are also equal
-# 
+#
 # If the comparison still fails, it compares the *address* field from our dataset with GeoPy's *display_name* (using again the Damerau-Levenshtein distance).
-# 
+#
 # In case of a match with GeoPy data, we set the values for the fields *state*, *county*, *city*, *latitude*, *longitude*, *importance*, *address_type* to the corresponding fileds provided by GeoPy. Otherwise we check for matches with the Wikipedia data (using again the Damerau-Levenshtein distance).
 
 # %%
@@ -768,7 +769,7 @@ plot_scattermap_plotly(incidents_df_nan_city, 'state', zoom=2, title='Missing ci
 
 # %% [markdown]
 # **Final considerations**
-# 
+#
 # From this analysis we found that:
 # - 174,796 entries are fully consistent
 # - in 26,635 entries only the city is missing, but it can be inferred from latitude and longitude
@@ -776,9 +777,9 @@ plot_scattermap_plotly(incidents_df_nan_city, 'state', zoom=2, title='Missing ci
 # - in 33 entries both the city and county are missing. Even in this group, the missing information can be inferred from latitude and longitude, as they are all closely clustered around Baltimore
 # - in 3,116 entries latitude, longitude, and city are missing. They can be inferred (though not perfectly) from the county-state pair
 # - in 19,844 entries only the state field is present
-# 
+#
 # The dataset does not contain any other combinations beyond the ones just mentioned.
-# 
+#
 # In the following we will recover the missing information using the latitude and longitude values.
 
 # %% [markdown]
@@ -1030,7 +1031,7 @@ house_districts
 
 # %% [markdown]
 # Also this attribute has some errors because the maximum number of state house districts should be 204 (for New Hampshire, see [here](https://ballotpedia.org/State_Legislative_Districts)). For now we won't correct this error beacuse this attribute is not useful for our analysis.
-# 
+#
 # We check if given a certain value for the attributes `latitude` and `longitude`, the attribute `state_house_district` has always the same value:
 
 # %%
@@ -1059,7 +1060,7 @@ senate_districts
 
 # %% [markdown]
 # And again we notice some errors because the maximum number of state senate districts should be 67 (for Minnesota, see [here](https://ballotpedia.org/State_Legislative_Districts)). For now we won't correct this error beacuse this attribute is not useful for our analysis.
-# 
+#
 # We correct other possible errors as above:
 
 # %%
@@ -1087,7 +1088,7 @@ incidents_df[incidents_df['congressional_district'].notnull()].groupby(
 
 # %% [markdown]
 # We cannot recover the missing values for the attribute `congressional_district` from the values of `state_house_district` either.
-# 
+#
 # We could, instead, recover the missing values from the entries with "similar" `latitude` and `longitude`. To explore this possibility we first plot on a map the dislocation of the incidents, coloring them according to the value of the attribute `congressional_district`:
 
 # %%
@@ -1103,9 +1104,9 @@ plot_scattermap_plotly(
 
 # %% [markdown]
 # Many points with missing `congressional_district` are often "surrounded" by points belonging to the same congressional district. We could, therefore, use KNN classifier to recover those values.
-# 
+#
 # We'll do this first for the state of Alabama, showing the results with some plots. Later we will do the same for all the other states. 
-# 
+#
 # We plot the distribution of the values of the attribute `congressional_district` for the state of Alabama:
 
 # %%
@@ -1234,7 +1235,7 @@ plot_clf_decision_boundary(knn_eu_clf, X_train_converted, y_train, alabama_color
 
 # %% [markdown]
 # We can now compare the boundaries built by the classifier with the actual boundaries (this map was taken [here](https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif/lossless-page1-1256px-United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif.png)):
-# 
+#
 # <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif/lossless-page1-1256px-United_States_Congressional_Districts_in_Alabama%2C_since_2013.tif.png" alt="Alt Text" width="600"/>
 
 # %% [markdown]
@@ -1304,7 +1305,7 @@ plot_scattermap_plotly(
 
 # %% [markdown]
 # These attributes have a lot of missing values, sometimes spread over large areas where there are no other points. Given this scarcity of training examples, we cannot apply the same method to recover the missing values.
-# 
+#
 # Finally we visualize the most frequent addresses:
 
 # %%
@@ -1354,23 +1355,23 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 
 # %% [markdown]
 # To identify inconsistencies in the data related to the minimum, maximum, average age of participants, and to the composition of the age groups we checked if:
-# 
+#
 # - min_age_participants $<$ avg_age_participants $<$ max_age_participants
 # - n_participants_child $+$ n_participants_teen $+$ n_participants_adult $>$ 0
-# 
+#
 # - $if$ min_age_participants $<$ 12 $then$ n_participants_child $>$ 0
 # - $if$ 12 $\leq$ min_age_participants $<$ 18 $then$ n_participants_teen $>$ 0
 # - $if$ min_age_participants $\geq$ 18 $then$ n_participants_adult $>$ 0
-# 
+#
 # - $if$ max_age_participants $<$ 12 $then$ n_participants_child $>$ 0 and n_participants_teen $=$ 0 and n_participants_adult $=$ 0
 # - $if$ max_age_participants $<$ 18 $then$ n_participants_teen $>$ 0 or n_participants_child $>$ 0 and n_participants_adult $=$ 0
 # - $if$ max_age_participants $\geq$ 18 $then$ n_participants_adult $>$ 0
-# 
+#
 # Note that: child = 0-11, teen = 12-17, adult = 18+
 
 # %% [markdown]
 # To identify inconsistencies in the data related to the number of participants we checked if:
-# 
+#
 # - n_participants $\geq$ 0
 # - n_participants $==$ n_males $+$ n_females
 # - n_killed $+$ n_injured $\leq$ n_participants
@@ -1379,17 +1380,17 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 
 # %% [markdown]
 # Values related to participant_age_group1 and participant_gender1 have been binarized using one-hot encoding, thus creating the boolean features *participant1_child*, *participant1_teen*, *participant1_adult*, *participant1_male*, *participant1_female*.
-# 
+#
 # To identify other potential inconsistencies we did the following checks:
-# 
+#
 # - $if$ participant_age1 $<$ 12 $then$ participant_age_group1 $=$ *Child*
 # - $if$ 12 $\leq$ participant_age1 $<$ 18 $then$ participant_age_group1 $=$ *Teen*
 # - $if$ participant_age1 $\geq$ 18 $then$ participant_age_group1 $==$ *Adult*
-# 
+#
 # - $if$ participant_age_group1 $==$ *Child* $then$ n_participants_child $>$ 0
 # - $if$ participant_age_group1 $==$ *Teen* $then$ n_participants_teen $>$ 0
 # - $if$ participant_age_group1 $==$ *Adult* $then$ n_participants_adult $>$ 0
-# 
+#
 # - $if$ participant_gender1 $==$ *Male* $then$ n_males $>$ 0
 # - $if$ participant_gender1 $==$ *Female* $then$ n_females $>$ 0
 
@@ -1403,7 +1404,7 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 # - *participant1_age_range_consistency_wrt_all_data*: to track the consistency between the age group of participant1 and the other attributes related to age groups
 # - *participant1_gender_consistency_wrt_all_data*: to track the consistency between the gender of participant1 and the other attributes related to gender
 # - *consistency_participants1_wrt_n_participants*: to track the overall consistency between the data about participant1 and the other data
-# 
+#
 # The chunck of code below performes the specified checks:
 
 # %%
@@ -1775,7 +1776,7 @@ characteristics_count_matrix[["Shot - Dead (murder, accidental, suicide)"]].sort
 # - <b>workplace</b>: it tells if the incident happened in a workplace
 # - <b>abduction</b>: it tells if the incident involved any form of abduction
 # - <b>unintentional</b>: it tells if the incident was unintentional
-# 
+#
 # Each tag was set to True if and only if we had enough information to assume that the incident had that particular characteristic. 
 
 # %% [markdown]
@@ -1897,7 +1898,7 @@ ch_females_counts = ch1_females_counts.add(ch2_females_counts, fill_value=0).sor
 
 # %% [markdown]
 # The distribution is very similar to the one involving both men and women. Some of the main differences are that, for women, the frequency of suicides is higher, while the involvemnte of officiers is lower.
-# 
+#
 # We plot on a map the location of mass shootings, incidents involving children and suicides:
 
 # %%
@@ -2119,6 +2120,22 @@ fig.savefig("../html/attributes_correlation_matrix.svg")
 
 # %% [markdown]
 # The attributes min_age_participants, avg_age_participants and max_age_participants are positively correlated with each other (probably because there are many incidents involving a single person). n_participants is positively correlated with n_participants_adults and n_males: most of the incidents involve adult males. povertyPercentage is inversly correlated with latitude: southern states are poorer.
+#
+# We visualize scatter plots for each pair of numerical features:
+
+# %%
+cols_to_scatter = [
+    'location_imp',
+    'min_age', 'avg_age', 'max_age',
+    'n_child', 'n_teen', 'n_adult',
+    'n_males', 'n_females',
+    'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 'n_participants',
+    'poverty_perc', 'total_votes'
+    ]
+scatter_pairs(incidents_df, cols_to_scatter, figsize=(35,100), ncols=3)
+
+# %% [markdown]
+# We notice again that the pairs (n participants, n_adults) and (n_participants, n_males) are linearly correlated.
 
 # %% [markdown]
 # We re-order the columns and we save the cleaned dataset:
