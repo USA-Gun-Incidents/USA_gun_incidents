@@ -1,4 +1,8 @@
 # %% [markdown]
+# **Data mining Project - University of Pisa, acedemic year 2023/24**
+#  
+# **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
+#
 # # Clustering comparison
 #
 # In this notebook, we compare the clustering results of the different methods. Since DBSCAN and Heirarchical clustering were applied only to the incidents happened in Illinois, we restrict the comparison to the incidents in this state. We remind that the state of Illinois was chosen because it had few null values and the distribution of the variables was similar to the distribution of the variables of the whole dataset.
@@ -23,7 +27,8 @@ internal_scores_files = [PATH+'4-Means_internal_scores.csv', PATH+'4-Means_PCA_i
 # We concatenate the clustering results into a single dataframe:
 
 # %%
-clusters_df = pd.DataFrame(index=[i for i in range(239379)])
+nrows = pd.read_csv(labels_files[0], index_col=0).shape[0]
+clusters_df = pd.DataFrame(index=[i for i in range(nrows)])
 for name, labels_file, external_score_file, internal_score_file in zip(clustering_name, labels_files, external_scores_files, internal_scores_files):
     clusters_curr_df = pd.read_csv(labels_file, index_col=0)
     clusters_curr_df = clusters_curr_df.rename(columns={'cluster':'cluster'+name})
@@ -57,33 +62,62 @@ internal_scores_df.drop(columns=['model'], inplace=True)
 internal_scores_df
 
 # %% [markdown]
-# BSS and SSE are not comparable because the feature space on which we run the algorithms is different. The other scores are comparable. 
+# BSS and SSE are not comparable because the feature space on which we run the algorithms is different. The other scores are comparable. As for the Calinski-Harabasz score and the Silhouette score, the best results are obtained by KMeans, while for the Davies-Bouldin score the best results are obtained by KMeansPCA.
+#
+# Now we compare the silhouette score of all the methods:
 
 # %%
 silhouette_df = internal_scores_df['silhouette_score'].to_frame()
-silhouette_df
-
-# %%
 DBSCAN_silhouette = pd.read_csv(PATH+'DBSCAN_internal_scores.csv', index_col=0)['silhouette_score'].values[0]
-DBSCAN_silhouette
+hierarchical_silhouette = pd.read_csv(PATH+'hierarchical_internal_scores.csv', index_col=0).T['silhouette_score'].values[0]
+pd.concat([silhouette_df, pd.DataFrame({'silhouette_score': [DBSCAN_silhouette, hierarchical_silhouette]}, index=['DBSCAN', 'Hierarchical'])])
+
+# %% [markdown]
+# According to the silhouette score the best clustering results are obtained by Hierarchical clustering.
+
+# %% [markdown]
+# We finally visualize the external scores of all the methods:
 
 # %%
-pd.concat([silhouette_df, pd.DataFrame({'silhouette_score': [DBSCAN_silhouette]}, index=['DBSCAN'])])
-
-# %%
+scores_per_feature = {}
+scores_per_metric = {}
+algs_order = []
+scores_order = []
+features_order = []
 external_scores_df = pd.DataFrame()
-for name, external_score_file in zip(clustering_name[:2], external_scores_files[:2]):
-    scores_curr_df = pd.read_csv(external_score_file, index_col='feature')
-    for
-    # columns = {}
-    # for column in scores_curr_df.columns:
-    #     columns[column] = column+' '+name
-    # scores_curr_df = scores_curr_df.rename(columns=columns)
-    # external_scores_df = pd.concat([external_scores_df, scores_curr_df], axis=1)
-
-# %%
-external_scores_files = [PATH+'4-Means_external_scores.csv', PATH+'4-Means_PCA_external_scores.csv', PATH+'DBSCAN_external_scores.csv']
-external_scores_dfs = []
 for name, external_score_file in zip(clustering_name, external_scores_files):
     scores_curr_df = pd.read_csv(external_score_file, index_col='feature')
-    external_scores_dfs.append(scores_curr_df)
+    for feature in scores_curr_df.index:
+        if feature not in scores_per_feature:
+            scores_per_feature[feature] = []
+        scores_per_feature[feature].append(scores_curr_df.loc[feature].to_list())
+    for metric in scores_curr_df.columns:
+        if metric not in scores_per_metric:
+            scores_per_metric[metric] = []
+        scores_per_metric[metric].append(scores_curr_df[metric].to_list())
+    algs_order.append(name)
+    scores_order = scores_curr_df.columns.to_list()
+    features_order = scores_curr_df.index.to_list()
+
+# %%
+fig, axs = plt.subplots(1, 4, figsize=(20, 5))
+for i, key in enumerate(scores_per_metric):
+    pd.DataFrame(np.array(scores_per_metric[key]), index=algs_order, columns=features_order).plot.bar(rot=0, title=key, ax=axs[i])
+
+# %%
+fig, axs = plt.subplots(2, 2, figsize=(30, 10))
+for i, key in enumerate(scores_per_metric):
+    pd.DataFrame(np.array(scores_per_metric[key]).T, index=features_order, columns=algs_order).plot.bar(rot=0, title=key, ax=axs[int(i/2)][i%2])
+
+# %%
+fig, axs = plt.subplots(3, 3, figsize=(15, 15))
+for i, key in enumerate(scores_per_feature):
+    pd.DataFrame(np.array(scores_per_feature[key]), index=algs_order, columns=scores_order).plot.bar(rot=0, title=key, ax=axs[int(i/3)][i%3])
+
+# %% [markdown]
+# Regarding the external scores:
+# - the class 'death' is better clustered by DBSCAN
+# - KMeans has similar scores to KMeansPCA; KMeansPCA works better in identifying incidents from the class 'arrest'
+# - Heirarchical clustering has the highest scores for the class 'arrested' and works also better than the other algorithms in identifying incidents from the classes 'aggression' and 'injuries'
+
+
