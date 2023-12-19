@@ -18,6 +18,9 @@ sys.path.append(os.path.abspath('..'))
 from plot_utils import *
 # %matplotlib inline
 from classification_utils import *
+import pyproj
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import MinMaxScaler
 
 # %% [markdown]
 # We load the dataset and reaname some columns:
@@ -40,15 +43,22 @@ incidents_df.rename(
 )
 dataset_original_columns = incidents_df.columns
 
-# %%
-import pyproj
+# %% [markdown]
+# We project latitude and longitude on the cartesian plane:
 
+# %%
 projector = pyproj.Proj(proj='utm', zone=14, ellps='WGS84', preserve_units=True)
 incidents_df['x'], incidents_df['y'] = projector(incidents_df['longitude'], incidents_df['latitude'])
+
+# %% [markdown]
+# We plot the projection:
 
 # %%
 plt.plot(incidents_df['x'], incidents_df['y'], 'o', markersize=1)
 plt.axis('equal')
+
+# %% [markdown]
+# We visualize the distribution of incidents per 100k inhabitants in each state:
 
 # %%
 incidents_per_state = incidents_df[incidents_df['death']].groupby(['state', 'population_state_2010']).size()
@@ -61,7 +71,7 @@ incidents_per_state.plot(
     figsize=(15, 10),
     ylabel='State',
     xlabel='Mortal incidents per 100k inhabitants',
-    title='Incidents per 100k inhabitants per state'
+    title='Mortal incidents per 100k inhabitants in every state'
 )
 
 
@@ -94,19 +104,21 @@ sns.violinplot(data=incidents_df[record_level_ratios], ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
-# Additionally, we compute the age range of the participants involved in the incident and we visualize its distribution:
+# We compute the age range of the participants involved in the incident and we visualize its distribution:
 
 # %%
 incidents_df['age_range'] = incidents_df['max_age'] - incidents_df['min_age']
 sns.violinplot(data=incidents_df[['age_range']])
 
 # %% [markdown]
-# We define a list of the most relevant indicators with their abbreviations:
+# We define a list of indicators with their abbreviations:
 
 # %%
 indicators_abbr = {
     # spatial data
     'location_imp': 'location_imp',
+    'latitude': 'latitude',
+    'longitude': 'longitude',
     'x': 'x',
     'y': 'y',
     # age data
@@ -139,6 +151,7 @@ for tag in incidents_tags:
     if tag=='children': # not added because we already have n_child_prop
         continue
     indicators_abbr[tag] = tag
+indicators_names = list(indicators_abbr.values())
 incidents_df.rename(columns=indicators_abbr, inplace=True)
 
 # %% [markdown]
@@ -150,18 +163,18 @@ for tag in incidents_tags:
     incidents_df[tag].replace([True, False], [1, 0], inplace=True)
 
 # %% [markdown]
-# We compute the correlation between the features:
+# We compute the correlation between the attributes:
 
 # %%
-# compute the pearson's correlation coefficient between the features
+# compute the pearson's correlation coefficient between the attributes
 fig, ax = plt.subplots(figsize=(30, 15))
-pearson_corr_matrix = incidents_df[list(indicators_abbr.values()) + ['death']].corr('pearson')
+pearson_corr_matrix = incidents_df[indicators_names + ['death']].corr('pearson')
 sns.heatmap(pearson_corr_matrix, annot=True, ax=ax, mask=np.triu(pearson_corr_matrix), cmap='coolwarm')
 
 # %%
-# compute the spearman's correlation coefficient between the features
+# compute the spearman's correlation coefficient between the attributes
 fig, ax = plt.subplots(figsize=(30, 15))
-spearman_corr_matrix = incidents_df[list(indicators_abbr.values()) + ['death']].corr('spearman')
+spearman_corr_matrix = incidents_df[indicators_names + ['death']].corr('spearman')
 sns.heatmap(spearman_corr_matrix, annot=True, ax=ax, mask=np.triu(spearman_corr_matrix), cmap='coolwarm')
 
 # %%
@@ -169,6 +182,9 @@ pearson_corr_matrix['death'].to_frame().style.background_gradient(cmap='coolwarm
 
 # %%
 spearman_corr_matrix['death'].to_frame().style.background_gradient(cmap='coolwarm', axis=None).format(precision=3)
+
+# %% [markdown]
+# We scatter the incidents on different feature spaces:
 
 # %%
 scatter_by_label(
@@ -188,25 +204,13 @@ scatter_by_label(
     figsize=(35, 50)
 )
 
-# %%
-# TODO:
-# pca = PCA()
-# X_pca = pca.fit_transform(X)
-# scatter_pca_features_by_label(
-#     X_pca,
-#     n_components,
-#     labels,
-#     palette,
-#     title=None
-# )
-
 # %% [markdown]
 # We check for duplicated rows:
 
 # %%
-n_duplicates = incidents_df[list(indicators_abbr.values())].duplicated().sum()
+n_duplicates = incidents_df[indicators_names].duplicated().sum()
 print(f"Number of duplicated rows: {n_duplicates}")
-print(f"Percentage of duplicated rows: {(n_duplicates/incidents_df[list(indicators_abbr.values())].shape[0])*100:.2f}%")
+print(f"Percentage of duplicated rows: {(n_duplicates/incidents_df[indicators_names].shape[0])*100:.2f}%")
 
 # %% [markdown]
 # We save the names of the indicators in a json file and we save the dataset with the indicators:
@@ -214,36 +218,114 @@ print(f"Percentage of duplicated rows: {(n_duplicates/incidents_df[list(indicato
 # %%
 import json
 with open('../data/clf_indicators_names.json', 'w') as f:
-    json.dump(list(indicators_abbr.values()), f)
+    json.dump(indicators_names, f)
 
-# TODO: evitare duplicati con nomi diversi
-original_features_minus_indicators = [feature for feature in dataset_original_columns if feature not in list(indicators_abbr.values())]
+original_features_minus_indicators = [feature for feature in dataset_original_columns if feature not in indicators_names]
 original_features_minus_indicators.remove('party')
-incidents_df[original_features_minus_indicators + list(indicators_abbr.values())].to_csv('../data/clf_incidents_indicators.csv')
-incidents_df[list(indicators_abbr.values())].to_csv('../data/clf_indicators.csv')
+incidents_df[original_features_minus_indicators + indicators_names].to_csv('../data/clf_incidents_indicators.csv')
+incidents_df[indicators_names].to_csv('../data/clf_indicators.csv')
 
 # %% [markdown]
 # We visualize the number of nan values for each indicator:
 
 # %%
-incidents_df[list(indicators_abbr.values())].info()
+incidents_df[indicators_names].info()
 
 # %%
 print(f'The dataset has {incidents_df.shape[0]} rows')
-print(f'Dropping rows with nan values in the indicators columns, {incidents_df[list(indicators_abbr.values())].dropna().shape[0]} rows remain')
+print(f'Dropping rows with nan values in the indicators columns, {incidents_df[indicators_names].dropna().shape[0]} rows remain')
 
 # %% [markdown]
 # We display a summary of the descriptive statistics of the indicators:
 
 # %%
-incidents_df[list(indicators_abbr.values())].describe()
+incidents_df[indicators_names].describe()
+
+# %% [markdown]
+# We drop incidents having at lest a nan indicator:
 
 # %%
-incidents_clf = incidents_df[list(indicators_abbr.values())+['death']].dropna()
+incidents_clf = incidents_df[indicators_names+['death']].dropna()
+
+# %% [markdown]
+# We visualize the distribution of mortal incidents:
 
 # %%
-fig, ax = plt.subplots(figsize=(5, 5))
-incidents_clf['death'].value_counts().plot.pie(autopct='%1.1f%%', ax=ax)
+fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+incidents_clf['death'].value_counts().plot.pie(autopct='%1.1f%%', ax=ax[0], title='Death distribution (indicidents without nan)')
+incidents_df['death'].value_counts().plot.pie(autopct='%1.1f%%', ax=ax[1], title='Death distribution (all incidents)')
+
+# %% [markdown]
+# Visualize mortal incidents in PCA space:
+
+# %%
+pca = PCA()
+std_scaler = MinMaxScaler()
+X_minmax = std_scaler.fit_transform(incidents_clf.values)
+X_pca = pca.fit_transform(X_minmax)
+scatter_pca_features_by_label(
+    X_pca,
+    n_components=4,
+    labels=incidents_clf['death'].values,
+    palette=sns.color_palette(n_colors=2)
+)
+
+# %% [markdown]
+# Visualize distribution of features in the first and second principal components space:
+
+# %%
+nplots = len(incidents_clf.columns)
+ncols = 4
+nrows = int(nplots/ncols)
+if nplots % ncols != 0:
+    nrows += 1
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 25), sharex=True, sharey=True)
+for i, col in enumerate(incidents_clf.columns):
+    axs[int(i/ncols)][i%ncols].scatter(X_pca[:, 0], X_pca[:, 1], edgecolor='k', s=40, c=incidents_clf[col], cmap='viridis')
+    axs[int(i/ncols)][i%ncols].set_title(col)
+    axs[int(i/ncols)][i%ncols].set_xlabel("1st eigenvector")
+    axs[int(i/ncols)][i%ncols].set_ylabel("2nd eigenvector")
+if nrows > 1:
+    for ax in axs[nrows-1, i%ncols:]:
+        ax.remove()
+
+# %% [markdown]
+# Visualize distribution of features in the first and third principal components space:
+
+# %%
+nplots = len(incidents_clf.columns)
+ncols = 4
+nrows = int(nplots/ncols)
+if nplots % ncols != 0:
+    nrows += 1
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 25), sharex=True, sharey=True)
+for i, col in enumerate(incidents_clf.columns):
+    axs[int(i/ncols)][i%ncols].scatter(X_pca[:, 0], X_pca[:, 2], edgecolor='k', s=40, c=incidents_clf[col], cmap='viridis')
+    axs[int(i/ncols)][i%ncols].set_title(col)
+    axs[int(i/ncols)][i%ncols].set_xlabel("1st eigenvector")
+    axs[int(i/ncols)][i%ncols].set_ylabel("3rd eigenvector")
+if nrows > 1:
+    for ax in axs[nrows-1, i%ncols:]:
+        ax.remove()
+
+# %% [markdown]
+# Visualize distribution of features in the second and third principal components space:
+
+# %%
+nplots = len(incidents_clf.columns)
+ncols = 4
+nrows = int(nplots/ncols)
+if nplots % ncols != 0:
+    nrows += 1
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 25), sharex=True, sharey=True)
+for i, col in enumerate(incidents_clf.columns):
+    axs[int(i/ncols)][i%ncols].scatter(X_pca[:, 1], X_pca[:, 2], edgecolor='k', s=40, c=incidents_clf[col], cmap='viridis')
+    axs[int(i/ncols)][i%ncols].set_title(col)
+    axs[int(i/ncols)][i%ncols].set_xlabel("2nd eigenvector")
+    axs[int(i/ncols)][i%ncols].set_ylabel("3rd eigenvector")
+if nrows > 1:
+    for ax in axs[nrows-1, i%ncols:]:
+        ax.remove()
 
 # %% [markdown]
 # ## Final Indicators semantics
@@ -251,16 +333,22 @@ incidents_clf['death'].value_counts().plot.pie(autopct='%1.1f%%', ax=ax)
 # | Name | Description | Present in the original dataset |
 # | :--: | :---------: | :-----------------------------: |
 # | location_imp | Location importance according to Geopy | No |
+# | latitude | Latitude of the incident | Yes |
+# | longitude | Longitude of the incident | Yes |
+# | x | Projection of the longitude of the incident | No |
+# | y | Projection of the latitude of the incident | No |
 # | age_range | Difference between the maximum and the minimum age of the participants involved in the incident | No |
 # | avg_age | Average age of the participants involved in the incident | Yes |
 # | n_child_prop | Ratio between the number of child involved in the incident and number of people involved in the incident | No |
 # | n_teen_prop | Ratio between the number of teen involved in the incident and number of people involved in the incident | No |
 # | n_males_prop | Ratio between the number of males and the number of people involed in the incident | No |
 # | n_participants | Number of participants involved in the incident | Yes |
+# | month | Month in which the incident happened | Yes (in date) |
+# | day_of_week | Day of the week in which the incident happened | | No (computed from date) |
 # | poverty_perc | Poverty percentage in the state and year of the incident | Yes |
 # | democrat | Winning party in the congressional_district and year of the incident | Yes |
 # | aggression | Whether the incident involved an aggression (both with a gun or not) | No (extracted from the incident characteristics) |
-# | road | Whether the incident happene in a road | No (extracted from the incident characteristics) |
+# | road | Whether the incident happened in a road | No (extracted from the incident characteristics) |
 # | illegal_holding | Whether the incident involved a stealing act or a gun was illegally possessed | No (extracted from the incident characteristics) |
 # | house | Whether the incident happened in a house | No (extracted from the incident characteristics) |
 # | school | Whether the incident happened in a school | No (extracted from the incident characteristics) |
