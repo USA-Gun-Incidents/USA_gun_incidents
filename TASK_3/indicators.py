@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Definition and study of the features to use for the classification task
 
@@ -14,7 +15,7 @@ import seaborn as sns
 import json
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-%matplotlib inline
+# %matplotlib inline
 from classification_utils import *
 from enum import Enum
 import pyproj
@@ -303,7 +304,7 @@ with open('../data/clf_indicators_names.json', 'w') as f:
 # We define the binary label to predict:
 
 # %%
-incidents_df['death'] = incidents_df['n_killed']>0
+incidents_df['death'] = (incidents_df['n_killed']>0).astype(int)
 
 # %% [markdown]
 # We compute the correlation between the indicators (and the label to predict):
@@ -495,7 +496,7 @@ if nrows > 1:
 # The third principal components does not seem to be correlated with any indicator.
 
 # %% [markdown]
-# We split the dataset in a train (including 0.75% of the records) and a test fold (including the remainig 0.25% of the records), stratifiying the split according to the label to predict and we save the folds in csv files:
+# We split the dataset in a train set (including 0.75% of the records) and a test test (including the remainig 0.25% of the records), stratifiying the split according to the label to predict, and we save the sets in csv files:
 
 # %%
 original_features_minus_indicators = [feature for feature in dataset_original_columns if feature not in indicators_names]
@@ -518,14 +519,14 @@ y_test.to_csv('../data/clf_y_test.csv')
 
 # %%
 train_test_infos = {}
-train_test_infos['mortal'] = [y_train.sum(), y_test.sum()]
-train_test_infos['non_mortal'] = [(y_train == False).sum(), (y_test == False).sum()]
+train_test_infos['Fatal'] = [y_train.sum(), y_test.sum()]
+train_test_infos['Non_Fatal'] = [(y_train == False).sum(), (y_test == False).sum()]
 train_test_infos['total'] = [X_train.shape[0], X_test.shape[0]]
 pd.DataFrame(train_test_infos, index=['train', 'test'])
 
 # %% [markdown]
 # TODO: compilare una volta definiti
-# 
+#
 # # Final Indicators semantics
 # | Name | Description | Present in the original dataset |
 # | :--: | :---------: | :-----------------------------: |
