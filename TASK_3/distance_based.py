@@ -9,14 +9,10 @@ import scikitplot as skplt
 import statistics
 from classification_utils import *
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import KNeighborsClassifier, NearestCentroid
 from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
-from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import accuracy_score, matthews_corrcoef
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.metrics import classification_report, accuracy_score, matthews_corrcoef, f1_score, confusion_matrix, ConfusionMatrixDisplay
 from sklearn.inspection import DecisionBoundaryDisplay
 from itertools import product
 
@@ -276,15 +272,57 @@ print(classification_report(test_label, final_test_predictions))
 final_test_predictions = voting_schema_predictions(best_models, test_set)
 print(classification_report(test_label, final_test_predictions))
 
+# %% [markdown]
+# ## Nearest Centroid
+
 # %%
-# roc curves
-# confusion matrix
-# scatter plot
-# decision boundaries?
+# Nearest Centroid
+
+metrics = ['euclidean', 'manhattan'] # check only for euclidean and manhattan
+best_f1 = -1 # as we have unbalanced classifier we use F1-score to evaluate performance
+best_distance = 'euclidean'
+best_models = []
+best_model_predictions = []
+val_f1_per_k = []
+for distance in metrics:
+    
+    fold_predictions = []
+    f1_scores = []
+    models = []
+    for fold in range(1, n_fold + 1):
+        # split deployment set in training and validation
+        train_indices, val_indices = fold_indices[fold - 1]
+        train_fold_set = train_set.iloc[train_indices]
+        train_fold_label = label.iloc[train_indices]
+        val_fold_set = train_set.iloc[val_indices]
+        val_fold_label = label.iloc[val_indices]
+
+        # training
+        nc = NearestCentroid(metric=distance).fit(train_fold_set, train_fold_label)
+        models.append(nc)
+
+        # evaluate the model
+        val_pred_nc = nc.predict(val_fold_set)
+        fold_predictions.append(val_pred_nc)       
+        f1_scores.append(f1_score(val_fold_label, val_pred_nc, zero_division=0.0, average="binary"))
+
+    # check for the best k
+    mean_f1 = np.mean(f1_scores)
+    val_f1_per_k.append(mean_f1)
+    print("metric distance = " + str(distance) + "\tF1-score = " + str(mean_f1))
+    if mean_f1 > best_f1:
+        best_f1 = mean_f1
+        best_distance = distance
+        best_model_predictions = fold_predictions
+        best_models = models
 
 
-# sankey
+# %%
+final_predictions = voting_schema_predictions(best_models, train_set)
+print(classification_report(train_label, final_predictions))
 
+# %% [markdown]
+# ## Analisys and plots
 
 # %%
 knn_giocattolo = KNeighborsClassifier(n_neighbors=7, algorithm='ball_tree', metric='minkowski')
@@ -292,6 +330,13 @@ knn_giocattolo.fit(train_set, train_label)
 
 svm_giocattolo = SVC(kernel='rbf', C=0.01, gamma='auto', probability=True)
 svm_giocattolo.fit(train_set, train_label)
+
+# %%
+nc_giocattolo = NearestCentroid(metric='manhattan')
+nc_giocattolo.fit(train_set, train_label)
+
+# %%
+test_pred_nc = nc_giocattolo.predict(test_set)
 
 # %%
 test_pred_knn = knn_giocattolo.predict(test_set)
@@ -315,5 +360,14 @@ cm = confusion_matrix(test_label, test_pred_svm)
 disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["0", "1"])
 disp.plot()
 plt.show()
+
+# %%
+cm = confusion_matrix(test_label, test_pred_nc)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["0", "1"])
+disp.plot()
+plt.show()
+
+# %%
+#sankey?
 
 
