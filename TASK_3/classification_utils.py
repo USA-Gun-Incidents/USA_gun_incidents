@@ -3,8 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.lines import Line2D
-from sklearn.metrics import ConfusionMatrixDisplay
-from sklearn.metrics import RocCurveDisplay
+from sklearn.metrics import ConfusionMatrixDisplay, RocCurveDisplay, roc_auc_score, classification_report
 from sklearn.decomposition import PCA
 from mlxtend.plotting import plot_decision_regions
 from sklearn.model_selection import LearningCurveDisplay
@@ -95,7 +94,8 @@ def scatter_pca_features_by_label(
 def plot_confusion_matrix(
     y_true,
     y_pred,
-    path=None
+    path=None,
+    title=None
     ):
     '''
     This function plots the confusion matrix of the given estimator.
@@ -108,18 +108,20 @@ def plot_confusion_matrix(
     ConfusionMatrixDisplay.from_predictions(
         y_true=y_true,
         y_pred=y_pred,
-        display_labels=['Non-Mortal', 'Mortal'],
+        display_labels=['Non-Fatal', 'Fatal'],
         cmap=plt.cm.Blues,
         normalize=None,
     )
+    if title is not None:
+        plt.title(title)
     if path is not None:
         plt.savefig(path)
 
 def plot_predictions_in_features_space(
     df,
     features,
-    true_label_test,
-    pred_label_test,
+    true_labels,
+    pred_labels,
     figsize=(15, 15),
     path=None
     ):
@@ -128,15 +130,15 @@ def plot_predictions_in_features_space(
 
     :param df: dataframe containing the features
     :param features: list of features to use for the plot
-    :param true_label_test: list of true labels
-    :param pred_label_test: list of predicted labels
+    :param true_labels: list of true labels
+    :param pred_labels: list of predicted labels
     :param figsize: size of the figure
     :param path: path where to save the figure
     '''
     
-    true_labels = ['red' if x else 'blue' for x in true_label_test]
-    pred_labels = ['red' if x else 'blue' for x in pred_label_test]
-    errors = ['gray' if x==y else 'yellow' for x, y in zip(true_label_test, pred_label_test)]
+    true_labels = ['red' if x else 'blue' for x in true_labels]
+    pred_labels = ['red' if x else 'blue' for x in pred_labels]
+    errors = ['gray' if x==y else 'orange' for x, y in zip(true_labels, pred_labels)]
 
     ncols = 3
     import math
@@ -154,8 +156,8 @@ def plot_predictions_in_features_space(
             axs[id][0].set_ylabel(y)
             axs[id][0].set_title('True labels')
             legend_elements = [
-                Line2D([0], [0], marker='o', color='w', label='Non-mortal', markerfacecolor='blue', markersize=10),
-                Line2D([0], [0], marker='o', color='w', label='Mortal', markerfacecolor='red', markersize=10)
+                Line2D([0], [0], marker='o', color='w', label='Non-Fatal', markerfacecolor='blue', markersize=10),
+                Line2D([0], [0], marker='o', color='w', label='Fatal', markerfacecolor='red', markersize=10)
             ]
             axs[id][0].legend(handles=legend_elements, loc='best')
 
@@ -164,8 +166,8 @@ def plot_predictions_in_features_space(
             axs[id][1].set_ylabel(y)
             axs[id][1].set_title('Predicted labels')
             legend_elements = [
-                Line2D([0], [0], marker='o', color='w', label='Non-mortal', markerfacecolor='blue', markersize=10),
-                Line2D([0], [0], marker='o', color='w', label='Mortal', markerfacecolor='red', markersize=10)
+                Line2D([0], [0], marker='o', color='w', label='Non-Fatal', markerfacecolor='blue', markersize=10),
+                Line2D([0], [0], marker='o', color='w', label='Fatal', markerfacecolor='red', markersize=10)
             ]
             axs[id][1].legend(handles=legend_elements, loc='best')
 
@@ -175,7 +177,7 @@ def plot_predictions_in_features_space(
             axs[id][2].set_title('Missclassification')
             legend_elements = [
                 Line2D([0], [0], marker='o', color='w', label='Correct', markerfacecolor='gray', markersize=10),
-                Line2D([0], [0], marker='o', color='w', label='Wrong', markerfacecolor='yellow', markersize=10)
+                Line2D([0], [0], marker='o', color='w', label='Wrong', markerfacecolor='orange', markersize=10)
             ]
             axs[id][2].legend(handles=legend_elements, loc='best')
 
@@ -217,14 +219,22 @@ def plot_PCA_decision_boundary(
     '''
 
     X = train_set.values
-    y = np.where(train_label, 1, 0)
+    y = train_label
     
     pca = PCA(n_components = 2)
     X = pca.fit_transform(X)
 
     classifier.fit(X, y)
 
-    plot_decision_regions(X=X, y=y, clf=classifier, legend=2, ax=axs)
+    plot_decision_regions(X=X, y=y, clf=classifier, legend=2, ax=axs, colors='blue,red')
+
+    legend_Text = axs.get_legend().get_texts()
+    if legend_Text[0].get_text()=='0':
+        legend_Text[0].set_text('Not-Fatal')
+        legend_Text[1].set_text('Fatal')
+    else:
+        legend_Text[0].set_text('Fatal')
+        legend_Text[1].set_text('Not-Fatal')
 
     axs.set_title('Decision boundary of ' + classifier_name)
 
@@ -378,3 +388,49 @@ def plot_distribution_missclassifications(
             )
     else:
         raise ValueError("kind must be either 'bar', 'hist' or 'pie'")
+
+
+def compute_clf_scores(
+        y_true,
+        y_pred,
+        train_score,
+        train_score_name,
+        train_time,
+        score_time,
+        params,
+        clf_name,
+        prob_pred=None,
+        path=None
+    ):
+    '''
+    This function computes the scores of the given classifier.
+
+    :param y_true: true labels
+    :param y_pred: predicted labels
+    :param train_time: training time
+    :param score_time: score time
+    :param params: parameters of the classifier
+    :param clf_name: name of the classifier
+    :param prob_pred: predicted probabilities
+    :param path: path where to save the scores
+    '''
+
+    report_dict = classification_report(y_true=y_true, y_pred=y_pred, output_dict=True, target_names=['Non-Fatal', 'Fatal'])
+    report_df = pd.DataFrame(report_dict).T
+    report_df.drop(columns=['support'], inplace=True)
+    report_df.drop(index=['accuracy'], inplace=True)
+    report_series = report_df.stack()
+    report_unstacked_df = pd.DataFrame([report_series.values],  columns=[f'{j}-{i}' for i, j in report_series.index])
+    report_unstacked_df['accuracy'] = report_dict['accuracy']
+    auroc = None
+    if prob_pred is not None:
+        auroc = roc_auc_score(y_true=y_true, y_score=prob_pred[:,1])
+    report_unstacked_df['auroc'] = auroc
+    report_unstacked_df[train_score_name] = train_score
+    report_unstacked_df['train_time'] = train_time
+    report_unstacked_df['score_time'] = score_time
+    report_unstacked_df['params'] = str(params)
+    report_unstacked_df.index = [clf_name]
+    if path:
+        report_unstacked_df.to_csv(path)
+    return report_unstacked_df
