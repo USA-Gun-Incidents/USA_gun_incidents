@@ -273,7 +273,7 @@ def plot_learning_curve(
     ax.set_title(f'Learning curve of {classifier_name}')
 
 def plot_scores_varying_params(
-    gs_results,
+    gs_results_df,
     param_of_interest,
     fixed_params,
     score_name,
@@ -283,18 +283,21 @@ def plot_scores_varying_params(
     '''
     This function plots the mean and std cv score varying the given parameter of interest.
 
-    :param gs_results: grid search results
+    :param gs_results_df: grid search results
     :param param_of_interest: parameter of interest
     :param fixed_params: other parameters values
     :param score_name: name of the score
     :param axs: axis where to plot the learning curve
     '''
 
-    gs_results_df = pd.DataFrame(gs_results)
+    gs_results_df = gs_results_df.copy()
     for param_name, param_value in fixed_params.items():
-        gs_results_df = gs_results_df[gs_results_df['param_'+param_name] == param_value]
+        if param_value is not None:
+            gs_results_df = gs_results_df[gs_results_df['param_'+param_name] == param_value]
+        else:
+            gs_results_df = gs_results_df[gs_results_df['param_'+param_name].isnull()]
     gs_results_df = gs_results_df.sort_values(by='param_'+param_of_interest)
-    axs.plot(gs_results_df['param_'+param_of_interest], gs_results_df['mean_test_score'], label=f'cv mean, params: {fixed_params}')
+    axs.plot(gs_results_df['param_'+param_of_interest], gs_results_df['mean_test_score'], label=f'cv mean, params: {fixed_params}', marker='o')
     axs.fill_between(
         np.array(gs_results_df['param_'+param_of_interest], dtype='float'),
         np.array(gs_results_df['mean_test_score'] - gs_results_df['std_test_score']),
@@ -393,8 +396,6 @@ def plot_distribution_missclassifications(
 def compute_clf_scores(
         y_true,
         y_pred,
-        train_score,
-        train_score_name,
         train_time,
         score_time,
         params,
@@ -426,7 +427,6 @@ def compute_clf_scores(
     if prob_pred is not None:
         auroc = roc_auc_score(y_true=y_true, y_score=prob_pred[:,1])
     report_unstacked_df['auroc'] = auroc
-    report_unstacked_df[train_score_name] = train_score
     report_unstacked_df['train_time'] = train_time
     report_unstacked_df['score_time'] = score_time
     report_unstacked_df['params'] = str(params)
@@ -434,3 +434,38 @@ def compute_clf_scores(
     if path:
         report_unstacked_df.to_csv(path)
     return report_unstacked_df
+
+def display_feature_importances(
+    feature_names,
+    feature_importances,
+    axs,
+    title=None,
+    path=None
+    ):
+    '''
+    This function plots the feature importances.
+
+    :param feature_names: list of feature names
+    :param feature_importances: list of feature importances
+    :param axs: axis where to plot the feature importances
+    :param title: title of the plot
+    :param path: path where to save the feature importances
+    '''
+
+    sorted_idx = np.flip(np.argsort(feature_importances))
+    sorted_features_names = [feature_names[i] for i in sorted_idx]
+    sorted_features_imp = [feature_importances[i] for i in sorted_idx]
+    if path is not None:
+        pd.DataFrame({
+            'features': sorted_features_names,
+            'importances': sorted_features_imp,
+            'rank': np.arange(1, len(sorted_features_imp)+1)
+        }).to_csv(path)
+    axs.bar(
+        x=sorted_features_names,
+        height=sorted_features_imp
+    )
+    for tick in axs.get_xticklabels():
+        tick.set_rotation(90);
+    if title is not None:
+        axs.set_title(title)
