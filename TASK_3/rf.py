@@ -17,6 +17,7 @@ pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 RANDOM_STATE = 42
 RESULTS_DIR = '../data/classification_results'
+clf_name = 'RandomForestClassifier'
 
 # %%
 # load the data
@@ -54,7 +55,6 @@ indicators_test_df = incidents_test_df[features_for_clf]
 # - oob_score: Whether to use out-of-bag samples to estimate the generalization score. This parameter is used to estimate the generalization error without using a test set. We won't use it.
 
 # %%
-clf_name = 'RandomForestClassifier'
 param_grid = {
     # values to try
     'n_estimators': [100, 200], # TODO: provarne di più?
@@ -223,6 +223,16 @@ graph = pydotplus.graph_from_dot_data(dot_data)
 Image(graph.create_png())
 
 # %%
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+display_feature_importances(
+    feature_names=best_model.feature_names_in_,
+    feature_importances=best_model.feature_importances_,
+    axs=axs,
+    title=clf_name,
+    path=f'{RESULTS_DIR}/{clf_name}_feature_importances.csv'
+)
+
+# %%
 plot_confusion_matrix(
     y_true=true_labels_test,
     y_pred=pred_labels_test,
@@ -267,9 +277,11 @@ plot_learning_curve(
 param_of_interest = 'min_samples_split'
 fixed_params = best_model_params.copy()
 fixed_params.pop(param_of_interest)
+if fixed_params['min_samples_leaf']==1:
+    fixed_params['min_samples_leaf'] = 0
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_scores_varying_params(
-    gs.cv_results_,
+    cv_results_df,
     param_of_interest,
     fixed_params,
     'F1',
@@ -281,24 +293,16 @@ plot_scores_varying_params(
 param_of_interest = 'min_samples_leaf'
 fixed_params = best_model_params.copy()
 fixed_params.pop(param_of_interest)
+if fixed_params['min_samples_split']==2:
+    fixed_params['min_samples_split'] = 0
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_scores_varying_params(
-    gs.cv_results_,
+    cv_results_df,
     param_of_interest,
     fixed_params,
     'F1',
     axs,
     title=clf_name
-)
-
-# %%
-fig, axs = plt.subplots(1, 1, figsize=(10, 5))
-display_feature_importances(
-    feature_names=indicators_train_df.columns,
-    feature_importances=best_model.feature_importances_,
-    axs=axs,
-    title=clf_name,
-    path=f'{RESULTS_DIR}/{clf_name}_feature_importances.csv'
 )
 
 # %%

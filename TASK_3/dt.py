@@ -16,6 +16,7 @@ pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 RANDOM_STATE = 42
 RESULTS_DIR = '../data/classification_results'
+clf_name = 'DecisionTreeClassifier'
 
 # %%
 # load the data
@@ -50,7 +51,6 @@ indicators_test_df = incidents_test_df[features_for_clf]
 # - max_features: The number of features to consider when looking for the best split. We will experiment a similar approach using Random Forests.
 
 # %%
-clf_name = 'DecisionTreeClassifier'
 param_grid = {
     # values to try
     'criterion': ['entropy', 'gini'],
@@ -125,7 +125,7 @@ axs.set_title('param_class_weight = balanced; param_criterion = entropy');
 params = [col for col in cv_results_df.columns if 'param_' in col and 'random' not in col]
 cv_results_df.sort_values(
     by='mean_test_score',
-    ascending=False)[params+['mean_test_score']].head(20).style.background_gradient(subset='mean_test_score', cmap='Blues')
+    ascending=False)[params+['std_test_score', 'mean_test_score']].head(20).style.background_gradient(subset=['std_test_score', 'mean_test_score'], cmap='Blues')
 
 # %%
 best_index = gs.best_index_
@@ -158,6 +158,11 @@ pd.DataFrame(
 file = open(f'{RESULTS_DIR}/{clf_name}.pkl', 'wb')
 pickle.dump(obj=best_model, file=file)
 file.close()
+
+# save the cv results
+best_model_cv_results = pd.DataFrame(cv_results_df.iloc[best_index]).T
+best_model_cv_results.index = [clf_name]
+best_model_cv_results.to_csv(f'{RESULTS_DIR}/{clf_name}_train_cv_scores.csv')
 
 # %%
 compute_clf_scores(
@@ -239,6 +244,16 @@ dot_data = export_graphviz(
 )
 graph = pydotplus.graph_from_dot_data(dot_data)
 Image(graph.create_png())
+
+# %%
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+display_feature_importances(
+    feature_names=best_model.feature_names_in_,
+    feature_importances=best_model.feature_importances_,
+    axs=axs,
+    title=clf_name,
+    path=f'{RESULTS_DIR}/{clf_name}_feature_importances.csv'
+)
 
 # %%
 path = best_model.cost_complexity_pruning_path(indicators_train_df, true_labels_train)
@@ -368,16 +383,6 @@ plot_scores_varying_params(
     'F1',
     axs,
     title=clf_name
-)
-
-# %%
-fig, axs = plt.subplots(1, 1, figsize=(10, 5))
-display_feature_importances(
-    feature_names=best_model.feature_names_in_,
-    feature_importances=best_model.feature_importances_,
-    axs=axs,
-    title=clf_name,
-    path=f'{RESULTS_DIR}/{clf_name}_feature_importances.csv'
 )
 
 # %%
