@@ -7,14 +7,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scikitplot as skplt
 import statistics
+import joblib
 from classification_utils import *
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import KNeighborsClassifier, NearestCentroid
 from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split, StratifiedKFold
-from sklearn.metrics import classification_report, accuracy_score, matthews_corrcoef, f1_score, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.model_selection import train_test_split, StratifiedKFold, GridSearchCV
+from sklearn.metrics import classification_report, accuracy_score, matthews_corrcoef, f1_score, confusion_matrix, ConfusionMatrixDisplay, make_scorer
 from sklearn.inspection import DecisionBoundaryDisplay
 from itertools import product
+from time import time
 
 DATA_FOLDER = '../data/'
 SEED = 42
@@ -36,9 +38,6 @@ indicators_df.isna().sum()
 indicators_df.dropna(inplace=True)
 
 indicators_df
-
-# %%
-indicators_df.dtypes
 
 # %%
 # drop columns with categorical data since we're using distance
@@ -66,7 +65,6 @@ features = indicators_df.columns
 features = features.drop(label_name)
 scatter_by_label(
         indicators_df,
-        #features,
         ["age_range", "avg_age", "n_child_prop", "n_teen_prop", "n_males_prop"],
         label_name,
         figsize=(35, 60)
@@ -78,296 +76,306 @@ label = X_minmax_df.pop(label_name)
 # we apply stratification since we have unbalanced data
 train_set, test_set, train_label, test_label = train_test_split(X_minmax_df, label, stratify=label, test_size=0.30, random_state=SEED)
 
-n_fold = 5
-kf = StratifiedKFold(n_splits=n_fold, shuffle=True, random_state=SEED)
-fold_indices = list(kf.split(train_set, train_label))
+# %%
+def grid_search(clf_name, param_grid, classifier, train_set, train_labels):
+    grid = GridSearchCV( # uses a stratified 5-fold cv to validate the models
+        classifier,
+        param_grid=param_grid,
+        n_jobs=-1,
+        scoring=make_scorer(f1_score),
+        verbose=10,
+        cv=5,
+        refit=False
+    )
+    grid.fit(train_set, train_labels)
+
+    return grid
 
 # %% [markdown]
 # ## KNN
 
 # %%
-# KNN
+knn_param_grid = {
+    "n_neighbors": [1, 5, 10, 20, 50, 100],
+    "algorithm": ['auto'],
+    "metric": ['minkowski'],
+    "p": [1, 2]
+}
 
-# cross validation on number of neighbours
-k_values = [1, 5, 10, 20, 50, 100, 200, 400]
-best_mcc = -1 # as we have unbalanced classifier we use MCC to evaluate performance
-best_k = -1
-best_models = []
-best_model_predictions = []
-val_mcc_per_k = []
-for k in k_values:
-    
-    fold_predictions = []
-    mcc_scores = []
-    models = []
-    for fold in range(1, n_fold + 1):
-        # split deployment set in training and validation
-        train_indices, val_indices = fold_indices[fold - 1]
-        train_fold_set = train_set.iloc[train_indices]
-        train_fold_label = label.iloc[train_indices]
-        val_fold_set = train_set.iloc[val_indices]
-        val_fold_label = label.iloc[val_indices]
-
-        # training
-        knn = KNeighborsClassifier(n_neighbors=k, algorithm='ball_tree', metric='minkowski').fit(train_fold_set, train_fold_label)
-        models.append(knn)
-
-        # evaluate the model
-        val_pred_knn = knn.predict(val_fold_set)
-        fold_predictions.append(val_pred_knn)
-        mcc_scores.append(matthews_corrcoef(val_fold_label, val_pred_knn))
-
-    # check for the best k
-    mean_mcc = np.mean(mcc_scores)
-    val_mcc_per_k.append(mean_mcc)
-    print("k = " + str(k) + "\tMCC = " + str(mean_mcc))
-    if mean_mcc > best_mcc:
-        best_mcc = mean_mcc
-        best_k = k
-        best_model_predictions = fold_predictions
-        best_models = models
+knn_grid = grid_search('KNN', knn_param_grid, KNeighborsClassifier(), train_set, train_label)
 
 # %%
-def voting_schema_predictions(voting_models, X):
-    predictions = [voting_models[i].predict(X) for i in range(len(voting_models))] # get predictions of all models
-
-    # voting schema
-    final_predictions = []
-    for j in range(len(predictions[0])):
-        votes = []
-        for i in range(len(predictions)):
-            votes.append(predictions[i][j])
-        final_predictions.append(statistics.mode(votes))
-    
-    return final_predictions
+knn_cv_results_df = pd.DataFrame(knn_grid.cv_results_)
+knn_best_index = knn_grid.best_index_
+knn_best_model_params = knn_cv_results_df.loc[knn_best_index]['params']
+knn_best_model_train_score = knn_cv_results_df.loc[knn_best_index]['mean_test_score']
+knn_best_model = KNeighborsClassifier(**knn_best_model_params)
 
 # %%
-deploy_predictions = [best_models[i].predict(train_set) for i in range(len(best_models))]
+RESULTS_DIR = '../data/classification_results'
 
-# voting schema
-final_predictions = []
-for j in range(len(deploy_predictions[0])):
-    votes = []
-    for i in range(len(deploy_predictions)):
-        votes.append(deploy_predictions[i][j])
-    final_predictions.append(statistics.mode(votes))
+# fit the model on all the training data
+fit_start = time()
+knn_best_model.fit(train_set, train_label)
+knn_fit_time = time() - fit_start
 
-print(classification_report(train_label, final_predictions))
+# get the predictions on the test data
+test_score_start = time()
+knn_pred_labels_test = knn_best_model.predict(test_set)
+knn_test_score_time = time() - test_score_start
+knn_pred_probas_test = knn_best_model.predict_proba(test_set)
 
-# %%
-final_predictions = voting_schema_predictions(best_models, train_set)
-print(classification_report(train_label, final_predictions))
-
-# %%
-final_test_predictions = voting_schema_predictions(best_models, test_set)
-print(classification_report(test_label, final_test_predictions))
+# save the predictions
+pd.DataFrame({'labels': knn_pred_labels_test, 'probs_True': knn_pred_probas_test[:,1]}).to_csv(RESULTS_DIR + '/knn_preds.csv')
 
 # %%
-# plot curve of MCC for diffenrent k
+knn_best_model_params
 
-#avg_acc = val_mcc_per_k
-avg_acc = [0.002666614831852752, -5.8079602608956425e-05, -0.0032178177351965182, -0.005367026083421151, -0.00013658472204129725, -0.002019849927929783, 0.0, 0.0]
-k_values = [1, 5, 10, 20, 50, 100, 200, 400]
+# %%
+BEST_MODELS_DIR = "./best_models"
 
-plt.plot(k_values, avg_acc, 'b', label='Validation Accuracy')
-plt.title('Validation Accuracy - KNN')
-plt.xlabel('K')
-plt.ylabel('MCC')
-plt.legend()
-plt.show()
+# save model
+joblib.dump(knn_best_model, BEST_MODELS_DIR + '/knn.pkl')
+
+# %%
+SCORES_DIR = '../data/classification_scores'
+
+compute_clf_scores(
+    test_label,
+    y_pred=knn_pred_labels_test,
+    train_score=knn_best_model_train_score,
+    train_score_name='f1_score_train',
+    train_time=knn_fit_time,
+    score_time=knn_test_score_time,
+    params=knn_best_model_params,
+    prob_pred=knn_pred_probas_test,
+    clf_name='KNN',
+    path=SCORES_DIR + '/knn_scores.csv'
+)
 
 # %% [markdown]
 # ## SVM
 
 # %%
-# cross validation
-#kernel = ['linear', 'poly', 'rbf', 'sigmoid']
-#gamma = ['scale', 'auto']
-#C = [0.001, 0.01, 0.1, 1.0]
+svm_param_grid = {
+    'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
+    'gamma': ['scale', 'auto'],
+    'C': [0.001, 0.01, 0.1, 1.0]
+}
 
-# per ora facciamo un grid search giocattolo
-#kernels = ['linear','rbf']
-#gammas = ['scale', 'auto']
-#Cs = [0.01, 1.0]
-
-kernels = ['rbf']
-gammas = ['auto']
-Cs = [0.01, 1.0]
-
-
-best_kernel = ''
-best_gamma = ''
-best_C = 1.0
-best_mcc = -1
-best_models = []
-best_model_predictions = []
-
-for kernel in kernels:
-    for gamma in gammas:
-        for c in Cs:
-            fold_predictions = []
-            mcc_scores = []
-            models = []
-            for fold in range(1, n_fold + 1):
-                # split deployment set in training and validation
-                train_indices, val_indices = fold_indices[fold - 1]
-                train_fold_set = train_set.iloc[train_indices]
-                train_fold_label = label.iloc[train_indices]
-                val_fold_set = train_set.iloc[val_indices]
-                val_fold_label = label.iloc[val_indices]
-
-                # training
-                svm = SVC(kernel=kernel, C=c, gamma=gamma).fit(train_fold_set, train_fold_label)
-                models.append(svm)
-
-                # evaluate the model
-                val_pred_svm = svm.predict(val_fold_set)
-                fold_predictions.append(val_pred_svm)
-                mcc_scores.append(matthews_corrcoef(val_fold_label, val_pred_svm))
-
-            # check for the best parameters
-            mean_mcc = np.mean(mcc_scores)
-            print("kernel = " + str(kernel) + ", gamma = " + str(gamma) + ", C = " + str(c) + "\tMCC = " + str(mean_mcc))
-            if mean_mcc > best_mcc:
-                best_mcc = mean_mcc
-                best_kernel = kernel
-                best_gamma = gamma
-                best_C = c
-                best_model_predictions = fold_predictions
-                best_models = models
+svm_grid = grid_search('SVM', svm_param_grid, SVC(), train_set, train_label)
 
 # %%
-deploy_predictions = [best_models[i].predict(train_set) for i in range(len(best_models))]
+svm_cv_results_df = pd.DataFrame(svm_grid.cv_results_)
+svm_best_index = svm_grid.best_index_
+svm_best_model_params = svm_cv_results_df.loc[svm_best_index]['params']
+svm_best_model_train_score = svm_cv_results_df.loc[svm_best_index]['mean_test_score']
 
-# voting schema
-final_predictions = []
-for j in range(len(deploy_predictions[0])):
-    votes = []
-    for i in range(len(deploy_predictions)):
-        votes.append(deploy_predictions[i][j])
-    final_predictions.append(statistics.mode(votes))
-
-print(classification_report(train_label, final_predictions))
+# we create two models for different purposes:
+svm_best_model = SVC(**svm_best_model_params) # to measure the training time
+svm_best_model_proba = SVC(probability=True, **svm_best_model_params) # to get probabilities for ROC
 
 # %%
-#final_predictions = voting_schema_predictions(best_models, train_set)
-final_predictions = voting_schema_predictions(models, train_set)
-print(classification_report(train_label, final_predictions))
+fit_start = time()
+svm_best_model.fit(train_set, train_label)
+svm_fit_time = time() - fit_start
+svm_best_model_proba.fit(train_set, train_label)
+
+test_score_start = time()
+svm_pred_labels_test = svm_best_model.predict(test_set)
+svm_test_score_time = time() - test_score_start
+svm_pred_probas_test = svm_best_model_proba.predict_proba(test_set)
+
+pd.DataFrame({'labels': svm_pred_labels_test, 'probs_True': svm_pred_probas_test[:,1]}).to_csv(RESULTS_DIR + '/svm_preds.csv')
 
 # %%
-# test set prediction
-test_predictions = [best_models[i].predict(test_set) for i in range(len(best_models))]
-
-final_test_predictions = []
-for j in range(len(test_predictions[0])):
-    votes = []
-    for i in range(len(test_predictions)):
-        votes.append(test_predictions[i][j])
-    final_test_predictions.append(statistics.mode(votes))
-
-
-print(classification_report(test_label, final_test_predictions))
+svm_best_model_params
 
 # %%
-final_test_predictions = voting_schema_predictions(best_models, test_set)
-print(classification_report(test_label, final_test_predictions))
+joblib.dump(svm_best_model, BEST_MODELS_DIR + '/svm.pkl')
+
+# %%
+compute_clf_scores(
+    test_label,
+    y_pred=svm_pred_labels_test,
+    train_score=svm_best_model_train_score,
+    train_score_name='f1_score_train',
+    train_time=svm_fit_time,
+    score_time=svm_test_score_time,
+    params=svm_best_model_params,
+    prob_pred=svm_pred_probas_test,
+    clf_name='SVM',
+    path=SCORES_DIR + '/svm_scores.csv'
+)
 
 # %% [markdown]
 # ## Nearest Centroid
 
 # %%
-# Nearest Centroid
+nc_param_grid = {
+    'metric': ['euclidean', 'manhattan']
+}
 
-metrics = ['euclidean', 'manhattan'] # check only for euclidean and manhattan
-best_f1 = -1 # as we have unbalanced classifier we use F1-score to evaluate performance
-best_distance = 'euclidean'
-best_models = []
-best_model_predictions = []
-val_f1_per_k = []
-for distance in metrics:
-    
-    fold_predictions = []
-    f1_scores = []
-    models = []
-    for fold in range(1, n_fold + 1):
-        # split deployment set in training and validation
-        train_indices, val_indices = fold_indices[fold - 1]
-        train_fold_set = train_set.iloc[train_indices]
-        train_fold_label = label.iloc[train_indices]
-        val_fold_set = train_set.iloc[val_indices]
-        val_fold_label = label.iloc[val_indices]
-
-        # training
-        nc = NearestCentroid(metric=distance).fit(train_fold_set, train_fold_label)
-        models.append(nc)
-
-        # evaluate the model
-        val_pred_nc = nc.predict(val_fold_set)
-        fold_predictions.append(val_pred_nc)       
-        f1_scores.append(f1_score(val_fold_label, val_pred_nc, zero_division=0.0, average="binary"))
-
-    # check for the best k
-    mean_f1 = np.mean(f1_scores)
-    val_f1_per_k.append(mean_f1)
-    print("metric distance = " + str(distance) + "\tF1-score = " + str(mean_f1))
-    if mean_f1 > best_f1:
-        best_f1 = mean_f1
-        best_distance = distance
-        best_model_predictions = fold_predictions
-        best_models = models
-
+nc_grid = grid_search('Nearest Centroid', nc_param_grid, NearestCentroid(), train_set, train_label)
 
 # %%
-final_predictions = voting_schema_predictions(best_models, train_set)
-print(classification_report(train_label, final_predictions))
+nc_cv_results_df = pd.DataFrame(nc_grid.cv_results_)
+nc_best_index = nc_grid.best_index_
+nc_best_model_params = nc_cv_results_df.loc[nc_best_index]['params']
+nc_best_model_train_score = nc_cv_results_df.loc[nc_best_index]['mean_test_score']
+nc_best_model = NearestCentroid(**nc_best_model_params)
+
+# %%
+fit_start = time()
+nc_best_model.fit(train_set, train_label)
+nc_fit_time = time() - fit_start
+
+test_score_start = time()
+nc_pred_labels_test = nc_best_model.predict(test_set)
+nc_test_score_time = time() - test_score_start
+
+pd.DataFrame({'labels': nc_pred_labels_test}).to_csv(RESULTS_DIR + '/nc_preds.csv')
+
+# %%
+nc_best_model_params
+
+# %%
+joblib.dump(nc_best_model, BEST_MODELS_DIR + '/nc.pkl')
+
+# %%
+SCORES_DIR = '../data/classification_scores'
+compute_clf_scores(
+    test_label,
+    y_pred=nc_pred_labels_test,
+    train_score=nc_best_model_train_score,
+    train_score_name='f1_score_train',
+    train_time=nc_fit_time,
+    score_time=nc_test_score_time,
+    params=nc_best_model_params,
+    clf_name='Nearest Centroid',
+    path=SCORES_DIR + '/nc_scores.csv'
+)
 
 # %% [markdown]
 # ## Analisys and plots
 
 # %%
-knn_giocattolo = KNeighborsClassifier(n_neighbors=7, algorithm='ball_tree', metric='minkowski')
-knn_giocattolo.fit(train_set, train_label)
-
-svm_giocattolo = SVC(kernel='rbf', C=0.01, gamma='auto', probability=True)
-svm_giocattolo.fit(train_set, train_label)
-
-# %%
-nc_giocattolo = NearestCentroid(metric='manhattan')
-nc_giocattolo.fit(train_set, train_label)
+# load trained models
+knn_best_model = joblib.load(BEST_MODELS_DIR + "/knn.pkl")
+svm_best_model = joblib.load(BEST_MODELS_DIR + "/svm.pkl")
+nc_best_model = joblib.load(BEST_MODELS_DIR + "/nc.pkl")
 
 # %%
-test_pred_nc = nc_giocattolo.predict(test_set)
+y_trues = [test_label, test_label]
+y_probs = [knn_pred_probas_test[:,1], knn_pred_probas_test[:,1]]
+names = ['KNN']
+plot_roc(y_trues, y_probs, names)
+
+y_probs = [svm_pred_probas_test[:,1], svm_pred_probas_test[:,1]]
+names = ['SVM']
+plot_roc(y_trues, y_probs, names)
 
 # %%
-test_pred_knn = knn_giocattolo.predict(test_set)
-test_pred_svm_prob = svm_giocattolo.predict_proba(test_set)
-skplt.metrics.plot_roc(test_label.values, test_pred_svm_prob)
+skplt.metrics.plot_roc(test_label.values, knn_pred_probas_test)
+skplt.metrics.plot_roc(test_label.values, svm_pred_probas_test)
 plt.show()
-
-# %%
-test_pred_svm = svm_giocattolo.predict(test_set)
 
 # %%
 # compute confusion matrix
 
-cm = confusion_matrix(test_label, test_pred_knn)
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["0", "1"])
-disp.plot()
-plt.show()
+plot_confusion_matrix(y_true=test_label, y_pred=knn_pred_labels_test)
+plot_confusion_matrix(y_true=test_label, y_pred=svm_pred_labels_test)
+plot_confusion_matrix(y_true=test_label, y_pred=nc_pred_labels_test)
 
 # %%
-cm = confusion_matrix(test_label, test_pred_svm)
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["0", "1"])
-disp.plot()
-plt.show()
+plot_predictions_in_features_space(
+    test_set,
+    ['n_males_prop', 'n_child_prop', 'n_participants'],
+    test_label,
+    knn_pred_labels_test,
+    figsize=(15, 15)
+)
+
+plot_predictions_in_features_space(
+    test_set,
+    ['n_males_prop', 'n_child_prop', 'n_participants'],
+    test_label,
+    svm_pred_labels_test,
+    figsize=(15, 15)
+)
+
+plot_predictions_in_features_space(
+    test_set,
+    ['n_males_prop', 'n_child_prop', 'n_participants'],
+    test_label,
+    nc_pred_labels_test,
+    figsize=(15, 15)
+)
 
 # %%
-cm = confusion_matrix(test_label, test_pred_nc)
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["0", "1"])
-disp.plot()
-plt.show()
+fig, axs = plt.subplots(1, figsize=(10, 5))
+plot_PCA_decision_boundary(train_set, train_label, knn_best_model, 'KNN', axs=axs)
 
 # %%
-#sankey?
+fig, axs = plt.subplots(1, figsize=(10, 5))
+plot_PCA_decision_boundary(train_set, train_label, svm_best_model, 'SVM', axs=axs)
+
+# %%
+fig, axs = plt.subplots(1, figsize=(10, 5))
+plot_PCA_decision_boundary(train_set, train_label, nc_best_model, 'Nearest Centroid', axs=axs)
+
+# %%
+fig, axs = plt.subplots(1, figsize=(10, 5))
+plot_learning_curve(knn_best_model, 'KNN', train_set, train_label, axs)
+
+# %%
+fig, axs = plt.subplots(1, figsize=(10, 5))
+plot_learning_curve(svm_best_model, 'SVM', train_set, train_label, axs)
+
+# %%
+fig, axs = plt.subplots(1, figsize=(10, 5))
+plot_learning_curve(nc_best_model, 'Nearest Centroid', train_set, train_label, axs)
+
+# %%
+plot_distribution_missclassifications(
+    test_label,
+    knn_pred_labels_test,
+    test_set,
+    'poverty_perc',
+    'hist'
+    )
+
+# %%
+plot_distribution_missclassifications(
+    test_label,
+    svm_pred_labels_test,
+    test_set,
+    'avg_age',
+    'hist'
+    )
+
+# %%
+plot_distribution_missclassifications(
+    test_label,
+    nc_pred_labels_test,
+    test_set,
+    'poverty_perc',
+    'hist'
+    )
+
+# %%
+param_of_interest = 'n_neighbors'
+fixed_params = knn_best_model_params.copy() # best params
+fixed_params.pop(param_of_interest)
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+plot_scores_varying_params(knn_grid.cv_results_, param_of_interest, fixed_params, 'F1 Score', axs, title=f'KNN - F1 score varying {param_of_interest}')
+
+# %%
+param_of_interest = 'C'
+fixed_params = svm_best_model_params.copy() # best params
+fixed_params.pop(param_of_interest)
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+axs.set_xscale('log')
+plot_scores_varying_params(svm_grid.cv_results_, param_of_interest, fixed_params, 'F1 Score', axs, title=f'SVM - F1 score varying {param_of_interest}')
 
 
