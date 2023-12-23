@@ -2,6 +2,7 @@
 import pandas as pd
 import json
 import numpy as np
+import pickle
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pydotplus
@@ -74,7 +75,7 @@ param_grid = {
     #'ccp_alpha': [0],
     #'oob_score': [False],
 }
-grid = GridSearchCV(
+gs = GridSearchCV(
     RandomForestClassifier(),
     param_grid=param_grid,
     n_jobs=-1,
@@ -83,10 +84,10 @@ grid = GridSearchCV(
     cv=5, # uses a stratified 5-fold cv to validate the models
     refit=False
 )
-grid.fit(indicators_train_df, true_labels_train)
+gs.fit(indicators_train_df, true_labels_train)
 
 # %%
-cv_results_df = pd.DataFrame(grid.cv_results_)
+cv_results_df = pd.DataFrame(gs.cv_results_)
 cv_results_df.head()
 
 # %%
@@ -138,27 +139,36 @@ cv_results_df.sort_values(
     ascending=False)[params+['mean_test_score']].head(20).style.background_gradient(subset='mean_test_score', cmap='Blues')
 
 # %%
-best_index = grid.best_index_
+best_index = gs.best_index_
 best_model_params = cv_results_df.loc[best_index]['params']
 best_model = RandomForestClassifier(**best_model_params)
+
 # fit the model on all the training data
 fit_start = time()
 best_model.fit(indicators_train_df, true_labels_train)
 fit_time = time()-fit_start
+
 # get the predictions on the training data
 train_score_start = time()
 pred_labels_train = best_model.predict(indicators_train_df)
 train_score_time = time()-train_score_start
 pred_probas_train = best_model.predict_proba(indicators_train_df)
+
 # get the predictions on the test data
 test_score_start = time()
 pred_labels_test = best_model.predict(indicators_test_df)
 test_score_time = time()-test_score_start
 pred_probas_test = best_model.predict_proba(indicators_test_df)
+
 # save the predictions
 pd.DataFrame(
-    {'labels': pred_labels_test, 'probs_True': pred_probas_test[:,1]}
+    {'labels': pred_labels_test, 'probs': pred_probas_test[:,1]}
 ).to_csv(f'{RESULTS_DIR}/{clf_name}_preds.csv')
+
+# save the model
+file = open(f'{RESULTS_DIR}/{clf_name}.pkl', 'wb')
+pickle.dump(obj=best_model, file=file)
+file.close()
 
 # %%
 compute_clf_scores(
@@ -168,7 +178,7 @@ compute_clf_scores(
     score_time=train_score_time,
     params=best_model_params,
     prob_pred=pred_probas_train,
-    clf_name=clf_name+' (train)',
+    clf_name=clf_name,
     path=f'{RESULTS_DIR}/{clf_name}_train_scores.csv'
 )
 
@@ -180,7 +190,7 @@ compute_clf_scores(
     score_time=test_score_time,
     params=best_model_params,
     prob_pred=pred_probas_test,
-    clf_name=clf_name + ' (test)',
+    clf_name=clf_name,
     path=f'{RESULTS_DIR}/{clf_name}_test_scores.csv'
 )
 
@@ -229,7 +239,7 @@ plot_predictions_in_features_space(
 )
 
 # %%
-plot_roc(y_trues=[true_labels_test], y_probs=[pred_probas_test[:,1]], names=[clf_name])
+plot_roc(y_true=true_labels_test, y_probs=[pred_probas_test[:,1]], names=[clf_name])
 
 # %%
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
@@ -259,7 +269,7 @@ fixed_params = best_model_params.copy()
 fixed_params.pop(param_of_interest)
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_scores_varying_params(
-    grid.cv_results_,
+    gs.cv_results_,
     param_of_interest,
     fixed_params,
     'F1',
@@ -273,7 +283,7 @@ fixed_params = best_model_params.copy()
 fixed_params.pop(param_of_interest)
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_scores_varying_params(
-    grid.cv_results_,
+    gs.cv_results_,
     param_of_interest,
     fixed_params,
     'F1',

@@ -4,6 +4,7 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pickle
 import pydotplus
 from IPython.display import Image
 from sklearn.tree import DecisionTreeClassifier, export_graphviz
@@ -66,7 +67,7 @@ param_grid = {
     #'max_features': [None],
     'random_state': [RANDOM_STATE]
 }
-grid = GridSearchCV(
+gs = GridSearchCV(
     DecisionTreeClassifier(),
     param_grid=param_grid,
     n_jobs=-1,
@@ -75,10 +76,10 @@ grid = GridSearchCV(
     cv=5, # uses a stratified 5-fold cv to validate the models
     refit=False
 )
-grid.fit(indicators_train_df, true_labels_train)
+gs.fit(indicators_train_df, true_labels_train)
 
 # %%
-cv_results_df = pd.DataFrame(grid.cv_results_)
+cv_results_df = pd.DataFrame(gs.cv_results_)
 cv_results_df.head()
 
 # %%
@@ -127,27 +128,36 @@ cv_results_df.sort_values(
     ascending=False)[params+['mean_test_score']].head(20).style.background_gradient(subset='mean_test_score', cmap='Blues')
 
 # %%
-best_index = grid.best_index_
+best_index = gs.best_index_
 best_model_params = cv_results_df.loc[best_index]['params']
 best_model = DecisionTreeClassifier(**best_model_params)
+
 # fit the model on all the training data
 fit_start = time()
 best_model.fit(indicators_train_df, true_labels_train)
 fit_time = time()-fit_start
+
 # get the predictions on the training data
 train_score_start = time()
 pred_labels_train = best_model.predict(indicators_train_df)
 train_score_time = time()-train_score_start
 pred_probas_train = best_model.predict_proba(indicators_train_df)
+
 # get the predictions on the test data
 test_score_start = time()
 pred_labels_test = best_model.predict(indicators_test_df)
 test_score_time = time()-test_score_start
 pred_probas_test = best_model.predict_proba(indicators_test_df)
+
 # save the predictions
 pd.DataFrame(
-    {'labels': pred_labels_test, 'probs_True': pred_probas_test[:,1]}
+    {'labels': pred_labels_test, 'probs': pred_probas_test[:,1]}
 ).to_csv(f'{RESULTS_DIR}/{clf_name}_preds.csv')
+
+# save the model
+file = open(f'{RESULTS_DIR}/{clf_name}.pkl', 'wb')
+pickle.dump(obj=best_model, file=file)
+file.close()
 
 # %%
 compute_clf_scores(
@@ -157,7 +167,7 @@ compute_clf_scores(
     score_time=train_score_time,
     params=best_model_params,
     prob_pred=pred_probas_train,
-    clf_name=clf_name+' (train)',
+    clf_name=clf_name,
     path=f'{RESULTS_DIR}/{clf_name}_train_scores.csv'
 )
 
@@ -169,7 +179,7 @@ test_scores = compute_clf_scores(
     score_time=test_score_time,
     params=best_model_params,
     prob_pred=pred_probas_test,
-    clf_name=clf_name + ' (test)',
+    clf_name=clf_name,
     path=f'{RESULTS_DIR}/{clf_name}_test_scores.csv'
 )
 test_scores
@@ -182,22 +192,25 @@ true_labels_train_nan = true_labels_train_nan_df.values.ravel()
 
 # project on the features_to_use
 indicators_train_nan_df = incidents_train_nan_df[features_for_clf]
-
 best_model_nan = DecisionTreeClassifier(**best_model_params)
+
 # fit the model on all the training data
 fit_start_nan = time()
 best_model_nan.fit(indicators_train_nan_df, true_labels_train_nan)
 fit_time_nan = time()-fit_start_nan
+
 # get the predictions on the training data
 train_score_start_nan = time()
 pred_labels_train_nan = best_model_nan.predict(indicators_train_nan_df)
 train_score_time_nan = time()-train_score_start_nan
 pred_probas_train_nan = best_model_nan.predict_proba(indicators_train_nan_df)
+
 # get the predictions on the test data
 test_score_start_nan = time()
 pred_labels_test_nan = best_model_nan.predict(indicators_test_df)
 test_score_time_nan = time()-test_score_start_nan
 pred_probas_test_nan = best_model_nan.predict_proba(indicators_test_df)
+
 # save the predictions
 pd.DataFrame(
     {'labels': pred_labels_test_nan, 'probs_True': pred_probas_test_nan[:,1]}
@@ -211,7 +224,7 @@ test_scores_nan = compute_clf_scores(
     score_time=test_score_time_nan,
     params=best_model_params,
     prob_pred=pred_probas_test_nan,
-    clf_name=clf_name + ' nan (test)',
+    clf_name=clf_name + ' nan',
     path=f'{RESULTS_DIR}/{clf_name}_nan_test_scores.csv'
 )
 pd.concat([test_scores, test_scores_nan])
@@ -301,7 +314,7 @@ plot_predictions_in_features_space(
 )
 
 # %%
-plot_roc(y_trues=[true_labels_test], y_probs=[pred_probas_test[:,1]], names=[clf_name])
+plot_roc(y_true=true_labels_test, y_probs=[pred_probas_test[:,1]], names=[clf_name])
 
 # %%
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
