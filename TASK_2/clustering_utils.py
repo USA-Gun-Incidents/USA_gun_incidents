@@ -3,8 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import seaborn as sns
-import plotly.graph_objects as go
-import plotly.offline as pyo
 from sklearn.utils import resample
 from scipy.spatial.distance import pdist, squareform
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, precision_score, recall_score
@@ -524,101 +522,6 @@ def scatter_pca_features_by_score(
         axs[i].set_xlabel(f'PC {x_component}')
         axs[i].set_ylabel(f'PC {y_component}')
     fig.suptitle(f'Clusters in PCA space colored by {score_name}', fontweight='bold')
-
-def sankey_plot(
-        labels,
-        labels_titles=None,
-        title=None,
-        color_palette=sns.color_palette()
-    ):
-    '''
-    This function plots a Sankey diagram of the sets of labels passed as arguments.
-
-    :param labels1: list of labels list
-    :param labels2: lables titles
-    :param title: title of the plot
-    :param color_palette: color palette to use
-    '''
-
-    n_clusters = [len(set(label_list)) for label_list in labels]
-
-    plot_labels = []
-    for i in range(len(labels)):
-        for j in range(n_clusters[i]):
-            plot_labels.append(str(j))
-
-    source = []
-    target = []
-    value = []
-    for i in range(len(labels)-1):
-        confusion_matrix = pd.crosstab(labels[i], labels[i+1])
-        curr_source = []
-        curr_target = []
-        curr_value = []
-
-        source_add = 0
-        for j in range(0, i):
-            source_add += n_clusters[j]
-        target_add = source_add + n_clusters[i]
-
-        for j in range(n_clusters[i]):
-            for k in range(n_clusters[i+1]):
-                if confusion_matrix.iloc[j, k] != 0:
-                    curr_source.append(j+source_add)
-                    curr_target.append(k+target_add)
-                    curr_value.append(confusion_matrix.iloc[j, k])
-
-        source += curr_source
-        target += curr_target
-        value += curr_value
-
-    colors = []
-    for i in range(len(labels)):
-        colors += color_palette.as_hex()[:n_clusters[i]]
-
-    fig = go.Figure(
-        data=[
-            go.Sankey(
-                node = dict(
-                    pad = 15,
-                    thickness = 20,
-                    line = dict(color = "black", width = 0.5),
-                    label = plot_labels,
-                    color = colors
-                ),
-                link = dict(
-                    source = source,
-                    target = target,
-                    value = value
-                )
-            )
-        ]
-    )
-
-    for x_coordinate, column_name in enumerate(labels_titles):
-        fig.add_annotation(
-            x=x_coordinate,
-            y=1.05,
-            xref="x",
-            yref="paper",
-            text=column_name,
-            showarrow=False
-        )
-    fig.update_layout(
-        title_text=title, 
-        xaxis={'showgrid': False, 'zeroline': False, 'visible': False},
-        yaxis={'showgrid': False, 'zeroline': False, 'visible': False},
-        plot_bgcolor='rgba(0,0,0,0)',
-        font_size=10
-    )
-
-    file_name = f'../html/sankey'
-    if title is not None:
-        camel_title = title.replace(' ', '_')
-        file_name += f'_{camel_title}'
-    file_name += '.html'
-    pyo.plot(fig, filename=file_name, auto_open=False)
-    fig.show()
 
 def plot_distance_matrices(X, n_samples, clusters, random_state=None):
     '''

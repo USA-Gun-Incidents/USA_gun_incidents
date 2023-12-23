@@ -12,6 +12,9 @@
 # %%
 import pandas as pd
 from clustering_utils import *
+import sys, os
+sys.path.append(os.path.abspath('..'))
+from plot_utils import sankey_plot
 
 # %% [markdown]
 # We define the paths to the saved clustering results:

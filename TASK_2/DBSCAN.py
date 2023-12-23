@@ -10,6 +10,8 @@
 # Import library and dataset
 
 # %%
+import os
+import sys
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -22,8 +24,10 @@ from sklearn.metrics import silhouette_samples, silhouette_score, davies_bouldin
 from scipy.spatial.distance import pdist, squareform
 from plot_utils import plot_scattermap_plotly
 from clustering_utils import plot_dbscan, plot_scores_per_point, plot_bars_by_cluster, compute_bss_per_cluster
-from clustering_utils import plot_hists_by_cluster_dbscan, sankey_plot
+from clustering_utils import plot_hists_by_cluster_dbscan
 from clustering_utils import plot_distance_matrices, write_clusters_to_csv, compute_permutation_invariant_external_metrics
+sys.path.append(os.path.abspath('..'))
+from plot_utils import sankey_plot
 
 # %%
 incidents_df = pd.read_csv(
