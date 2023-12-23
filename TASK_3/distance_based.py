@@ -138,6 +138,27 @@ BEST_MODELS_DIR = "./best_models"
 joblib.dump(knn_best_model, BEST_MODELS_DIR + '/knn.pkl')
 
 # %%
+knn_cv_results_df = pd.DataFrame(knn_grid.cv_results_)
+
+fig, axs = plt.subplots(1, 2, figsize=(15, 5))
+pvt_manhattan = pd.pivot_table(
+    knn_cv_results_df[(knn_cv_results_df['param_p'] == 1)],
+    values='mean_test_score',
+    index=['param_n_neighbors']
+)
+pvt_euclidean = pd.pivot_table(
+    knn_cv_results_df[(knn_cv_results_df['param_p'] == 2)],
+    values='mean_test_score',
+    index=['param_n_neighbors']
+)
+min_score = knn_cv_results_df['mean_test_score'].min()
+max_score = knn_cv_results_df['mean_test_score'].max()
+axs[0].set_title('metric distance = Manhattan')
+axs[1].set_title('metric distance = Euclidean')
+sns.heatmap(pvt_manhattan, cmap='Blues', ax=axs[0], vmin=min_score, vmax=max_score)
+sns.heatmap(pvt_euclidean, cmap='Blues', ax=axs[1], vmin=min_score, vmax=max_score)
+
+# %%
 SCORES_DIR = '../data/classification_scores'
 
 compute_clf_scores(
@@ -195,6 +216,29 @@ svm_best_model_params
 joblib.dump(svm_best_model, BEST_MODELS_DIR + '/svm.pkl')
 
 # %%
+svm_cv_results_df = pd.DataFrame(svm_grid.cv_results_)
+
+fig, axs = plt.subplots(1, 2, figsize=(15, 5))
+pvt_scale = pd.pivot_table(
+    svm_cv_results_df[(svm_cv_results_df['param_gamma'] == 'scale')],
+    values='mean_test_score',
+    index=['param_C'],
+    columns=['param_kernel']
+)
+pvt_auto = pd.pivot_table(
+    svm_cv_results_df[(svm_cv_results_df['param_gamma'] == 'auto')],
+    values='mean_test_score',
+    index=['param_C'],
+    columns=['param_kernel']
+)
+min_score = svm_cv_results_df['mean_test_score'].min()
+max_score = svm_cv_results_df['mean_test_score'].max()
+axs[0].set_title('gamma selected with \'scale\'')
+axs[1].set_title('gamma selected with \'auto\'')
+sns.heatmap(pvt_scale, cmap='Blues', ax=axs[0], vmin=min_score, vmax=max_score)
+sns.heatmap(pvt_auto, cmap='Blues', ax=axs[1], vmin=min_score, vmax=max_score)
+
+# %%
 compute_clf_scores(
     test_label,
     y_pred=svm_pred_labels_test,
@@ -241,6 +285,18 @@ nc_best_model_params
 
 # %%
 joblib.dump(nc_best_model, BEST_MODELS_DIR + '/nc.pkl')
+
+# %%
+nc_cv_results_df = pd.DataFrame(nc_grid.cv_results_)
+
+fig, axs = plt.subplots(1, 1, figsize=(7, 5))
+pvt_nc = pd.pivot_table(
+    nc_cv_results_df,
+    values='mean_test_score',
+    index=['param_metric']
+)
+axs.set_title('Nearest Neighbors')
+sns.heatmap(pvt_nc, cmap='Blues', ax=axs)
 
 # %%
 SCORES_DIR = '../data/classification_scores'
