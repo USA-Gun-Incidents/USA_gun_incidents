@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import json
@@ -42,7 +43,7 @@ indicators_test_df = incidents_test_df[features_for_clf]
 # - max_samples: The number of samples to draw from the trainin set to train each base estimator. We will try both using all the samples and using half of the samples.
 # - min_samples_split: The minimum number of samples required to split an internal node. We will try 2 (the minimum possible) and different fractions of the training set.
 # - min_samples_leaf: The minimum number of samples required to be at a leaf node. We will try 1 (the minimum possible) and different fractions of the training set.
-# 
+#
 # Fixed parameters:
 # - bootstrap: We will bootstrap samples when building trees.
 # - class_weight: Weights associated with classes. We will use 'balanced' as it performed better in the previous experiments with the Decision Tree Classifier.
@@ -306,18 +307,56 @@ plot_scores_varying_params(
 )
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'n_killed', 'bar')
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'n_killed',
+    'bar',
+    title='n_killed distribution'
+)
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'suicide', 'pie')
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'suicide',
+    'pie',
+    title='suicide distribution'
+)
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'incident_characteristics1', 'pie')
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'incident_characteristics1',
+    'pie',
+    title='incident_characteristics1 distribution'
+)
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'incident_characteristics2', 'pie', pie_perc_threshold=2, figsize=(20, 5))
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'incident_characteristics2',
+    'pie',
+    pie_perc_threshold=2,
+    figsize=(20, 5),
+    title='incident_characteristics2 distribution'
+)
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'location_imp', 'hist', bins=5)
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'location_imp',
+    'hist',
+    bins=5,
+    title='location_imp distribution'
+)
 
 

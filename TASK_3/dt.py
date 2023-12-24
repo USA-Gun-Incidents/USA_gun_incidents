@@ -386,18 +386,56 @@ plot_scores_varying_params(
 )
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'n_killed', 'bar')
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'n_killed',
+    'bar',
+    title='n_killed distribution'
+)
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'suicide', 'pie')
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'suicide',
+    'pie',
+    title='suicide distribution'
+)
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'incident_characteristics1', 'pie')
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'incident_characteristics1',
+    'pie',
+    title='incident_characteristics1 distribution'
+)
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'incident_characteristics2', 'pie', pie_perc_threshold=2, figsize=(20, 5))
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'incident_characteristics2',
+    'pie',
+    pie_perc_threshold=2,
+    figsize=(20, 5),
+    title='incident_characteristics2 distribution'
+)
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'location_imp', 'hist', bins=5)
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'location_imp',
+    'hist',
+    bins=5,
+    title='location_imp distribution'
+)
 
 
