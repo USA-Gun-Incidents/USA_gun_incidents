@@ -775,10 +775,12 @@ dm, idm = plot_distance_matrices(X=X, n_samples=5000, clusters=clusters, random_
 # %%
 incidents_df['unharmed'] = incidents_df['n_unharmed'] > 0
 incidents_df['arrested'] = incidents_df['n_arrested'] > 0
+incidents_df['males'] = incidents_df['n_males'] > 0
+incidents_df['females'] = incidents_df['n_females'] > 0
 external_scores_df = compute_permutation_invariant_external_metrics(
     incidents_df,
     'cluster',
-    ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested']
+    ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested', 'males', 'females']
 )
 external_scores_df
 
