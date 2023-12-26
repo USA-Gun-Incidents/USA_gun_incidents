@@ -235,7 +235,7 @@ display_feature_importances(
     tabnet.feature_importances_,
     axs,
     title='TabNetClassifier feature importances',
-    path=None
+    path=f'{RESULTS_DIR}/{clf_name}_feature_importances.csv'
 )
 
 

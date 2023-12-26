@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import numpy as np
@@ -46,7 +45,7 @@ print(f'Number of features: {len(features_for_clf)}')
 # - colsample_bylevel: is the subsample ratio of columns for each level. Subsampling occurs once for every new depth level reached in a tree. Columns are subsampled from the set of columns chosen for the current tree (default=1).
 # - colsample_bynode: is the subsample ratio of columns for each node (split). Subsampling occurs once every time a new split is evaluated. Columns are subsampled from the set of columns chosen for the current level (default=1).
 # - max_depth: Maximum depth of a tree. Increasing this value will make the model more complex and more likely to overfit. 0 indicates no limit on depth (default=6).
-#
+# 
 # Fixed parameters (many other parameters can be tuned, here we report only the most important one):
 # - eta: Step size shrinkage used in update to prevents overfitting. After each boosting step, we can directly get the weights of new features, and eta shrinks the feature weights to make the boosting process more conservative (default=0.3).
 
@@ -201,7 +200,7 @@ plot_predictions_in_features_space(
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_PCA_decision_boundary(
   train_set=indicators_train_df,
-  features=indicators_train_df.columns, # TODO: eventualmente usare solo le numeriche
+  features=indicators_train_df.columns, # TODO: eventualmente usare solo le numeriche, togliere x, y
   train_label=true_labels_train,
   classifier=best_model,
   classifier_name=clf_name,
@@ -222,6 +221,16 @@ plot_learning_curve(
 
 # %%
 # TODO: plot al variare di parametri di complessità
+
+# %%
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+display_feature_importances(
+    feature_names=indicators_train_df.columns,
+    feature_importances=best_model.feature_importances_,
+    axs=axs,
+    title=clf_name,
+    path=f'{RESULTS_DIR}/{clf_name}_feature_importances.csv'
+)
 
 # %%
 plot_distribution_missclassifications(

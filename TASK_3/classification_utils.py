@@ -7,6 +7,7 @@ from sklearn.metrics import ConfusionMatrixDisplay, RocCurveDisplay, roc_auc_sco
 from sklearn.decomposition import PCA
 from mlxtend.plotting import plot_decision_regions
 from sklearn.model_selection import LearningCurveDisplay
+from scipy.stats import rankdata
 
 def scatter_by_label(
         df,
@@ -466,7 +467,7 @@ def display_feature_importances(
         pd.DataFrame({
             'features': sorted_features_names,
             'importances': sorted_features_imp,
-            'rank': np.arange(1, len(sorted_features_imp)+1)
+            'rank': rankdata([-imp for imp in sorted_features_imp], method='dense')
         }).to_csv(path)
     axs.bar(
         x=sorted_features_names,
