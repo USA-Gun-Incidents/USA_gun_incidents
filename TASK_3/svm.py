@@ -5,15 +5,17 @@ import pickle
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.metrics import make_scorer, f1_score
+from sklearn.inspection import permutation_importance
 from time import time
 from classification_utils import *
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 RESULTS_DIR = '../data/classification_results'
-clf_name = 'KNearestNeighborsClassifier'
+clf_name = 'SupportVectorMachineClassifier'
 
 # %%
 # load the data
@@ -40,24 +42,19 @@ print(f'Number of features: {len(features_for_clf)}')
 
 # %%
 scaler = MinMaxScaler()
-knn = KNeighborsClassifier()
-pipe = Pipeline(steps=[('scaler', scaler), ('knn', knn)])
+svc = SVC()
+pipe = Pipeline(steps=[('scaler', scaler), ('svc', svc)])
 
 param_grid = [
     {
-        'knn__n_neighbors': [3, 5, 7, 9, 11, 13, 21, 31, 51], # odd values to avoid ties
-        'knn__weights': ['uniform', 'distance'],
-        'knn__algorithm': ['brute'], # gli altri cambiano in base al train (rischiamo di usare euristiche su certi fold e brute force su altri)
-        'knn__metric': ['minkowski'],
-        'knn__p': [1, 2]
+        'svc__kernel': ['linear'],
+        'svc__C': [0.001, 0.01, 0.1, 1]
     },
     {
-        'knn__n_neighbors': [1],
-        'knn__weights': ['uniform'], # to reduce the number of combinations
-        'knn__algorithm': ['brute'],
-        'knn__metric': ['minkowski'],
-        'knn__p': [1, 2]
-    }
+        'svc__kernel': ['poly', 'rbf', 'sigmoid'],
+        'svc__C': [0.001, 0.01, 0.1, 1],
+        'svc__gamma': ['scale', 'auto'],
+    } # poly?
 ]
 
 gs = GridSearchCV(
@@ -66,25 +63,36 @@ gs = GridSearchCV(
     n_jobs=-1,
     scoring=make_scorer(f1_score),
     verbose=10,
-    cv=StratifiedKFold(n_splits=25),
+    cv=StratifiedShuffleSplit(n_splits=2, test_size=1/3), # TODO: con altri classificatori usiamo stratified 5-fold, qui ci vuole troppo
     refit=False
 )
 gs.fit(indicators_train_df, true_labels_train)
 
 # %%
 cv_results_df = pd.DataFrame(gs.cv_results_)
-cv_results_df.columns = [col.replace('knn__', '') for col in cv_results_df.columns]
+cv_results_df.columns = [col.replace('svc__', '') for col in cv_results_df.columns]
 cv_results_df.head()
 
 # %%
-fig, axs = plt.subplots(1, figsize=(8, 5))
-pvt_manhattan = pd.pivot_table(
-    cv_results_df,
+fig, axs = plt.subplots(1, 2, figsize=(15, 5))
+pvt_scale = pd.pivot_table(
+    cv_results_df[(cv_results_df['param_gamma'] == 'scale')],
     values='mean_test_score',
-    columns=['param_p', 'param_weights'],
-    index=['param_n_neighbors']
+    index=['param_C'],
+    columns=['param_kernel']
 )
-sns.heatmap(pvt_manhattan, cmap='Blues')
+pvt_auto = pd.pivot_table(
+    cv_results_df[(cv_results_df['param_gamma'] == 'auto')],
+    values='mean_test_score',
+    index=['param_C'],
+    columns=['param_kernel']
+)
+min_score = cv_results_df['mean_test_score'].min()
+max_score = cv_results_df['mean_test_score'].max()
+axs[0].set_title("param_gamma='scale'")
+axs[1].set_title("param_gamma='auto'")
+sns.heatmap(pvt_scale, cmap='Blues', ax=axs[0], vmin=min_score, vmax=max_score)
+sns.heatmap(pvt_auto, cmap='Blues', ax=axs[1], vmin=min_score, vmax=max_score)
 
 # %%
 params = [col for col in cv_results_df.columns if 'param_' in col and 'random' not in col]
@@ -95,8 +103,9 @@ cv_results_df.sort_values(
 # %%
 best_index = gs.best_index_
 best_model_params = cv_results_df.loc[best_index]['params']
-best_model_params = {k.replace('knn__', ''): v for k, v in best_model_params.items()}
-best_model = KNeighborsClassifier(**best_model_params)
+best_model_params = {k.replace('svc__', ''): v for k, v in best_model_params.items()}
+best_model_params['probability'] = True
+best_model = SVC(**best_model_params)
 
 # scale all the data
 minmax_scaler = MinMaxScaler()
@@ -201,9 +210,10 @@ plot_learning_curve(
 )
 
 # %%
-param_of_interest = 'n_neighbors'
+param_of_interest = 'C'
 fixed_params = best_model_params.copy()
 fixed_params.pop(param_of_interest)
+fixed_params.pop('probability')
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_scores_varying_params(
     cv_results_df,
@@ -212,6 +222,39 @@ plot_scores_varying_params(
     'F1',
     axs,
     title=clf_name
+)
+
+# %%
+# TODO: eventualmente spostare ciò che segue in explainability
+
+# %%
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+#svc =  SVC(kernel='linear') # TODO: scegli param
+#svc.fit(indicators_train_scaled, true_labels_train)
+svc = best_model # FIXME: se il best è lineare, altrimenti refit
+axs.set_yscale('log')
+display_feature_importances(
+    feature_names=indicators_train_df.columns,
+    feature_importances=np.square(svc.coef_[0]),
+    axs=axs,
+    title='SVM - linear kernel',
+    path=f'{RESULTS_DIR}/svm_linear_feature_importances.csv'
+)
+
+# %%
+# train SVC with rbf kernel
+svc =  SVC(kernel='rbf', gamma='scale', C=0.1)
+svc.fit(indicators_train_scaled, true_labels_train)
+# get features importances
+perm_importance = permutation_importance(svc, indicators_train_scaled, true_labels_train, random_state = 42)
+# plot features importances
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+display_feature_importances(
+    feature_names=indicators_train_df.columns,
+    feature_importances=perm_importance['importances_mean'],
+    axs=axs,
+    title='SVM - rbf kernel',
+    path=f'{RESULTS_DIR}/svm_rbf_feature_importances.csv'
 )
 
 # %%
