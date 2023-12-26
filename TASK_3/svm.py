@@ -52,7 +52,7 @@ param_grid = [
         'svc__kernel': ['poly', 'rbf', 'sigmoid'],
         'svc__C': [0.001, 0.01, 0.1, 1],
         'svc__gamma': ['scale', 'auto'],
-    } # poly degree default = 3
+    } # poly degree default = 3; class_weight='balanced'? default = None
 ]
 
 gs = GridSearchCV(

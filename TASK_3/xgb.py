@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
+import numpy as np
 import json
 from classification_utils import *
 from time import time
@@ -9,6 +11,7 @@ from xgboost import XGBClassifier
 from xgboost import plot_tree
 import pickle
 RESULTS_DIR = '../data/classification_results'
+RANDOM_STATE = 42
 clf_name = 'XGBClassifier'
 
 # %%
@@ -34,29 +37,36 @@ indicators_test_df = incidents_test_df[features_for_clf]
 print(features_for_clf)
 print(f'Number of features: {len(features_for_clf)}')
 
+# %% [markdown]
+# Parameters explored:
+# - min_child_weight: Minimum sum of instance weight (hessian) needed in a child. If the tree partition step results in a leaf node with the sum of instance weight less than min_child_weight, then the building process will give up further partitioning. In linear regression task, this simply corresponds to minimum number of instances needed to be in each node. The larger min_child_weight is, the more conservative the algorithm will be (default=1).
+# - subsample: Subsample ratio of the training instances. Setting it to 0.5 means that XGBoost would randomly sample half of the training data prior to growing trees. and this will prevent overfitting. Subsampling will occur once in every boosting iteration (default=1).
+# - scale_pos_weight: Control the balance of positive and negative weights, useful for unbalanced classes. A typical value to consider: sum(negative instances) / sum(positive instances) (default=1).
+# - colsample_bytree: is the subsample ratio of columns when constructing each tree. Subsampling occurs once for every tree constructed (default=1).
+# - colsample_bylevel: is the subsample ratio of columns for each level. Subsampling occurs once for every new depth level reached in a tree. Columns are subsampled from the set of columns chosen for the current tree (default=1).
+# - colsample_bynode: is the subsample ratio of columns for each node (split). Subsampling occurs once every time a new split is evaluated. Columns are subsampled from the set of columns chosen for the current level (default=1).
+# - max_depth: Maximum depth of a tree. Increasing this value will make the model more complex and more likely to overfit. 0 indicates no limit on depth (default=6).
+#
+# Fixed parameters (many other parameters can be tuned, here we report only the most important one):
+# - eta: Step size shrinkage used in update to prevents overfitting. After each boosting step, we can directly get the weights of new features, and eta shrinks the feature weights to make the boosting process more conservative (default=0.3).
+
 # %%
-# TODO: decidere quali parametri esplorare
-param_grid = { # https://xgboost.readthedocs.io/en/stable/parameter.html
-    'booster': ['gbtree'],
-    'eta': [0.001, 0.01, 0.1, 0.3], # i.e. learning_rate in [0,1], default = 0.3
-    'gamma': [0],
-    'max_depth': [6],
-    'min_child_weight': [1],
-    'max_delta_step': [0],
-    'subsample': [1],
-    'sampling_method': ['uniform'],
+# TODO: decidere quali parametri esplorare (https://xgboost.readthedocs.io/en/stable/parameter.html)
+cv_train_size = (4/5)*(indicators_train_df.shape[0])
+num_pos_inst = np.unique(true_labels_train, return_counts=True)[1][1]
+num_neg_inst = np.unique(true_labels_train, return_counts=True)[1][0]
+param_grid = {
+    'eta': [0.3],
+    'min_child_weight': [1, int(0.01*cv_train_size), int(0.025*cv_train_size), int(0.05*cv_train_size), int(0.1*cv_train_size)],
+    'subsample': [0.5, 1],
+    'scale_pos_weight': [1, num_neg_inst / num_pos_inst],
     'colsample_bytree': [1],
     'colsample_bylevel': [1],
-    'colsample_bynode': [1],
-    'lambda': [1],
-    'alpha': [0],
-    'tree_method': ['auto'],
-    'scale_pos_weight': [1],
-    'refresh_leaf': [1],
-    'grow_policy': ['depthwise'],
-    'max_leaves': [0],
-    # max_cat_to_onehot ?
+    'colsample_bynode': [1, np.sqrt(len(features_for_clf)/len(features_for_clf))],
+    'max_depth': [4, 6, 8]
+    # TODO: cosa fare per categorical data https://xgboost.readthedocs.io/en/stable/tutorials/categorical.html
 }
+
 gs = GridSearchCV(
     XGBClassifier(),
     param_grid=param_grid,
@@ -73,7 +83,25 @@ cv_results_df = pd.DataFrame(gs.cv_results_)
 cv_results_df.head()
 
 # %%
-# TODO: heatmaps params
+fig, axs = plt.subplots(1, 2, figsize=(15, 5))
+pvt_balanced = pd.pivot_table(
+    cv_results_df[(cv_results_df['param_scale_pos_weight'] == 1)],
+    values='mean_test_score',
+    index=['param_min_child_weight', 'param_subsample'],
+    columns=['param_colsample_bynode', 'param_max_depth']
+)
+pvt_non_balanced = pd.pivot_table(
+    cv_results_df[(cv_results_df['param_scale_pos_weight'] != 1)],
+    values='mean_test_score',
+    index=['param_min_child_weight', 'param_subsample'],
+    columns=['param_colsample_bynode', 'param_max_depth']
+)
+min_score = cv_results_df['mean_test_score'].min()
+max_score = cv_results_df['mean_test_score'].max()
+sns.heatmap(pvt_non_balanced, cmap='Blues', ax=axs[0], vmin=min_score, vmax=max_score)
+axs[0].set_title('param_scale_pos_weight = 1');
+sns.heatmap(pvt_balanced, cmap='Blues', ax=axs[1], vmin=min_score, vmax=max_score)
+axs[1].set_title('param_scale_pos_weight = num_neg_inst / num_pos_inst');
 
 # %%
 params = [col for col in cv_results_df.columns if 'param_' in col and 'random' not in col]
