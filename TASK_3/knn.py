@@ -3,7 +3,6 @@ import pandas as pd
 import json
 import pickle
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import GridSearchCV
@@ -66,7 +65,7 @@ gs = GridSearchCV(
     n_jobs=-1,
     scoring=make_scorer(f1_score),
     verbose=10,
-    cv=StratifiedKFold(n_splits=25),
+    cv=5,
     refit=False
 )
 gs.fit(indicators_train_df, true_labels_train)

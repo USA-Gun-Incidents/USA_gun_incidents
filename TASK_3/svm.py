@@ -3,11 +3,9 @@ import pandas as pd
 import json
 import pickle
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import GridSearchCV,  StratifiedShuffleSplit
 from sklearn.metrics import make_scorer, f1_score
 from sklearn.inspection import permutation_importance
 from time import time
@@ -54,7 +52,7 @@ param_grid = [
         'svc__kernel': ['poly', 'rbf', 'sigmoid'],
         'svc__C': [0.001, 0.01, 0.1, 1],
         'svc__gamma': ['scale', 'auto'],
-    } # poly?
+    } # poly degree default = 3
 ]
 
 gs = GridSearchCV(
@@ -229,13 +227,12 @@ plot_scores_varying_params(
 
 # %%
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
-#svc =  SVC(kernel='linear') # TODO: scegli param
-#svc.fit(indicators_train_scaled, true_labels_train)
-svc = best_model # FIXME: se il best è lineare, altrimenti refit
+svc =  SVC(kernel='linear')
+svc.fit(indicators_train_scaled, true_labels_train)
 axs.set_yscale('log')
 display_feature_importances(
     feature_names=indicators_train_df.columns,
-    feature_importances=np.square(svc.coef_[0]),
+    feature_importances=np.abs(svc.coef_[0]),
     axs=axs,
     title='SVM - linear kernel',
     path=f'{RESULTS_DIR}/svm_linear_feature_importances.csv'

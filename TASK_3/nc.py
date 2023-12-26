@@ -38,6 +38,12 @@ print(features_for_clf)
 print(f'Number of features: {len(features_for_clf)}')
 
 # %%
+# TODO: dire che con feature categoriche non è indicato
+# (comunque anche se il centroide assume valori in [0,1] il ragionamento utilizzato per classificare ha senso,
+# i.e. se in una classe la metà degli esempi ha una feature a 0 e l'altra metà a 1,
+# il centroide sta nel mezzo => la feature non è rilevante)
+
+# %%
 scaler = MinMaxScaler()
 nc = NearestCentroid()
 pipe = Pipeline(steps=[('scaler', scaler), ('nc', nc)])
