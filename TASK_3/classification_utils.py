@@ -203,6 +203,7 @@ def plot_roc(y_true, y_probs, names):
 
 def plot_PCA_decision_boundary(
     train_set,
+    features,
     train_label,
     classifier,
     classifier_name,
@@ -218,7 +219,10 @@ def plot_PCA_decision_boundary(
     :param axs: axis where to plot the decision boundary
     '''
 
-    X = train_set.values
+    if type(train_set) == pd.DataFrame:
+        X = train_set[features].values
+    else:
+        X = train_set
     y = train_label
     
     pca = PCA(n_components = 2)

@@ -173,6 +173,7 @@ plot_predictions_in_features_space(
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_PCA_decision_boundary(
   train_set=indicators_train_df,
+  features=indicators_train_df.columns, # TODO: eventualmente usare solo le numeriche
   train_label=true_labels_train,
   classifier=best_model,
   classifier_name=clf_name,
