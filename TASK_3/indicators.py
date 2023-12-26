@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Definition and study of the features to use for the classification task
 
@@ -15,7 +14,7 @@ import seaborn as sns
 import json
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-# %matplotlib inline
+%matplotlib inline
 from classification_utils import *
 from enum import Enum
 import pyproj
@@ -35,6 +34,7 @@ incidents_df = pd.read_csv(
     parse_dates=['date', 'date_original'],
     date_parser=lambda x: pd.to_datetime(x, format='%Y-%m-%d')
 )
+incidents_df.drop_duplicates(inplace=True)
 incidents_df.rename(
     columns={
         'min_age_participants': 'min_age',
@@ -255,7 +255,7 @@ incidents_df.rename(columns=indicators_abbr, inplace=True)
 incidents_df['democrat'].replace(['REPUBLICAN', 'DEMOCRAT'], [0, 1], inplace=True)
 
 # %% [markdown]
-# We conver to categorical codes the state attributes:
+# We convert to categorical codes the state attributes:
 
 # %%
 incidents_df['state_code'] = incidents_df['state'].astype('category').cat.codes
@@ -483,10 +483,8 @@ incidents_df[indicators_names].describe()
 
 # %%
 incidents_clf = incidents_df.dropna(subset=indicators_names)
+incidents_clf.drop_duplicates(subset=indicators_names, inplace=True) # TODO: hanno stessa x, y, data, caratteristiche...
 incidents_nan = incidents_df[incidents_df[indicators_names].isna().any(axis=1)]
-
-# %%
-incidents_df.columns[-40:]
 
 # %% [markdown]
 # We save all the names of the indicators in a json file:
@@ -494,18 +492,6 @@ incidents_df.columns[-40:]
 # %%
 with open('../data/clf_indicators_names.json', 'w') as f:
     json.dump(indicators_names, f)
-
-# %% [markdown]
-# We check how many incidents have the same value for all the indicators but different labels:
-
-# %%
-incidents_clf[indicators_names].duplicated().sum()-incidents_clf[indicators_names+['death']].duplicated().sum()
-
-# %% [markdown]
-# We display those incidents:
-
-# %%
-incidents_clf[incidents_clf[indicators_names].duplicated() ^ incidents_clf[indicators_names+['death']].duplicated()]#[indicators_names]
 
 # %% [markdown]
 # We visualize the distribution of mortal incidents:
@@ -645,6 +631,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 pd.concat([X_train, incidents_nan.drop(columns='death')]).to_csv('../data/clf_indicators_train_nan.csv')
 pd.concat([y_train, incidents_nan['death']]).to_csv('../data/clf_y_train_nan.csv')
 X_train.to_csv('../data/clf_indicators_train.csv')
+X_test.to_csv('../data/clf_indicators_test.csv')
 y_train.to_csv('../data/clf_y_train.csv')
 y_test.to_csv('../data/clf_y_test.csv')
 
@@ -681,7 +668,7 @@ fig.suptitle('Distributions of the indicators', fontweight='bold');
 minmax_scaler.fit(X_train[indicators_names])
 X_test_transf = minmax_scaler.transform(X_test[indicators_names])
 X_test[indicators_names] = X_test_transf
-X_test.to_csv('../data/clf_indicators_test.csv')
+X_test.to_csv('../data/clf_scaled_indicators_test.csv')
 
 # %%
 fig, axs = plt.subplots(figsize=(10, 6))
@@ -699,7 +686,7 @@ pd.DataFrame(train_test_infos, index=['train', 'test'])
 
 # %% [markdown]
 # TODO: compilare una volta definiti
-#
+# 
 # # Final Indicators semantics
 # | Name | Description | Present in the original dataset |
 # | :--: | :---------: | :-----------------------------: |
