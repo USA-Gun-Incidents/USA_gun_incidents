@@ -28,11 +28,18 @@ true_labels_test_df = pd.read_csv('../data/clf_y_test.csv', index_col=0)
 true_labels_test = true_labels_test_df.values.ravel()
 
 # load the names of the features to use for the classification task
-features_for_clf = json.loads(open('../data/clf_indicators_subset.json').read())
+features_for_clf = json.loads(open('../data/clf_indicators_names_distance_based.json').read())
 
 # project on the features_to_use
 indicators_train_df = incidents_train_df[features_for_clf]
 indicators_test_df = incidents_test_df[features_for_clf]
+
+# %% [markdown]
+# We display the features names we will use:
+
+# %%
+print(features_for_clf)
+print(f'Number of features: {len(features_for_clf)}')
 
 # %% [markdown]
 # Parameters explored:
@@ -67,6 +74,7 @@ param_grid = {
     #'max_features': [None],
     'random_state': [RANDOM_STATE]
 }
+
 gs = GridSearchCV(
     DecisionTreeClassifier(),
     param_grid=param_grid,

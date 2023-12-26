@@ -2,6 +2,7 @@
 import pandas as pd
 import json
 from pytorch_tabnet.tab_model import TabNetClassifier
+from sklearn.preprocessing import MinMaxScaler
 from pytorch_tabnet.augmentations import ClassificationSMOTE
 from sklearn.model_selection import train_test_split
 from classification_utils import *
@@ -13,24 +14,28 @@ clf_name = 'TabNetClassifier'
 # %%
 # load the data
 incidents_train_df = pd.read_csv('../data/clf_indicators_train.csv', index_col=0)
-incidents_test_df = pd.read_csv('../data/clf_indicators_test.csv', index_col=0)
+incidents_test_df = pd.read_csv('../data/clf_scaled_indicators_test.csv', index_col=0)
+
 true_labels_train_df = pd.read_csv('../data/clf_y_train.csv', index_col=0)
 true_labels_train = true_labels_train_df.values.ravel()
 true_labels_test_df = pd.read_csv('../data/clf_y_test.csv', index_col=0)
 true_labels_test = true_labels_test_df.values.ravel()
 
 # load the names of the features to use for the classification task
-features_for_clf = json.loads(open('../data/clf_indicators_subset.json').read())
+features_for_clf = json.loads(open('../data/clf_indicators_names_distance_based.json').read())
 
 # project on the features_to_use
 indicators_train_df = incidents_train_df[features_for_clf]
 indicators_test_df = incidents_test_df[features_for_clf]
 
-# TODO: pre-processing?
+# scale the data
+# FIXME: se poi facciamo grid search bisogna fare come in nn.py
+scaler = MinMaxScaler()
+indicators_train_scaled = scaler.fit_transform(indicators_train_df)
 
 # split the data into train and validation sets
-train_set, val_set, train_labels, val_labels = train_test_split(
-    indicators_train_df.values,
+train_set, val_set, train_labels, val_labels = train_test_split( # FIXME: qui di nuovo il validation è scalato
+    indicators_train_scaled,
     true_labels_train,
     test_size=0.2
 )
@@ -38,7 +43,6 @@ train_set, val_set, train_labels, val_labels = train_test_split(
 # %%
 aug = ClassificationSMOTE(p=0.2)
 # TODO: valutare p
-# TODO: capire se vogliono one hot encoding o no
 # TODO: embedding di feature cateoriche come fanno qui?
 # https://github.com/dreamquark-ai/tabnet/blob/develop/census_example.ipynb
 
@@ -55,8 +59,7 @@ tabnet.fit(
 )
 fit_time = time()-fit_start
 
-# TODO: provare altr parametri (in fondo al readme)
-# https://github.com/dreamquark-ai/tabnet
+# TODO: provare altr parametri? (in fondo al readme https://github.com/dreamquark-ai/tabnet)
 
 # %%
 plt.plot(tabnet.history['loss'], label='Train')
@@ -123,10 +126,6 @@ compute_clf_scores(
     clf_name=clf_name,
     path=f'{RESULTS_DIR}/{clf_name}_test_scores.csv'
 )
-
-# %%
-from sklearn.metrics import classification_report
-print(classification_report(true_labels_test, pred_labels_test)) # TODO: sostituire con funzioni usate in altri notebook
 
 # %%
 plot_confusion_matrix(

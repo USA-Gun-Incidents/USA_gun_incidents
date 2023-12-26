@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import json
@@ -30,11 +29,18 @@ true_labels_test_df = pd.read_csv('../data/clf_y_test.csv', index_col=0)
 true_labels_test = true_labels_test_df.values.ravel()
 
 # load the names of the features to use for the classification task
-features_for_clf = json.loads(open('../data/clf_indicators_subset.json').read())
+features_for_clf = json.loads(open('../data/clf_indicators_names_distance_based.json').read())
 
 # project on the features_to_use
 indicators_train_df = incidents_train_df[features_for_clf]
 indicators_test_df = incidents_test_df[features_for_clf]
+
+# %% [markdown]
+# We display the features names we will use:
+
+# %%
+print(features_for_clf)
+print(f'Number of features: {len(features_for_clf)}')
 
 # %% [markdown]
 # Parameters explored:
@@ -43,7 +49,7 @@ indicators_test_df = incidents_test_df[features_for_clf]
 # - max_samples: The number of samples to draw from the trainin set to train each base estimator. We will try both using all the samples and using half of the samples.
 # - min_samples_split: The minimum number of samples required to split an internal node. We will try 2 (the minimum possible) and different fractions of the training set.
 # - min_samples_leaf: The minimum number of samples required to be at a leaf node. We will try 1 (the minimum possible) and different fractions of the training set.
-#
+# 
 # Fixed parameters:
 # - bootstrap: We will bootstrap samples when building trees.
 # - class_weight: Weights associated with classes. We will use 'balanced' as it performed better in the previous experiments with the Decision Tree Classifier.

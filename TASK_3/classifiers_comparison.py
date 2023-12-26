@@ -40,6 +40,10 @@ for clf in clf_names:
     test_preds[clf]['features_ranked'] = clf_feature_imp['features']
     test_preds[clf]['features_importance'] = clf_feature_imp['importances']
 
+# %%
+# TODO: ricordare di commentare che i tempi sono influenzati anche dal fatto che con alcuni classificatori
+# è stato necessario fare one-hot encoding delle feature e la complessità cresce al crescere delle feature
+
 # %% [markdown]
 # Train scores comparison:
 

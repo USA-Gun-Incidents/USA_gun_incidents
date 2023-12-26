@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import json
 import pickle
 import tensorflow as tf
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import MinMaxScaler
 from scikeras.wrappers import KerasClassifier
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import GridSearchCV
@@ -18,29 +20,31 @@ clf_name = 'NeuralNetworkClassifier'
 # %%
 # load the data
 incidents_train_df = pd.read_csv('../data/clf_indicators_train.csv', index_col=0)
-incidents_test_df = pd.read_csv('../data/clf_indicators_test.csv', index_col=0)
+incidents_test_df = pd.read_csv('../data/clf_scaled_indicators_test.csv', index_col=0)
 true_labels_train_df = pd.read_csv('../data/clf_y_train.csv', index_col=0)
 true_labels_train = true_labels_train_df.values.ravel()
 true_labels_test_df = pd.read_csv('../data/clf_y_test.csv', index_col=0)
 true_labels_test = true_labels_test_df.values.ravel()
 
 # load the names of the features to use for the classification task
-features_for_clf = json.loads(open('../data/clf_indicators_subset.json').read())
+features_for_clf = json.loads(open('../data/clf_indicators_names_distance_based.json').read())
 
 # project on the features_to_use
 indicators_train_df = incidents_train_df[features_for_clf]
 indicators_test_df = incidents_test_df[features_for_clf]
 
-# %%
-# TODO:
-# encoding di attributi categorici
-# preprocessing
+# %% [markdown]
+# We display the features names we will use:
 
+# %%
+print(features_for_clf)
+print(f'Number of features: {len(features_for_clf)}')
+
+# %%
 # Di seguito uso un wrapper di Keras per usare scikit learn
 # fino a poco tempo fa era parte di tensorflow, poi hanno smesso di mantenerlo e infine l'hanno rimosso dalle nuove versioni :(
 # https://adriangb.com/scikeras/stable/notebooks/Basic_Usage.html#7.2-Performing-a-grid-search
 
-# %%
 def get_clf(meta, hidden_layer_sizes, dropouts, activation_functions, last_activation_function):
     n_features_in_ = meta["n_features_in_"]
     model = tf.keras.models.Sequential()
@@ -54,31 +58,34 @@ def get_clf(meta, hidden_layer_sizes, dropouts, activation_functions, last_activ
 best_model = KerasClassifier(
     get_clf,
     metrics=['accuracy'],
-    validation_split=0.2,
+    validation_split=0.2, # FIXME: sul validation usiamo i dati scalati (ma forse è okay, lo usiamo solo per vedere la curva o fare eventualmente early stopping)
     model__hidden_layer_sizes=None,
     model__activation_functions=None,
     model__dropouts=None,
     model__last_activation_function=None
 )
 
+scaler = MinMaxScaler()
+pipe = Pipeline(steps=[("scaler", scaler), ("nn", best_model)])
+
 # TODO: questi valori li ho messi a caso per testarlo
 param_grid = [
     {
-        'model__hidden_layer_sizes': [(256, 256,)],
-        'model__activation_functions': [('sigmoid', 'sigmoid',)],
-        'model__last_activation_function': ['sigmoid'],
-        'model__dropouts': [(0.1, 0.1,)],
-        'optimizer': ['adamax'],
-        'optimizer__learning_rate': [0.001], # default of adamax
-        #'optimizer__decay': [1e-5],
-        'loss': ['mean_squared_error'],
-        'batch_size': [256],
-        'epochs': [10]
+        'nn__model__hidden_layer_sizes': [(256, 256,)],
+        'nn__model__activation_functions': [('sigmoid', 'sigmoid',)],
+        'nn__model__last_activation_function': ['sigmoid'],
+        'nn__model__dropouts': [(0.1, 0.1,)],
+        'nn__optimizer': ['adamax'],
+        'nn__optimizer__learning_rate': [0.001], # default of adamax
+        #'nn__optimizer__decay': [1e-5],
+        'nn__loss': ['mean_squared_error'],
+        'nn__batch_size': [256],
+        'nn__epochs': [10]
     },
 ] # lista di dizionari (e.g. con 3 layer) per evitare combinazioni non valide
 
 gs = GridSearchCV( # RandomizedSearchCV?
-    estimator=best_model,
+    estimator=pipe,
     param_grid=param_grid,
     n_jobs=-1,
     scoring=make_scorer(f1_score),
@@ -104,6 +111,8 @@ val_results_df.sort_values(
 # %%
 best_index = gs.best_index_
 best_model_params = val_results_df.iloc[best_index]['params']
+# remove from the params the prefix 'nn__'
+best_model_params = {k.replace('nn__', ''): v for k, v in best_model_params.items()}
 best_model = KerasClassifier(
     get_clf,
     metrics=['accuracy'],
@@ -113,16 +122,20 @@ best_model = KerasClassifier(
 print(best_model_params)
 
 # %%
+# scale all the data
+minmax_scaler = MinMaxScaler()
+indicators_train_scaled = minmax_scaler.fit_transform(indicators_train_df)
+
 # fit the model on all the training data
 fit_start = time()
-best_model.fit(indicators_train_df, true_labels_train)
+best_model.fit(indicators_train_scaled, true_labels_train)
 fit_time = time()-fit_start
 
 # get the predictions on the training data
 train_score_start = time()
-pred_labels_train = best_model.predict(indicators_train_df) # TODO: assicurarsi che il 'flattening' automatico sia come vogliamo (tanh è centrata in 0, sigmoid in 0.5)
+pred_labels_train = best_model.predict(indicators_train_scaled) # TODO: assicurarsi che il 'flattening' automatico sia come vogliamo (tanh è centrata in 0, sigmoid in 0.5)
 train_score_time = time()-train_score_start
-pred_probas_train = best_model.predict_proba(indicators_train_df)
+pred_probas_train = best_model.predict_proba(indicators_train_scaled)
 
 # get the predictions on the test data
 test_score_start = time()
