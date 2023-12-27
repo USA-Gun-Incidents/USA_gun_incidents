@@ -238,6 +238,85 @@ def add_tags(df):
 incidents_df = add_tags(incidents_df)
 
 # %% [markdown]
+# We search for inconsistencies:
+
+# %%
+incidents_df[(incidents_df['aggression']==1) & (incidents_df['defensive']==1)] # defense in response to aggression
+
+# %%
+incidents_df[(incidents_df['aggression']==1) & (incidents_df['accidental']==1)]
+
+# %%
+incidents_df[
+    (incidents_df['aggression']==0) & 
+    ((incidents_df['organized']==1))
+] # gang arrested in other circumstances
+
+# %%
+incidents_df[
+    (incidents_df['aggression']==0) & 
+    ((incidents_df['social_reasons']==1))
+]
+
+# %%
+incidents_df[
+    (incidents_df['aggression']==0) & 
+    ((incidents_df['abduction']==1))
+]
+
+# %%
+incidents_df[
+    (incidents_df['accidental']==1) & 
+    (
+        (incidents_df['aggression']==1) |
+        (incidents_df['defensive']==1) |
+        (incidents_df['suicide']==1) |
+        (incidents_df['organized']==1) |
+        (incidents_df['social_reasons']==1) |
+        (incidents_df['abduction']==1)
+    )
+]
+
+# %%
+incidents_df[
+    (incidents_df['defensive']==1) & 
+    (incidents_df['accidental']==1)
+]
+
+# %%
+incidents_df[
+    (incidents_df['defensive']==1) & 
+    (incidents_df['suicide']==1)
+]
+
+# %%
+incidents_df[
+    (incidents_df['suicide']==1) & 
+    (incidents_df['accidental']==1)
+]
+
+# %%
+incidents_df[
+    (incidents_df['organized']==1) & 
+    (incidents_df['accidental']==1)
+]
+
+# %%
+incidents_df[
+    (incidents_df['social_reasons']==1) & 
+    (incidents_df['accidental']==1)
+]
+
+# %%
+incidents_df[
+    (incidents_df['abduction']==1) & 
+    (incidents_df['accidental']==1)
+]
+
+# %%
+incidents_df[(incidents_df['aggression']==0) & (incidents_df['accidental']==0) & (incidents_df['defensive']==0) & (incidents_df['suicide']==0)]
+
+# %% [markdown]
 # We rename some indicators:
 
 # %%
