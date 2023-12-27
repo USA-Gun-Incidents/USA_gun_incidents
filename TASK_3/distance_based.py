@@ -14,7 +14,7 @@ from sklearn.neighbors import KNeighborsClassifier, NearestCentroid
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split, StratifiedKFold, GridSearchCV
 from sklearn.metrics import classification_report, accuracy_score, matthews_corrcoef, f1_score, confusion_matrix, ConfusionMatrixDisplay, make_scorer
-from sklearn.inspection import DecisionBoundaryDisplay
+from sklearn.inspection import DecisionBoundaryDisplay, permutation_importance
 from itertools import product
 from time import time
 
@@ -433,5 +433,46 @@ fixed_params.pop(param_of_interest)
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 axs.set_xscale('log')
 plot_scores_varying_params(svm_grid.cv_results_, param_of_interest, fixed_params, 'F1 Score', axs, title=f'SVM - F1 score varying {param_of_interest}')
+
+# %%
+# train a SVM with linear kernel to check which are the most important features in training
+
+features_names = train_set.columns
+svm = SVC(kernel='linear', gamma='scale', C=0.1)
+svm.fit(test_set, test_label)
+
+# %%
+# plot features importances
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+axs.set_yscale('log')
+display_feature_importances(
+    feature_names=train_set.columns,
+    # the higher is the absolute value of the weigth assiciated to a feature
+    # the higher is the importance
+    feature_importances=np.absolute(svm.coef_[0]), 
+    axs=axs,
+    title='SVM - linear kernel',
+    path=f'{RESULTS_DIR}/svm_linear_feature_importances.csv'
+    )
+
+# %%
+# train a SVM with rbf kernel to check which are the most important features in training
+svc =  SVC(kernel='linear', gamma='scale', C=0.1)
+svc.fit(train_set, train_label)
+
+# %%
+# get features importances
+perm_importance = permutation_importance(svc, train_set, train_label, random_state = SEED)
+
+# %%
+# plot features importances
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+display_feature_importances(
+    feature_names=train_set.columns,
+    feature_importances=perm_importance['importances_mean'],
+    axs=axs,
+    title='SVM - rbf kernel',
+    path=f'{RESULTS_DIR}/svm_rbf_feature_importances.csv'
+    )
 
 

@@ -7,6 +7,7 @@ from sklearn.metrics import ConfusionMatrixDisplay, RocCurveDisplay, roc_auc_sco
 from sklearn.decomposition import PCA
 from mlxtend.plotting import plot_decision_regions
 from sklearn.model_selection import LearningCurveDisplay
+from scipy.stats import rankdata
 
 def scatter_by_label(
         df,
@@ -203,6 +204,7 @@ def plot_roc(y_true, y_probs, names):
 
 def plot_PCA_decision_boundary(
     train_set,
+    features,
     train_label,
     classifier,
     classifier_name,
@@ -218,7 +220,10 @@ def plot_PCA_decision_boundary(
     :param axs: axis where to plot the decision boundary
     '''
 
-    X = train_set.values
+    if type(train_set) == pd.DataFrame:
+        X = train_set[features].values
+    else:
+        X = train_set
     y = train_label
     
     pca = PCA(n_components = 2)
@@ -319,7 +324,8 @@ def plot_distribution_missclassifications(
     kind,
     pie_perc_threshold=5,
     figsize=(15, 5),
-    bins=20
+    bins=20,
+    title=None
     ):
     '''
     This function plots the distribution of the given attribute in the missclassified incidents and in all incidents.
@@ -335,7 +341,7 @@ def plot_distribution_missclassifications(
     errors = pred_labels != true_labels
 
     if kind=='bar':
-        _, axs = plt.subplots(1, 2, figsize=figsize, sharey=True)
+        fig, axs = plt.subplots(1, 2, figsize=figsize, sharey=True)
         data[errors][attribute].value_counts(sort=False).plot.bar(
             xlabel=attribute,
             ylabel='count',
@@ -349,7 +355,7 @@ def plot_distribution_missclassifications(
             ax=axs[1]
         )
     elif kind=='hist':
-        _, axs = plt.subplots(1, 2, figsize=figsize, sharey=True)
+        fig, axs = plt.subplots(1, 2, figsize=figsize, sharey=True)
         data[errors][attribute].plot.hist(
             bins=bins,
             xlabel=attribute,
@@ -365,7 +371,7 @@ def plot_distribution_missclassifications(
             ax=axs[1]
         )
     elif kind=='pie':
-        _, axs = plt.subplots(1, 2, figsize=figsize)
+        fig, axs = plt.subplots(1, 2, figsize=figsize)
         nunique = data[attribute].nunique()
         if nunique > 2: # group small percentages in 'Other'
             perc = (data[errors][attribute].value_counts()/len(data[errors][attribute])*100).to_frame().reset_index()
@@ -391,6 +397,8 @@ def plot_distribution_missclassifications(
             )
     else:
         raise ValueError("kind must be either 'bar', 'hist' or 'pie'")
+    if title:
+        fig.suptitle(title, fontweight='bold')
 
 
 def compute_clf_scores(
@@ -459,7 +467,7 @@ def display_feature_importances(
         pd.DataFrame({
             'features': sorted_features_names,
             'importances': sorted_features_imp,
-            'rank': np.arange(1, len(sorted_features_imp)+1)
+            'rank': rankdata([-imp for imp in sorted_features_imp], method='dense')
         }).to_csv(path)
     axs.bar(
         x=sorted_features_names,

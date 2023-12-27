@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Definition and study of the features to use for the classification task
 
@@ -15,12 +14,12 @@ import seaborn as sns
 import json
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-# %matplotlib inline
+%matplotlib inline
 from classification_utils import *
 from enum import Enum
 import pyproj
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
 from sklearn.model_selection import train_test_split
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
@@ -35,6 +34,7 @@ incidents_df = pd.read_csv(
     parse_dates=['date', 'date_original'],
     date_parser=lambda x: pd.to_datetime(x, format='%Y-%m-%d')
 )
+incidents_df.drop_duplicates(inplace=True)
 incidents_df.rename(
     columns={
         'min_age_participants': 'min_age',
@@ -65,7 +65,7 @@ projector = pyproj.Proj(proj='utm', zone=14, ellps='WGS84', preserve_units=True)
 incidents_df['x'], incidents_df['y'] = projector(incidents_df['longitude'], incidents_df['latitude'])
 
 # %% [markdown]
-# We plot the projection:
+# We plot the projection to check if it is correct:
 
 # %%
 plt.plot(incidents_df['x'], incidents_df['y'], 'o', markersize=1)
@@ -238,6 +238,85 @@ def add_tags(df):
 incidents_df = add_tags(incidents_df)
 
 # %% [markdown]
+# We search for inconsistencies:
+
+# %%
+incidents_df[(incidents_df['aggression']==1) & (incidents_df['defensive']==1)] # defense in response to aggression
+
+# %%
+incidents_df[(incidents_df['aggression']==1) & (incidents_df['accidental']==1)]
+
+# %%
+incidents_df[
+    (incidents_df['aggression']==0) & 
+    ((incidents_df['organized']==1))
+] # gang arrested in other circumstances
+
+# %%
+incidents_df[
+    (incidents_df['aggression']==0) & 
+    ((incidents_df['social_reasons']==1))
+]
+
+# %%
+incidents_df[
+    (incidents_df['aggression']==0) & 
+    ((incidents_df['abduction']==1))
+]
+
+# %%
+incidents_df[
+    (incidents_df['accidental']==1) & 
+    (
+        (incidents_df['aggression']==1) |
+        (incidents_df['defensive']==1) |
+        (incidents_df['suicide']==1) |
+        (incidents_df['organized']==1) |
+        (incidents_df['social_reasons']==1) |
+        (incidents_df['abduction']==1)
+    )
+]
+
+# %%
+incidents_df[
+    (incidents_df['defensive']==1) & 
+    (incidents_df['accidental']==1)
+]
+
+# %%
+incidents_df[
+    (incidents_df['defensive']==1) & 
+    (incidents_df['suicide']==1)
+]
+
+# %%
+incidents_df[
+    (incidents_df['suicide']==1) & 
+    (incidents_df['accidental']==1)
+]
+
+# %%
+incidents_df[
+    (incidents_df['organized']==1) & 
+    (incidents_df['accidental']==1)
+]
+
+# %%
+incidents_df[
+    (incidents_df['social_reasons']==1) & 
+    (incidents_df['accidental']==1)
+]
+
+# %%
+incidents_df[
+    (incidents_df['abduction']==1) & 
+    (incidents_df['accidental']==1)
+]
+
+# %%
+incidents_df[(incidents_df['aggression']==0) & (incidents_df['accidental']==0) & (incidents_df['defensive']==0) & (incidents_df['suicide']==0)]
+
+# %% [markdown]
 # We rename some indicators:
 
 # %%
@@ -255,10 +334,110 @@ incidents_df.rename(columns=indicators_abbr, inplace=True)
 incidents_df['democrat'].replace(['REPUBLICAN', 'DEMOCRAT'], [0, 1], inplace=True)
 
 # %% [markdown]
-# We conver to categorical codes the state attributes:
+# We convert to categorical codes the state attributes:
 
 # %%
 incidents_df['state_code'] = incidents_df['state'].astype('category').cat.codes
+
+# %% [markdown]
+# We convert months and days of week to their names:
+
+# %%
+incidents_df['month_name'] = incidents_df['month'].apply(lambda x: pd.to_datetime(x, format='%m').month_name())
+incidents_df['day_of_week_name'] = incidents_df['date'].dt.day_name()
+
+# %% [markdown]
+# We one hot encode the categorical attributes:
+
+# %%
+# TODO: togliere
+# for attribute in ['state', 'day', 'month_name', 'day_of_week_name']:
+#     incidents_tmp = incidents_df[attribute]
+#     prefix = ''
+#     if attribute == 'day':
+#         prefix = 'day_'
+#     incidents_df = pd.get_dummies(incidents_df, columns=[attribute], prefix=prefix, prefix_sep='')
+#     incidents_df[attribute] = incidents_tmp
+
+# %% [markdown]
+# We compute the number of dayes from the first incident:
+
+# %%
+# TODO: fare locale a stato o distretto?
+# sottolineare i limiti, i.e. una volta deployato il modello si può usare solo dopo il 2014
+incidents_df['days_from_first_incident'] = (incidents_df['date'] - incidents_df['date'].min()).dt.days
+
+# %% [markdown]
+# We perform a cyclic encoding of the month, the day and the day of the week:
+
+# %%
+incidents_df['month_x'] = np.sin(2 * np.pi * incidents_df['month'] / 12.0)
+incidents_df['month_y'] = np.cos(2 * np.pi * incidents_df['month'] / 12.0)
+
+incidents_df['day_x'] = np.sin(2 * np.pi * incidents_df['day'] / 31.0)
+incidents_df['day_y'] = np.cos(2 * np.pi * incidents_df['day'] / 31.0)
+
+incidents_df['day_of_week_x'] = np.sin(2 * np.pi * incidents_df['day_of_week'] / 7.0)
+incidents_df['day_of_week_y'] = np.cos(2 * np.pi * incidents_df['day_of_week'] / 7.0)
+
+# %% [markdown]
+# We visualize the distributions of the encoded attributes:
+
+# %%
+fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+
+sns.set_palette('tab20')
+months = np.arange(1, 13)
+months_names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+month_xs = np.sin(2 * np.pi * np.array(months) / 12.0)
+month_ys = np.cos(2 * np.pi * np.array(months) / 12.0)
+for month_name, month_x, month_y in zip(months_names, month_xs, month_ys):
+    axs[0].scatter(
+        x=month_x,
+        y=month_y,
+        label=month_name
+    )
+axs[0].legend()
+axs[0].set_title('Cyclic encoding of months')
+
+month_days = np.arange(1, 32)
+month_days_xs = np.sin(2 * np.pi * np.array(month_days) / 31.0)
+month_days_ys = np.cos(2 * np.pi * np.array(month_days) / 31.0)
+for month_day, month_day_x, month_day_y in zip(month_days, month_days_xs, month_days_ys):
+    axs[1].scatter(
+        x=month_day_x,
+        y=month_day_y,
+        label=month_day
+    )
+axs[1].set_title('Cyclic encoding of days of the month')
+axs[1].legend(loc='lower center', ncols=31, bbox_to_anchor=(0.5, -0.2))
+
+sns.set_palette('tab10')
+days = np.arange(1, 8)
+days_names = ['Mon', 'Tue', 'Thu', 'Wed', 'Fri', 'Sat', 'Sun']
+days_xs = np.sin(2 * np.pi * np.array(days) / 7.0)
+days_ys = np.cos(2 * np.pi * np.array(days) / 7.0)
+for day, day_x, day_y in zip(days_names, days_xs, days_ys):
+    axs[2].scatter(
+        x=day_x,
+        y=day_y,
+        label=day
+    )
+axs[2].set_title('Cyclic encoding of days of the week')
+axs[2].legend()
+
+# %% [markdown]
+# We load the data about the gun laws strictness:
+
+# %%
+laws_df = pd.read_csv('../data/external_data/gun_law_rank.csv')
+laws_df
+
+# %% [markdown]
+# We merge the datasets:
+
+# %%
+incidents_df = incidents_df.merge(laws_df, how='left', on=['state', 'year'])
 
 # %% [markdown]
 # We define the list of indicators to use for the classification task:
@@ -284,21 +463,25 @@ indicators_names = [
     'n_participants',
     # temporal data
     'day',
+    'day_x',
+    'day_y',
     'day_of_week',
+    'day_of_week_x',
+    'day_of_week_y',
     'month',
-    #'year', # TODO: scartiamo prima quelli dal futuro?
+    'month_x',
+    'month_y',
+    'year', # democrat is only available for year <= 2018, nan years will be discarded
+    'days_from_first_incident',
     # socio-economic data
     'poverty_perc',
-    'democrat'
+    'democrat',
+    'gun_law_rank'
 ]
 
 # add the tags
 for tag in TagForClassification._member_names_:
     indicators_names.append(tag)
-
-# save the indicators names in a json file
-with open('../data/clf_indicators_names.json', 'w') as f:
-    json.dump(indicators_names, f)
 
 # %% [markdown]
 # We define the binary label to predict:
@@ -311,36 +494,41 @@ incidents_df['death'] = (incidents_df['n_killed']>0).astype(int)
 
 # %%
 # compute the pearson's correlation coefficient
-fig, ax = plt.subplots(figsize=(30, 15))
+fig, ax = plt.subplots(figsize=(40, 15))
 pearson_corr_matrix = incidents_df[indicators_names + ['death']].corr('pearson')
 sns.heatmap(pearson_corr_matrix, annot=True, ax=ax, mask=np.triu(pearson_corr_matrix), cmap='coolwarm')
 
 # %%
 # compute the spearman's correlation coefficient
-fig, ax = plt.subplots(figsize=(30, 15))
+fig, ax = plt.subplots(figsize=(40, 15))
 spearman_corr_matrix = incidents_df[indicators_names + ['death']].corr('spearman')
 sns.heatmap(spearman_corr_matrix, annot=True, ax=ax, mask=np.triu(spearman_corr_matrix), cmap='coolwarm')
+
+# %% [markdown]
+# We observe a correlation between:
+# - poverty percentage, gun_law_rank and latitude (southern states are more poor and have less strict gun laws)
+# - road, house and aggression (when the tag aggression could be inferred also the place where the incident happened was known)
 
 # %% [markdown]
 # We scatter the incidents on different feature spaces:
 
 # %%
-scatter_by_label(
-    incidents_df,
-    ['location_imp',
-    'age_range',
-    'avg_age',
-    'n_child_prop',
-    'n_teen_prop',
-    'n_males_prop',
-    'n_participants',
-    'month',
-    'day_of_week',
-    'poverty_perc'],
-    'death',
-    ncols=3,
-    figsize=(35, 50)
-)
+# scatter_by_label(
+#     incidents_df,
+#     ['location_imp',
+#     'age_range',
+#     'avg_age',
+#     'n_child_prop',
+#     'n_teen_prop',
+#     'n_males_prop',
+#     'n_participants',
+#     'month',
+#     'day_of_week',
+#     'poverty_perc'],
+#     'death',
+#     ncols=3,
+#     figsize=(35, 50)
+# )
 
 # %% [markdown]
 # Mortal and non-mortal incidents are not linearly separable in the plotted feature spaces.
@@ -370,10 +558,19 @@ print(f'Dropping rows with nan values in the indicators columns, {incidents_df[i
 incidents_df[indicators_names].describe()
 
 # %% [markdown]
-# We drop incidents having at lest a nan indicator:
+# We drop incidents having at least a nan indicator:
 
 # %%
 incidents_clf = incidents_df.dropna(subset=indicators_names)
+incidents_clf.drop_duplicates(subset=indicators_names, inplace=True) # TODO: hanno stessa x, y, data, caratteristiche...
+incidents_nan = incidents_df[incidents_df[indicators_names].isna().any(axis=1)]
+
+# %% [markdown]
+# We save all the names of the indicators in a json file:
+
+# %%
+with open('../data/clf_indicators_names.json', 'w') as f:
+    json.dump(indicators_names, f)
 
 # %% [markdown]
 # We visualize the distribution of mortal incidents:
@@ -501,6 +698,7 @@ if nrows > 1:
 # %%
 original_features_minus_indicators = [feature for feature in dataset_original_columns if feature not in indicators_names]
 incidents_clf = incidents_clf[original_features_minus_indicators + indicators_names + ['death']]
+incidents_nan = incidents_nan[original_features_minus_indicators + indicators_names + ['death']]
 X_train, X_test, y_train, y_test = train_test_split(
     incidents_clf.drop(columns='death'),
     incidents_clf['death'],
@@ -509,10 +707,51 @@ X_train, X_test, y_train, y_test = train_test_split(
     shuffle=True,
     stratify=incidents_clf['death'].values
 )
+pd.concat([X_train, incidents_nan.drop(columns='death')]).to_csv('../data/clf_indicators_train_nan.csv')
+pd.concat([y_train, incidents_nan['death']]).to_csv('../data/clf_y_train_nan.csv')
 X_train.to_csv('../data/clf_indicators_train.csv')
 X_test.to_csv('../data/clf_indicators_test.csv')
 y_train.to_csv('../data/clf_y_train.csv')
 y_test.to_csv('../data/clf_y_test.csv')
+
+# %% [markdown]
+# We display the distributions of the indicators:
+
+# %%
+# apply MinMaxScaler
+minmax_scaler = MinMaxScaler()
+X_minmax = minmax_scaler.fit_transform(incidents_clf[indicators_names])
+# apply StandardScaler
+std_scaler = StandardScaler()
+X_std = std_scaler.fit_transform(incidents_clf[indicators_names])
+# apply RobustScaler
+robust_scaler = RobustScaler()
+X_robust = robust_scaler.fit_transform(incidents_clf[indicators_names])
+# plot the distributions of the indicators after the transformations
+fig, axs = plt.subplots(nrows=1, ncols=4, figsize=(40, 6))
+axs[0].boxplot(incidents_clf[indicators_names])
+axs[0].set_xticklabels(indicators_names, rotation=90);
+axs[0].set_title('Original data');
+axs[1].boxplot(X_minmax)
+axs[1].set_xticklabels(indicators_names, rotation=90);
+axs[1].set_title('Min-Max scaling');
+axs[2].boxplot(X_std)
+axs[2].set_xticklabels(indicators_names, rotation=90);
+axs[2].set_title('Standard scaling');
+axs[3].boxplot(X_robust)
+axs[3].set_xticklabels(indicators_names, rotation=90);
+axs[3].set_title('Robust scaling');
+fig.suptitle('Distributions of the indicators', fontweight='bold');
+
+# %%
+minmax_scaler.fit(X_train[indicators_names])
+X_test_transf = minmax_scaler.transform(X_test[indicators_names])
+X_test[indicators_names] = X_test_transf
+X_test.to_csv('../data/clf_scaled_indicators_test.csv')
+
+# %%
+fig, axs = plt.subplots(figsize=(10, 6))
+X_test[indicators_names].boxplot(ax=axs, rot=90)
 
 # %% [markdown]
 # We display train and test sizes:
@@ -526,7 +765,7 @@ pd.DataFrame(train_test_infos, index=['train', 'test'])
 
 # %% [markdown]
 # TODO: compilare una volta definiti
-#
+# 
 # # Final Indicators semantics
 # | Name | Description | Present in the original dataset |
 # | :--: | :---------: | :-----------------------------: |

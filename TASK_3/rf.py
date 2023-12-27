@@ -29,11 +29,18 @@ true_labels_test_df = pd.read_csv('../data/clf_y_test.csv', index_col=0)
 true_labels_test = true_labels_test_df.values.ravel()
 
 # load the names of the features to use for the classification task
-features_for_clf = json.loads(open('../data/clf_indicators_subset.json').read())
+features_for_clf = json.loads(open('../data/clf_indicators_names_rule_based.json').read())
 
-# project on the features_to_use
+# project on the features to use
 indicators_train_df = incidents_train_df[features_for_clf]
 indicators_test_df = incidents_test_df[features_for_clf]
+
+# %% [markdown]
+# We display the features names we will use:
+
+# %%
+print(features_for_clf)
+print(f'Number of features: {len(features_for_clf)}')
 
 # %% [markdown]
 # Parameters explored:
@@ -255,6 +262,7 @@ plot_roc(y_true=true_labels_test, y_probs=[pred_probas_test[:,1]], names=[clf_na
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_PCA_decision_boundary(
   train_set=indicators_train_df,
+  features=indicators_train_df.columns, # TODO: eventualmente usare solo le numeriche
   train_label=true_labels_train,
   classifier=best_model,
   classifier_name=clf_name,
@@ -306,18 +314,56 @@ plot_scores_varying_params(
 )
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'n_killed', 'bar')
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'n_killed',
+    'bar',
+    title='n_killed distribution'
+)
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'suicide', 'pie')
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'suicide',
+    'pie',
+    title='suicide distribution'
+)
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'incident_characteristics1', 'pie')
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'incident_characteristics1',
+    'pie',
+    title='incident_characteristics1 distribution'
+)
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'incident_characteristics2', 'pie', pie_perc_threshold=2, figsize=(20, 5))
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'incident_characteristics2',
+    'pie',
+    pie_perc_threshold=2,
+    figsize=(20, 5),
+    title='incident_characteristics2 distribution'
+)
 
 # %%
-plot_distribution_missclassifications(true_labels_test, pred_labels_test, incidents_test_df, 'location_imp', 'hist', bins=5)
+plot_distribution_missclassifications(
+    true_labels_test,
+    pred_labels_test,
+    incidents_test_df,
+    'location_imp',
+    'hist',
+    bins=5,
+    title='location_imp distribution'
+)
 
 
