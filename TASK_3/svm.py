@@ -27,7 +27,7 @@ true_labels_test = true_labels_test_df.values.ravel()
 # load the names of the features to use for the classification task
 features_for_clf = json.loads(open('../data/clf_indicators_names_distance_based.json').read())
 
-# project on the features_to_use
+# project on the features to use
 indicators_train_df = incidents_train_df[features_for_clf]
 indicators_test_df = incidents_test_df[features_for_clf]
 

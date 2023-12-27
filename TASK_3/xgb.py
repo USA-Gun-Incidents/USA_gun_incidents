@@ -23,9 +23,9 @@ true_labels_test_df = pd.read_csv('../data/clf_y_test.csv', index_col=0)
 true_labels_test = true_labels_test_df.values.ravel()
 
 # load the names of the features to use for the classification task
-features_for_clf = json.loads(open('../data/clf_indicators_names_distance_based.json').read())
+features_for_clf = json.loads(open('../data/clf_indicators_names_rule_based.json').read())
 
-# project on the features_to_use
+# project on the features to use
 indicators_train_df = incidents_train_df[features_for_clf]
 indicators_test_df = incidents_test_df[features_for_clf]
 
@@ -55,7 +55,7 @@ cv_train_size = (4/5)*(indicators_train_df.shape[0])
 num_pos_inst = np.unique(true_labels_train, return_counts=True)[1][1]
 num_neg_inst = np.unique(true_labels_train, return_counts=True)[1][0]
 param_grid = {
-    'eta': [0.3],
+    'eta': [0.3], # 0.5'
     'min_child_weight': [1, int(0.01*cv_train_size), int(0.025*cv_train_size), int(0.05*cv_train_size), int(0.1*cv_train_size)],
     'subsample': [0.5, 1],
     'scale_pos_weight': [1, num_neg_inst / num_pos_inst],
