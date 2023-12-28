@@ -149,9 +149,7 @@ pd.DataFrame(
 ).to_csv(f'{RESULTS_DIR}/{clf_name}_preds.csv')
 
 # save the model
-file = open(f'{RESULTS_DIR}/{clf_name}.pkl', 'wb')
-pickle.dump(obj=best_model, file=file)
-file.close()
+best_model.model_.save(f'{RESULTS_DIR}/{clf_name}.h5')
 
 # save the val results
 best_model_val_results = pd.DataFrame(val_results_df.iloc[best_index]).T

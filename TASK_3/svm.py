@@ -235,7 +235,7 @@ display_feature_importances(
     feature_importances=np.abs(svc.coef_[0]),
     axs=axs,
     title='SVM - linear kernel',
-    path=f'{RESULTS_DIR}/svm_linear_feature_importances.csv'
+    path=f'{RESULTS_DIR}/{clf_name}_feature_importances.csv'
 )
 
 # %%
@@ -252,7 +252,7 @@ display_feature_importances(
     axs=axs,
     title='SVM - rbf kernel',
     path=f'{RESULTS_DIR}/svm_rbf_feature_importances.csv'
-)
+) # TODO: questo approccio possiamo usarlo con tutti
 
 # %%
 plot_distribution_missclassifications(
