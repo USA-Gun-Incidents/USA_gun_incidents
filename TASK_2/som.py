@@ -51,8 +51,8 @@ X = minmax_scaler.fit_transform(indicators_df.values)
 
 # %%
 som_params = som_parameters()
-rows = 3
-cols = 3
+rows = 8
+cols = 8
 n_clusters = rows*cols
 structure = type_conn.grid_four
 network = som(rows, cols, structure, som_params)
@@ -80,7 +80,7 @@ clusters = np.array(incidents_df['cluster'].astype(int))
 
 # %%
 fig, axs = plt.subplots(1, figsize=(6,4))
-award_mtx = np.array(network._award).reshape(network._rows, network._cols)
+award_mtx = np.array(network.awards).reshape(network._rows, network._cols)
 sns.heatmap(award_mtx, annot=True, ax=axs, fmt='.0f')
 axs.set_xticks([])
 axs.set_yticks([])
@@ -209,7 +209,7 @@ network.show_distance_matrix()
 # %%
 pca = PCA()
 X_pca = pca.fit_transform(X)
-palette = [sns.color_palette('tab10')[i] for i in range(n_clusters)]
+palette = [sns.color_palette('tab10')[i % len(sns.color_palette('tab10'))] for i in range(n_clusters)]
 scatter_pca_features_by_cluster(
     X_pca=X_pca,
     n_components=6,
@@ -381,6 +381,6 @@ external_score_df = compute_permutation_invariant_external_metrics(
 external_score_df
 
 # %%
-write_clusters_to_csv(clusters, f'./SOM_clusters.csv')
-pd.DataFrame(clustering_scores, index=['SOM']).to_csv(f'./SOM_internal_scores.csv')
-external_score_df.to_csv(f'./SOM_external_scores.csv')
+#write_clusters_to_csv(clusters, f'./SOM_clusters.csv')
+#pd.DataFrame(clustering_scores, index=['SOM']).to_csv(f'./SOM_internal_scores.csv')
+#external_score_df.to_csv(f'./SOM_external_scores.csv')
