@@ -16,7 +16,7 @@ import os
 import seaborn as sns
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-%matplotlib inline
+# %matplotlib inline
 
 # %% [markdown]
 # We load the dataset and reaname some columns:
@@ -41,7 +41,7 @@ dataset_original_columns = incidents_df.columns
 
 # %% [markdown]
 # We compute a set of indicators aimed at highlighting the degree of abnormality of the value of a specific feature of an incident with respect to the values of the same feature in the incidents happened in the same period and/or in the same geographical area. 
-# 
+#
 # The following function computes for each record the ratio between the value of a specific feature in that record and the value of an aggregation function (e.g. sum or mean) applied to the feature restricted to a certain time and space window:
 
 # %%
@@ -58,7 +58,7 @@ def compute_window_ratio_indicator(df, gby, feature, agg_fun, suffix):
 # - as aggregation functions the sum and the mean
 # - as time window the semester of the year or the whole year
 # - as space window the congressional district of the state or the whole state
-# 
+#
 # We chose not to use 'county' or 'city' as space window because not all the records have a value for those features (e.g. incidents happend in rural areas). The values of the congressional districts are instead always present (we have previously inferred the missing ones).
 
 # %%
@@ -134,7 +134,7 @@ plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
 # All the distributions are highly skewed. The indicators about the number of killed people, the number of teens and the number of children have far outliers.
-# 
+#
 # We define a function to apply a logarithmic transformation to a set of features (summing 1% of the minimum value of the feature - excluding 0 - to avoid infinite values):
 
 # %%
@@ -164,7 +164,7 @@ plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
 # As expected the logarithmic transformation reduced the skeweness of the distributions, but outliers are still present.
-# 
+#
 # We visualize the distributions of the indicators computed dividing by the sum:
 
 # %%
@@ -215,16 +215,16 @@ plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
 # We now compute a set of indicators with a similar semantics to those computed above, but using the concept of **surprisal**.
-# 
+#
 # This kind of indicator can also be computed for categorical variables, as well as for a set of variables.
-# 
+#
 # The **surprisal** (also called [Information content](https://en.wikipedia.org/wiki/Information_content)) of an event $E$ 
 # with probability $p(E)$ is defined as $log(1/p(E))$ (or equivalently $-log(p(E))$).
 # Surprisal is inversly related to probability (hence the term $1/p(E)$): when $p(E)$ is close to $1$, the surprisal of the event is low, whereas when $p(E)$ is close to $0$, the surprisal of the event is high.
 # The $log$ gives $0$ surprise when the probability of the event is $1$.
-# 
+#
 # The surprisal is closely related to **entropy**, which is the expected value of the information content of a random variable, thus quantifying how surprising the random variable is "on average".
-# 
+#
 # The following function computes the surprisal of a set of features of an incident w.r.t. the values of the same features in the incidents happened in the same period and/or geographical area:
 
 # %%
@@ -382,18 +382,18 @@ sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coo
 
 # %% [markdown]
 # The two measures of correlation have the following properties:
-# 
+#
 # **Pearson Correlation Coefficient:**
 # - Measures the linear relationship between two continuous variables
 # - Assumes that the variables are approximately normally distributed
 # - Sensitive to outliers
-# 
+#
 # **Spearman Rank Correlation Coefficient:**
 # - Measures the strength and direction of the monotonic relationship between two variables
 # - Does not assume that the variables are normally distributed
 # - Based on the ranks of the data rather than the actual values
 # - Less sensitive to outliers than the Pearson correlation
-# 
+#
 # Despite the differences, in this case they provide similar results.
 
 # %% [markdown]
@@ -424,7 +424,7 @@ sns.heatmap(corr_matrix, annot=True, ax=ax, mask=np.triu(corr_matrix), cmap='coo
 
 # %% [markdown]
 # Higher positive or negative correlations are all due to the semantics of the indicators. Pearson correlation coefficients falls within the range of [-0.43, 0.63], while Spearman correlation coefficients falls within the range of [-0.44, 0.7].
-# 
+#
 # We visualize scatter plots for each pair of indicators:
 
 # %%
@@ -475,7 +475,7 @@ incidents_df[indicators].describe()
 
 # %% [markdown]
 # ## Final Indicators semantics
-# 
+#
 # | Name | Description | Present in the original dataset |
 # | :--: | :---------: | :-----------------------------: |
 # | location_imp | Location importance according to Geopy | No |

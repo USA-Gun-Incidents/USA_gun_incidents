@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # # KMeans clustering of Principal Components
 
 # %% [markdown]
-# we import the libraries
+# We import the libraries
 
 # %%
 import pandas as pd
@@ -29,12 +30,12 @@ import sys
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
 from clustering_utils import *
-%matplotlib inline
+# %matplotlib inline
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 
 # %% [markdown]
-# and we load all the data usefoul for the analysis
+# We load the data:
 
 # %%
 incidents_df = pd.read_csv(
@@ -58,7 +59,7 @@ categorical_features = [
 incidents_df = incidents_df.dropna(subset=features_to_cluster)
 
 # %% [markdown]
-# we select the features we want to use for clustering
+# We select the features to cluster:
 
 # %%
 features_to_cluster_no_coord = features_to_cluster[2:]
@@ -68,7 +69,7 @@ features_to_cluster_no_coord
 incidents_df[features_to_cluster_no_coord].describe()
 
 # %% [markdown]
-# we display the distribution of the selected features 
+# We display the distribution of the selected features:
 
 # %%
 fig, ax = plt.subplots(figsize=(15, 5))
@@ -76,7 +77,7 @@ sns.violinplot(data=incidents_df[features_to_cluster_no_coord],ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
-# in order to obtain meaningful results, we must ensure that there is no feature that presents too high magnitude that outweighs the others, to implement this we normalise all ranges between 0 and 1
+# In order to obtain meaningful results, we must ensure that no feature presents too high magnitude that could overshadow the contributions of others. To implement this we normalize all features between 0 and 1.
 
 # %%
 from sklearn.preprocessing import MinMaxScaler
@@ -84,7 +85,7 @@ scaler_obj = MinMaxScaler()
 normalized_indicators = pd.DataFrame(data=scaler_obj.fit_transform(incidents_df[features_to_cluster_no_coord].values), columns=features_to_cluster_no_coord)
 
 # %% [markdown]
-# the features distribution after the normalization, the shape is untouched but now there are all included in the same range of values
+# We plot the features distribution after the normalization:
 
 # %%
 fig, ax = plt.subplots(figsize=(15, 5))
@@ -95,7 +96,7 @@ plt.xticks(rotation=90, ha='right');
 # ## Computing the PCA decomposition
 
 # %% [markdown]
-# below we use the object PCA and the funtion fit_transform implemented in the [Sklearn](https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html) library to calculate the principal component decomposition of the indicators chosen for clustering
+# We calculate the principal component decomposition of the indicators chosen for clustering:
 
 # %%
 pca = PCA()
@@ -103,7 +104,7 @@ X_pca = pca.fit_transform(normalized_indicators)
 pca_df = pd.DataFrame(index=incidents_df.index)
 
 # %% [markdown]
-# We now expose the records in the new vector space composed of the 2 most relevant eigenvectors, in relations, in relation to the value of an original feature for every original feature
+# We visualize the distribution of the features in the space defined by the first two principal components:
 
 # %%
 nrows=4
@@ -119,10 +120,12 @@ for i, col in enumerate(normalized_indicators.columns):
     axs[row][i % ncols].set_ylabel("2nd eigenvector")
 
 # %% [markdown]
-# we observe correlation between the first and second eigenvector and some original features, in particular:
-# 
-# - the first eighenvector is slightly correlated with 'n_injured_prop' and 'n_arrested_prop'
-# - the second is strictly correlated with 'n_killed_prop'
+# We observe that:
+# - the first PC is correlated with 'n_injured_prop' and 'n_arrested_prop'
+# - the second PC is correlated with 'n_killed_prop'
+
+# %% [markdown]
+# We visualize the distribution of the features in the space defined by the third and fourth principal components:
 
 # %%
 nrows=4
@@ -138,13 +141,12 @@ for i, col in enumerate(normalized_indicators.columns):
     axs[row][i % ncols].set_ylabel("4th eigenvector")
 
 # %% [markdown]
-# Above we have the same plot as before, but taking in to consideration the third and the fourth eigenvector, and here too we observe correlation between the two eigenvector and some original features, in particular:
-# 
-# - the third eighenvector is strongly correlated with 'n_unharmed_prop' and slightly with 'n_arrested_prop', 'n_killed_prop' and 'n_injured_prop'
-# - the fourth is strictly correlated with 'n_teen_prop' and slightly with 'avg_age'
+# We observe that:
+# - the third PC is correlated with 'n_unharmed_prop' and slightly with 'n_arrested_prop', 'n_killed_prop' and 'n_injured_prop'
+# - the fourth PC is correlated with 'n_teen_prop' and slightly with 'avg_age'
 
 # %% [markdown]
-# we display every incident in the vector space formed by the first 3 eigenvectors
+# We display incidents in vector space of the first 3 PC:
 
 # %%
 x = X_pca[:, 0]
@@ -154,7 +156,7 @@ fig = px.scatter_3d(x=x, y=y, z=z, labels={'x': '1st eigenvector', 'y': '3rd eig
 fig.show()
 
 # %% [markdown]
-# Now we want to understand the relevance of each component identified by the PCA, to narrow the clustering down to the most relevant ones, which alone can best approximate the entire dataset, to do this we plot the explained variance of each component, and relate it to the previous one
+# To narrow the number of PC down to the most relevant ones we plot the explained variance of each component, and relate it to the previous one:
 
 # %%
 exp_var_pca = pca.explained_variance_ratio_
@@ -176,8 +178,6 @@ for i, var in enumerate(diff_var):
             plt.axvline(x = i+gap+0.25, color = 'green', linestyle = '-.', alpha=0.5)
     
 print(xtick)
-#xtick = [0,1,2,3,4,5.5,6.5,7.5,8.5,9.5,10.5,12,13,14,15,16,17,18,19,20]
-#diff_var = list(zip(xtick, diff_var))
 xtick.append(xtick[-1]+1.5)
 
 plt.bar(xtick, exp_var_pca, align='center')
@@ -190,7 +190,7 @@ plt.xticks(xtick, range(exp_var_pca.shape[0]))
 plt.legend();
 
 # %% [markdown]
-# Of all the possible divisions identified, the most significant are the third, fourth and fifth, as we cannot afford a high reconstruction error
+# The most significant PC are the third, fourth and fifth
 
 # %%
 def get_reconstruction_error(x_pca, x_orig, pca, n_comp):
@@ -198,7 +198,8 @@ def get_reconstruction_error(x_pca, x_orig, pca, n_comp):
     return pd.DataFrame(index=x_orig.index, data=np.sum((dummy - x_orig.values)**2, axis=1))
 
 # %%
-pca_col = ['1st_comp',
+pca_col = [
+'1st_comp',
  '2nd_comp',
  '3rd_comp',
  '4th_comp',
@@ -214,26 +215,20 @@ pca_col = ['1st_comp',
  '14th_comp',
  '15th_comp',
  '16th_comp',
- '17th_comp']
-
-# %%
+ '17th_comp'
+]
 pca_indicators = pd.DataFrame(index=normalized_indicators.index, data=X_pca, columns=pca_col)
 
 # %% [markdown]
-# we calculate the dataset reconstruction error for the first 8, 10 and 12 components. 
-# 
-# defined as the error between the original dataset and the one generated by using only k components.
+# We calculate the dataset reconstruction error for the first 8, 10 and 12 components:
 
 # %%
 pca_indicators['PCA_rec_error_8C'] = get_reconstruction_error(X_pca, normalized_indicators, pca, 8)
 pca_indicators['PCA_rec_error_10C'] = get_reconstruction_error(X_pca, normalized_indicators, pca, 10)
 pca_indicators['PCA_rec_error_12C'] = get_reconstruction_error(X_pca, normalized_indicators, pca, 12)
 
-# %%
-pca_indicators.sample(3)
-
 # %% [markdown]
-# we display the distribution of the principal components but also the recostruction error calculate before
+# We display the distribution of the principal components and of the reconstruction error:
 
 # %%
 fig, ax = plt.subplots(figsize=(15, 5))
@@ -241,13 +236,13 @@ sns.violinplot(data=pca_indicators,ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
-# we normalize the previous distribution, because we will use this components for the clustering, and we want uniformity between the new features identified
+# We normalize the principal components to apply the clustering algorithm on them:
 
 # %%
 pca_normalized_indicators = pd.DataFrame(data=scaler_obj.fit_transform(pca_indicators.values), columns=pca_indicators.columns)
 
 # %% [markdown]
-# we display the normalized distributions
+# We display the normalized distributions:
 
 # %%
 fig, ax = plt.subplots(figsize=(15, 5))
@@ -255,9 +250,8 @@ sns.violinplot(data=pca_normalized_indicators,ax=ax)
 plt.xticks(rotation=90, ha='right');
 
 # %% [markdown]
-# Ultimately, we choose to use the first 10 components for clustering, because it seems the best compromise between a small number of components but still being able to approximate the original features well.
-# 
-# Below we can see the reconstruction error generated by these 10 components, and we can see that it is quite uniform and close to zero
+# We will use the first 10 components, striking a balance between minimizing the number of components and mitigating the reconstruction error.
+# Indeed, as shown below, the reconstruction error generated by these 10 components is quite uniform and close to zero:
 
 # %%
 hist_box_plot(
@@ -339,9 +333,7 @@ kmeans_params = {'init': INIT_METHOD, 'n_init': N_INIT, 'max_iter': MAX_ITER, 'r
 apply_k_elbow_method(X=X, kmeans_params=kmeans_params, metric='SSE', start_k=1, max_k=[10, 20, 30])
 
 # %% [markdown]
-# The elbow method identifies k=4, k=6 as best possible values of k.
-# 
-# At both points found we can see a large decrease in the rate of decrease, and being very close to each other we can say that the features chosen are also uniform in this aspect.
+# The elbow method identifies k=4 and k=6 as best possible values of k. For both values of k the elbow is evident.
 
 # %%
 best_k = [4, 6]
@@ -353,10 +345,7 @@ best_k = [4, 6]
 apply_k_elbow_method(X=X, kmeans_params=kmeans_params, metric='silhouette', start_k=2, max_k=[15], plot_elbow=False)
 
 # %% [markdown]
-# The curve generated above is not monotonic, like the previous one, in fact there are several local maxima at k equals to 4, 6, 8, 12 and 14, and probably if we increase k we will find other local and maybe global maxima, but having too many clusters is not positive.
-# 
-# we chose, using this score, k equals to 4, 8, 12, and 14 but keep in mind that k = 4 is the global maxima
-
+# The curve generated above is not monotonic. Indeed there are several local maxima (for k equals to 4, 6, 8, 12 and 14).
 # %%
 best_k += [4, 8, 12, 14]
 
@@ -367,7 +356,7 @@ best_k += [4, 8, 12, 14]
 apply_k_elbow_method(X=X, kmeans_params=kmeans_params, metric='calinski_harabasz', start_k=2, max_k=[15], plot_elbow=False)
 
 # %% [markdown]
-# In the graph above, the best value of k is clear, as there is a single clear global maximum with k=4
+# There is a single global maximum at k=4.
 
 # %%
 best_k += [4]
@@ -375,7 +364,7 @@ best_k = sorted(list(set(best_k)))
 best_k
 
 # %% [markdown]
-# To identify the best value of k we also apply the X-means algorithm from the library [pyclustering](https://github.com/annoviko/pyclustering/), which is a variation of the k-means algorithm that should automatically find the best value of k. The algorithm starts with k=2 and then it iteratively splits the clusters until a score does not improve anymore. The implementation we will use supports both the BIC score (Bayesian Information Criterion) and the Minimum Noiseless Descriptionlength score (MDL):
+# To identify the best value of k we also apply the X-means algorithm from the library [pyclustering](https://github.com/annoviko/pyclustering/), which is a variant of the k-means algorithm that should automatically find the best value of k. The algorithm starts with k=2 and then it iteratively splits the clusters until a score does not improve anymore. The implementation we will use supports both the BIC score (Bayesian Information Criterion) and the Minimum Noiseless Descriptionlength score (MDL):
 
 # %%
 initial_centers = kmeans_plusplus_initializer(data=X, amount_centers=1, random_state=RANDOM_STATE).initialize()
@@ -403,7 +392,7 @@ n_xmeans_MDL_clusters = len(xmeans_MDL_instance.get_clusters())
 print(f'Number of clusters found by xmeans using MDL score and setting the maximum number of clusters to {MAX_K}: {n_xmeans_MDL_clusters}')
 
 # %% [markdown]
-# X-means terminates with k equal to the maximum number of clusters allowed (30 in our case). This means that the score always improved when splitting the clusters. It is not possible to clearly identify a best K-value using this criteria, as the best k imposes too many clusters for these to remain relevant.
+# X-means terminates with k equal to the maximum number of clusters allowed (30 in our case). This means that the score always improved when splitting the clusters.
 
 # %% [markdown]
 # To choose the best value of k among the ones identified by the elbow method, we will compute other metrics to evaluate the quality of the clustering. The following function fits the k-means algorithm with a given set of parameters and computes the following metrics:
@@ -450,9 +439,8 @@ results_df.drop(columns=['model'])
 
 # %% [markdown]
 # We observe that:
-# - SSE is best for k=4, but this metric is expected to decrease increasing the number of clusters
-# - BSS is best for k=14, but this metric is inversely proportional to the previous one
-# - Davies-Bouldin score is best for k=14
+# - SSE and BSS are best for k=14, but these metric are expected to improve while increasing the number of clusters
+# - Davies-Bouldin score is best for k=4
 # - Calinski-Harabasz score is best for k=4 by a large margin
 # - Silhouette score is best for k=4
 
@@ -460,11 +448,17 @@ results_df.drop(columns=['model'])
 best_k = [4, 14]
 best_k
 
+# %% [markdown]
+# We visualize the size of the clusters with the best values of k:
+
 # %%
 fig, axs = plt.subplots(nrows=1, ncols=len(best_k), figsize=(25,5))
 for i in range(len(best_k)):
     k = best_k[i]
     plot_clusters_size(clusters=results[f'{k}_means']['model'].labels_, ax=axs[i], title=f'{best_k[i]}-Means clusters size', color_palette=sns.color_palette('tab10'))
+
+# %% [markdown]
+# We visualize the silhouette score for each point with the best values of k:
 
 # %%
 fig, axs = plt.subplots(nrows=1, ncols=len(best_k), figsize=(30,10), sharey=True)
@@ -482,19 +476,17 @@ for i in range(len(best_k)):
     )
 
 # %% [markdown]
-# For both the two best k values identified (4 and 14), the resulting clusters are well-balanced and evenly divide the records. The difference between the quantity of records in the largest and smallest clusters is similar between the two solutions.
-# 
-# For k=4, we can observe fewer data points with negative silhouettes. However, for k=14, they are generally more frequent, especially within the smaller-sized clusters.
-# 
-# In conclusion, both solutions have their pros and cons and theoretically could be acceptable, but we prefer the solution with k=4 because, being equal in terms of correctness and efficacy, having a smaller number of clusters makes their understanding simpler and more effective, and according to Occam's razor, the simplest solution, when equally effective, is the best one.
-# 
-# For this reason, future analyses will be conducted based on k=4.
+# For both values of k the resulting clusters are well-balanced. The difference between the number of points in the largest and in the smallest cluster is similar in the two solutions.
+#
+# For k=4, we observe fewer data points with negative silhouettes. While, for k=14, more points have a negative silhouette score, especially those in the smaller-sized clusters.
+#
+# We will use k=4 because a smaller number of clusters makes their understanding simpler and more effective, and according to Occam's razor, the simplest solution is the best one.
 
 # %% [markdown]
 # ## Characterization of the clusters
 
 # %% [markdown]
-# Chosen k, now we initialize the centroids with the final centroids computed by BisectingKMeans and then use the same procedure used before to compute the best kmeans clusterization we can.
+# We initialize the centroids with the final centroids computed by BisectingKMeans.
 
 # %%
 chosen_k = 4
@@ -507,9 +499,9 @@ kmeans_params['n_init'] = 1
 kmeans_params['init'] = bisect_kmeans.cluster_centers_
 final_result = fit_kmeans(X=X, params=kmeans_params)
 
-incidents_df['cluster'] = clusters
 kmeans = final_result['model']
 clusters = kmeans.labels_
+incidents_df['cluster'] = clusters
 centroids = kmeans.cluster_centers_
 
 # %%
@@ -527,18 +519,16 @@ plt.legend(fontsize=10)
 plt.title(f'Centroids of {chosen_k}-means clusters');
 
 # %% [markdown]
-# We observe that, as expected, the first components are the ones that most characterize the centroids of the identified clusters, with diversity decreasing as we move through the principal components used.
-# 
-# We can now appreciate the initial choice of not using all the PCA components but only a subset of the most relevant ones, as the subsequent ones would have little influence on the result.
-# 
-# Let's remember that the first 3 principal components derived from PCA were correlated to the original features:
+# We observe that, as expected, the first components are the ones that most characterize the centroids of the clusters. Diversity decreases as moving through the principal components.
+#
+# We remind that the 3 principal components were correlated to the following features:
 # - 'n_arrested_prop'
 # - 'n_killed_prop'
 # - 'n_injured_prop'
 # - 'n_unharmed_prop'
 # - 'n_teen_prop'
-# 
-# So, we expect that the identified clusters primarily differ in these 4 features.
+#
+# For this reason, we expect that the clusters primarily differ in these 4 features.
 
 # %% [markdown]
 # We visualize the same information using a interactive radar plot:
@@ -563,14 +553,14 @@ def plot_spider(points, features, title=None, palette=sns.color_palette(), save=
 plot_spider(points=centroids, features=clustered_components, title=f'Centroids of {chosen_k}-means clusters', palette=sns.color_palette('tab10'))
 
 # %% [markdown]
-# we create the function to convert back the centroid in the original features space
+# We define a function to convert back the centroid in the original feature space:
 
 # %%
 def inverse_trasform_k_comp(x_pca, pca, n_comp):
     return np.matmul(x_pca[:,:n_comp], pca.components_[:n_comp,:]) + pca.mean_
 
 # %% [markdown]
-# and now we create the same two graphs with the inverse transformation of the centroids 
+# We plot again the centroids in the original feature space:
 
 # %%
 transformed_centroids = inverse_trasform_k_comp(centroids, pca, 10)
@@ -587,28 +577,24 @@ plt.legend(fontsize=10)
 plt.title(f'Centroids of {k}-means clusters');
 
 # %% [markdown]
-# Here we can observe a strange aspect of the centroids, namely that three of them have the value 'n_arrested_prop' less than zero, although this value always represents a proportion greater than zero. As a result of some tests condicted it turned out that the most important principal components had the same negative value and that due to the reconstruction error derived from using only the first 10 this value remains negative.
-# 
-# Ultimately, we can see what we had predicted, with clusters divided mainly into the components mentioned above, and we also note some obvious diversification in the features:
-# 
+# We observe that the negative values of the attribute n_arrested_prop (that should always be positive) is due to the reconstruction error.
+#
+# Clusters differ also in the following features:
+#
 # - 'avg_age'
 # - 'suprisal_n_males'
 # - 'suprisal_characteristics'
-# 
-# From the graphs above, we can say that the first 3 clusters (0, 1 and 2) are identified with each other as:
-# - 0: the cluster presenting the accidents in which many of the participants were unharmed
-# - 1: the cluster presenting the accidents in which many of the participants were killed
-# - 2: the cluster presenting the incidents in which many of the participants were injured but not killed 
-# 
-# For the last cluster, we note that it differs greatly from the previous ones in that it has a higher 'n_arrested_prop' quantity and a low value for all three features that distinguish the previous ones.
-# 
-# We note a slightly higher-than-average value for cluster 2 in the 'n_teen_prop' feature
-# 
+#
+# Cluster 0 groups incidents with an high number of unharmed people.
+# Cluster 1 groups incidents with an high number of killed people.
+# Cluster 2 groups incidents with an high number of injured people (and a slightly higher-than-average value of number of teens).
+# Cluster 3 groups incidents with an high number of arrested people and a low number of unharmed people, killed people and injured people.
+#
 
 # %% [markdown]
-# For the sake of showing it below we see the main components defined by the PCA, whose co-ordinates of each record were used for clustering, in relation to the original features.
-# 
-# 
+# We also visualize the values of the principal components in the original feature space:
+#
+#
 
 # %%
 plot_spider(points=pca.components_[:10], features=features_to_cluster_no_coord, title=f'Centroids of {chosen_k}-means clusters', palette=sns.color_palette('tab10'))
@@ -619,18 +605,17 @@ plt.tick_params(axis='both', which='major', labelsize=10)
 plt.xticks(range(0, len(features_to_cluster_no_coord)), features_to_cluster_no_coord, rotation=90)
 plt.title(f'Centroids of {chosen_k}-means clusters');
 
-# %% [markdown]
-# However, it is difficult to make any assumptions as a result of this graph
-
 # %%
-most_identifying_columns = ['avg_age',
- 'n_killed_prop',
- 'n_injured_prop',
- 'n_unharmed_prop',
- 'n_males_prop',
- 'surprisal_n_males',
- 'n_arrested_prop',
- 'surprisal_day']
+most_identifying_columns = [
+    'avg_age',
+    'n_killed_prop',
+    'n_injured_prop',
+    'n_unharmed_prop',
+    'n_males_prop',
+    'surprisal_n_males',
+    'n_arrested_prop',
+    'surprisal_day'
+]
 
 # %% [markdown]
 # ## Distribution of variables within the 4 clusters
@@ -649,7 +634,7 @@ plot_scattermap_plotly(
 ).show()
 
 # %% [markdown]
-# Incidents are not clustered according to their geographical location, all clusters are evenly distributed, even in areas with fewer incidents like Hawaii or Alaska.
+# Incidents are not clustered according to their geographical location. All clusters are evenly distributed, even in areas with fewer incidents like Hawaii or Alaska.
 
 # %% [markdown]
 # Now we inspect the distribution of categorical features within the clusters:
@@ -658,9 +643,8 @@ plot_scattermap_plotly(
 plot_bars_by_cluster(df=incidents_df, feature='year', cluster_column='cluster')
 
 # %% [markdown]
-# For clusters 1 and 2, the distribution of the year of the incident respects that of the entire dataset, but for cluster 0 and 3 we notice some differences.
-# 
-# These differences can be seen in the presence of incidents occurring in 2014, which are scarcely present in cluster 3 and very present in cluster 0. It is currently difficult to understand the reason for the disproportionality, but it could mean a higher presence of an incident type represented in cluster 0 in that year, as we have already studied how the date does not correlate with any other feature directly
+# For clusters 1 and 2, the distribution of the year of the incident is in line with that of the entire dataset.
+# Cluster 3 groups fewer incidents happened in 2014, while cluster 0 groups more incidents happened in 2014.
 
 # %%
 incidents_df.loc[incidents_df['year']==2014.0].describe()[features_to_cluster_no_coord]
@@ -675,15 +659,13 @@ incidents_df.loc[incidents_df['year']>2014.0].describe()[features_to_cluster_no_
 # | >2014 | 1.774 | 0.384 / 0.216 | 0.102 / 0.001 |
 
 # %% [markdown]
-# As theorised, we note that in 2014, the average number of arrestees is 0.06 and the proportion between the average number of arrestees and participants is 0.03, whereas in subsequent years the two values are much higher and correspond to 0.38 and 0.21.
-# 
-# For the number of uninjured participants, on the other hand, is the opposite of the expected result.
+# In 2014, the average number of arrests is 0.06 and the proportion between the average number of arrestees and participants is 0.03, whereas in subsequent years the two values are higher (0.38 and 0.21 respectively).
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='party', cluster_column='cluster')
 
 # %% [markdown]
-# All clusters respect the distribution except for cluster 3, we can theorise that in incidents occurring in republican states, the number of arrests tends to be higher, perhaps as a result of differences in laws.
+# In cluster 3 - characterized by the highest value of n_arrestes_prop - the proportion of incidents happened in Republican states is higher than those happened in Democratic states. This is probably due to variations in the law enforcement policies.
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='firearm', cluster_column='cluster')
@@ -696,26 +678,25 @@ dummy_df
 
 
 # %% [markdown]
-# Almost all incidents that did not involve firearms are included in the cluster with the highest number of uninjured participants. Very interesting information and yet more proof of the lethality of firearms, which therefore cause more injuries and deaths.
-# The cluster 3, identifiable by generally low values of killed, injured, and unharmed individuals, and high values of arrests, includes these incidents.
+# Almost all incidents that did not involve firearms belong the cluster with the highest number of unharmed.
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='shots', cluster_column='cluster')
 
 # %% [markdown]
-# The vast majority of incidents within clusters 1 and 2 are characterized by firearm shots and are the incidents that respectively caused the most killed and injured. Cluster 3 shows a slight disproportion in favor of the absence of the tag.
+# The vast majority of incidents within clusters 1 and 2 are shooting incidents and are the incidents that mostly caused deaths and injuries. Cluster 3 groups less shooting incidents.
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='aggression', cluster_column='cluster')
 
 # %% [markdown]
-# As expected, cluster 3 predominantly comprises non-aggression incidents, while cluster 2, on the contrary, almost entirely comprises incidents tagged as 'aggression'. Cluster 0 shows no differences compared to the general distribution, as if the tag were not influential. Strangely, in cluster 1, identified with the highest number of deaths among participants, it presents the largest difference between aggression and non-aggression incidents. This implies that the majority of aggressions do not result in fatalities and do result in injured.
+# As expected, cluster 3 mainly comprises non-aggressive incidents, while cluster 2, almost entirely comprises aggressive incidents. The distribution of aggressions in cluster 0 is similar to the distribution in the whole dataset. Cluster 1, identified with the highest number of killed people, exhibits the largest difference between the number of aggressive and non-aggression incidents.
 
 # %%
 incidents_df.groupby('aggression').describe()[['n_killed_prop', 'n_injured_prop', 'n_arrested_prop']]
 
 # %% [markdown]
-# As we were saying, we notice the difference in the average of fatalities, which increases to 0.415 when the tag is present and drops to 0.065 when it's not.
+# The average number of deaths increases to 0.415 for aggressive incidents and drops to 0.065 for non aggressive incidents.
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='suicide', cluster_column='cluster')
@@ -727,7 +708,7 @@ dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
 dummy_df
 
 # %% [markdown]
-# While it is obvious, It is mandatory to state that suicides are almost entirely contained within cluster 1. It's also quite unexpected to find some instances of suicide in the other clusters.
+# Suicides are almost entirely contained within cluster 1.
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='injuries', cluster_column='cluster')
@@ -739,7 +720,7 @@ dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
 dummy_df
 
 # %% [markdown]
-# Here we can observe the most marked characterization of cluster 2, as it's entirely composed of incidents classified with the 'injuries' tag, indicating incidents that have resulted in injuries. Additionally, we notice how these mentioned incidents are less prevalent in cluster 1. Half of the incidents not classified as 'injuries' are contained within cluster 3, with the remainder evenly divided between clusters 0 and 1.
+# Cluster 2 mainly groups incidents involving injuries. Cluster 1 presents a lower number of incidents involving injuries. Half of the incidents not involving injuries are in cluster 3, the other half are evenly distributed between clusters 0 and 1.
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='death', cluster_column='cluster')
@@ -751,7 +732,7 @@ dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
 dummy_df
 
 # %% [markdown]
-# Here we can observe the most marked characterization of cluster 1, as it's entirely composed of incidents classified with the 'death' tag, indicating incidents that have resulted deaths. We also notice a negligible presence of these incidents in cluster 2.
+# Cluster 1 mainly groups mortal incidents. Some mortal incidents are also in cluster 2.
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='illegal_holding', cluster_column='cluster')
@@ -763,8 +744,7 @@ dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
 dummy_df
 
 # %% [markdown]
-# In clusters 1 and 2, we have a minimal presence of incidents tagged as 'illegal_holding', which are instead present in clusters 0 and 3.
-# We can observe that incidents where firearms were identified or seized for illegal possession did not result in injuries or fatalities. It's likely that a confrontation did not even occur.
+# In clusters 1 and 2, few incidents are tagged as 'illegal_holding'. Incidents exhibiting this tag are mainly grouped in clusters 0 and 3 (most of them did not result in injuries or deaths).
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='house', cluster_column='cluster')
@@ -774,9 +754,6 @@ dummy_df = incidents_df[
     (incidents_df['house']==True)]['cluster'].value_counts().to_frame()
 dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
 dummy_df
-
-# %% [markdown]
-# The same considerations we made previously apply to this tag as well, although in this case, it's more challenging to understand the reason behind it.
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='school', cluster_column='cluster')
@@ -788,10 +765,8 @@ dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
 dummy_df
 
 # %% [markdown]
-# Here, we can observe that incidents that occurred in schools have, on average, resulted in many arrests, many unharmed individuals, and few injured or deceased. Contrary to what one might think, incidents that occurred in schools don't only involve the well-known 'school shootings', the majority of them involve few participants and a peaceful resolution of the event.
+# We observe that incidents that occurred in schools have, on average, resulted in many arrest. The majority of them involve few participants and a peaceful resolution of the event.
 
-# %% [markdown]
-# Most of the incidents involving children are in cluster 8 - the one having the highest value of n_child_prop. Some of them are in cluster 6 - the one with the highest value of age_range.
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='drugs', cluster_column='cluster')
@@ -803,19 +778,19 @@ dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
 dummy_df
 
 # %% [markdown]
-# Even in this scenario, drugs don't entirely define the incidents across the clusters, but there's a notable distinction with cluster 3 compared to the others. This leads to the assumption that incidents involving illegal drug possession often have peaceful resolutions, frequently involving arrests by law enforcement.
+# Cluster 3 groups most of the incidents involving drugs. This means that these incidents often have peaceful resolutions and frequently involve arrests.
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='officers', cluster_column='cluster')
 
 # %% [markdown]
-# Here, we observe that the presence of officers, denoted by the 'officers' tag, in the incident leads to a higher number of arrests.
+# Incidents involving officers exhibit higher numbers of arrests.
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='workplace', cluster_column='cluster')
 
 # %% [markdown]
-# Similarly to the 'school' tag, the 'workplace' tag is more characteristic of clusters 3 and 0. Based on this conclusion, we can assert that, generally, incidents that occur inside buildings tend to conclude peacefully, often resulting in arrests.
+# Incidents happened at workplace are mainly grouped in clusters 0 and 3. Generally, these incidents conclude peacefully and often result in arrests.
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='defensive', cluster_column='cluster')
@@ -827,10 +802,10 @@ dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
 dummy_df
 
 # %% [markdown]
-# The majority of incidents identified as 'defensive' are included in cluster 0, which identifies a higher quantity of unharmed participants compared to the total and the other two categories.
+# The majority of incidents identified as 'defensive' are included in cluster 0 (the cluster with higher numbers of unharmed).
 
 # %% [markdown]
-# Below, we visualize the identified clusters projected onto two of the most influential dimensions in the clustering, which are the following:
+# We visualize the identified clusters projected onto the most influential dimensions in the clustering, i.e.:
 # - 'n_teen_prop'
 # - 'surprisal_age_groups'
 # - 'n_killed_prop'
@@ -855,7 +830,7 @@ scatter_by_cluster(
 plt.tight_layout()
 
 # %% [markdown]
-# Below, we visualize the identified clusters in the space of the first 6 components of PCA. We can observe that the first principal components better differentiate the 4 clusters.
+# We visualize the clusters in the space of the first 6 components of PCA. As expected the first principal components better separate the 4 clusters.
 
 # %%
 palette = [sns.color_palette('tab10')[i] for i in range(chosen_k)]
@@ -869,7 +844,7 @@ scatter_pca_features_by_cluster(
 )
 
 # %% [markdown]
-# Below, we can observe the distributions of the features used for clustering, along with the coordinates for each identified cluster. By observing these, it's possible to confirm the statements made so far.
+# We plot the distributions of the features used for clustering.
 
 # %%
 for feature in features_to_cluster:
@@ -883,7 +858,14 @@ for feature in features_to_cluster:
     )
 
 # %% [markdown]
-# The only additional insight we can draw from these graphs is that for incidents included in cluster 2, the variability of incident tags is lower than in the other clusters. This is highlighted by the distribution of 'suprisal_characterstics', which peaks around x = 1, indicating lower overall entropy.
+# These plots confirm the observations made so far. We observe that in cluster 2, the value of 'suprisal_charactestic' is lower than in the other clusters.
+
+# %% [markdown]
+# ## Evaluation of the clustering results
+# ### Internal indices
+
+# %% [markdown]
+# We compute the sum of squared error for each separate feature:
 
 # %%
 sse_feature = []
@@ -901,7 +883,7 @@ plt.xlabel('Feature')
 plt.title('SSE per feature')
 
 # %% [markdown]
-# ## Evaluation of the clustering results
+# We compute and plot the silhouette score for each point:
 
 # %%
 fig, axs = plt.subplots(1, figsize=(8,5))
@@ -915,6 +897,9 @@ plot_scores_per_point(
     minx=-0.02
 )
 
+# %% [markdown]
+# As already observed, few points have a negative silhouette score. Cluster 0 has lower silhouette scores than the other clusters.
+
 # %%
 # print top 5 points with highest SSE
 se_per_point = compute_se_per_point(X=X, clusters=clusters, centroids=centroids)
@@ -926,36 +911,31 @@ incidents_df.iloc[indices_of_top_contributors]
 
 # %% [markdown]
 # The number of participants contributes a lot to the SSE.
-
-# %%
-scatter_pca_features_by_score(
-    X_pca=X_pca,
-    clusters=incidents_df['cluster'],
-    x_component=1,
-    y_component=2,
-    score_per_point=silhouette_per_point,
-    score_name='Silhouette score',
-    cmaps=['Blues', 'Oranges', 'Greens', 'Reds', 'Purples', 'YlOrBr', 'PuRd', 'Greys', 'Wistia', 'GnBu'],
-    figsize=(40, 8)
-)
+#
+# To evaluate the separation we also display an embedding of the cluster centers in 2 dimensions, using the implementation of [Yellowbrick](https://www.scikit-yb.org/en/latest/index.html):
 
 # %%
 visualizer = InterclusterDistance(kmeans)
 visualizer.fit(X)
 visualizer.show();
 
+# %% [markdown]
+# Clusters are well separated.
+#
+# We now compute cohesion (SSE) and separation (BSS) for each cluster and visualize it:
+
 # %%
 # compute cohesion for each cluster
 se_per_cluster = np.zeros(chosen_k)
 sizes = np.ones(centroids.shape[0])
 for i in range(chosen_k):
-    se_per_cluster[i] = np.sum(se_per_point[np.where(clusters == i)[0]])/sizes[i] # TODO: weigthed (or not?)
+    se_per_cluster[i] = np.sum(se_per_point[np.where(clusters == i)[0]])/sizes[i]
 # compute separation for each cluster
-bss_per_cluster = compute_bss_per_cluster(X, clusters, centroids, weighted=True) # TODO: weigthed (or not?)
+bss_per_cluster = compute_bss_per_cluster(X, clusters, centroids, weighted=True)
 # compute average silhouette score for each cluster
 silhouette_per_cluster = np.zeros(chosen_k)
 for i in range(chosen_k):
-    silhouette_per_cluster[i] = silhouette_per_point[np.where(clusters == i)[0]].mean() # TODO: already weighted
+    silhouette_per_cluster[i] = silhouette_per_point[np.where(clusters == i)[0]].mean()
 
 # visualize the result
 fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(20,5))
@@ -977,14 +957,20 @@ for i in range(3):
 
 plt.suptitle('Cohesion and separation measures for each cluster', fontweight='bold')
 
+# %% [markdown]
+# Cluster 1 is the less cohesive, cluster 2 is the best separated.
+
+# %% [markdown]
+# We visualize the distance matrix sorted by cluster computed on a stratified subsample of 5000 points:
+
 # %%
 dm, idm = plot_distance_matrices(X=X, n_samples=5000, clusters=clusters, random_state=RANDOM_STATE)
 
 # %% [markdown]
 # The pearson correlation coefficient between the two matrix is 0.64. Indeed, the matrix has a sharp block diagonal structure, meaning that clusters are well separated.
-# 
+#
 # ### External indices
-# 
+#
 # We measure the extent to which the discovered clustering structure matches some categorical features of the dataset, using the following permutation invariant scores:
 # - **Adjusted rand score**: this score computes a similarity measure between two clusterings by considering all pairs of samples and counting pairs that are assigned in the same or different clusters in the predicted and true clusterings. It is 0 for random labeling, 1.0 when the clusterings are identical and is bounded below by -0.5 for especially discordant clusterings.
 # - **Normalized mutual information**: is a normalization of the Mutual Information (MI) score to scale the results between 0 (no mutual information) and 1 (perfect correlation). Mutual Information is a function that measures the agreement of the two assignments, ignoring permutations.
@@ -994,32 +980,21 @@ dm, idm = plot_distance_matrices(X=X, n_samples=5000, clusters=clusters, random_
 # %%
 incidents_df['unharmed'] = incidents_df['n_unharmed'] > 0
 incidents_df['arrested'] = incidents_df['n_arrested'] > 0
+incidents_df['males'] = incidents_df['n_males'] > 0
+incidents_df['females'] = incidents_df['n_females'] > 0
 external_score = compute_permutation_invariant_external_metrics(
     incidents_df,
     'cluster',
-    ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested']
+    ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested', 'males', 'females']
 )
 external_score
+
+# %% [markdown]
+# The categories that best matche the clustering are 'unharmed' and 'arrested'. The most homogeneous category is 'unharmed'. However, completeness is quite low for all the categories.
 
 # %%
 incidents_df['cluster'].to_csv(f'../data/clustering_labels/{chosen_k}-Means_PCA_clusters.csv')
 external_score.to_csv(f'../data/clustering_labels/{chosen_k}-Means_PCA_external_scores.csv')
 pd.DataFrame(final_result, index=['4means PCA']).T.to_csv(f'../data/clustering_labels/{chosen_k}-Means_PCA_internal_scores.csv')
-
-# %% [markdown]
-# ## Final considerations 
-# 
-# After studying the clustering algorithm's behavior with various 'k' values identified through different scores, it was possible to apply k-means with 'k = 4' to the PCA decomposition of the selected features for clustering, yielding good results.
-# 
-# The identified clusters distinguish themselves well from each other, especially concerning some original features such as:
-# - 'n_arrested_prop'
-# - 'n_killed_prop'
-# - 'n_injured_prop'
-# - 'n_unharmed_prop'
-# - 'n_teen_prop'
-# 
-# Furthermore, it was possible to observe the divergence of the clusters, although not overly pronounced, concerning the remaining features used in clustering. It was then feasible to confirm this diversification through a meticulous study correlating the clustering results with all the original categorical features in the dataframe, particularly with the tags. 
-# 
-# Finally, we can consider ourselves satisfied with the scores achieved by the clustering, as they are not optimal but good, as observable from the correlation matrix.
 
 

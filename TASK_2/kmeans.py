@@ -1,10 +1,12 @@
-# -*- coding: utf-8 -*-
 # %% [markdown]
+# **Data mining Project - University of Pisa, acedemic year 2023/24**
+#  
+# **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
+# 
 # # K-Means clustering
-
-# %% [markdown]
-# K-means clustering is simple and efficient partitional clustering algorithm. It starts from k initial centroids (where k is a user-specified parameter) and operates by iteratively assigning each data point to the cluster whose centroid is closest according to a specific distance metric (typically the euclidean distance). Centroids are updated at the end of each iteration based on the newly formed clusters.
-#
+# 
+# K-means clustering is a simple and efficient partitional clustering algorithm. It starts from k initial centroids (where k is a user-specified parameter) and operates by iteratively assigning each data point to the cluster whose centroid is closest according to a specific distance metric (typically the euclidean distance). Centroids are updated at the end of each iteration based on the newly formed clusters.
+# 
 # In this notebook, we will use the K-means algorithm to cluster the incidents dataset using the indicators previously extracted.
 
 # %% [markdown]
@@ -22,17 +24,17 @@ from sklearn.decomposition import PCA
 import plotly.express as px
 import plotly.offline as pyo
 import warnings
-np.warnings = warnings # altrimenti numpy da problemi con pyclustering, TODO: è un problema solo mio?
+np.warnings = warnings
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.metrics import davies_bouldin_score, calinski_harabasz_score, silhouette_score, silhouette_samples
 from sklearn.cluster import KMeans, BisectingKMeans
 from pyclustering.cluster.xmeans import xmeans, splitting_type
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
-from yellowbrick.cluster import KElbowVisualizer
+from yellowbrick.cluster import KElbowVisualizer, InterclusterDistance
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
 from clustering_utils import *
-# %matplotlib inline
+%matplotlib inline
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 
@@ -173,7 +175,7 @@ apply_k_elbow_method(X=X, kmeans_params=kmeans_params, metric='calinski_harabasz
 # The Calinski-Harabasz score is maximum for k=4.
 
 # %% [markdown]
-# To identify the best value of k we also apply the X-means algorithm from the library [pyclustering](https://github.com/annoviko/pyclustering/) X-means is a variation of the k-means algorithm that should automatically find the best value of k. The algorithm starts with k=2 and then it iteratively splits the clusters until a score does not improve anymore. The implementation we will use supports both the BIC score (Bayesian Information Criterion) and the Minimum Noiseless Descriptionlength score (MDL):
+# To identify the best value of k we also apply the X-means algorithm from the library [pyclustering](https://github.com/annoviko/pyclustering/). X-means is a variant of the k-means algorithm that should automatically find the best value of k. The algorithm starts with k=2 and then it iteratively splits the clusters until a score does not improve anymore. The implementation we will use supports both the BIC score (Bayesian Information Criterion) and the Minimum Noiseless Description Length score (MDL):
 
 # %%
 initial_centers = kmeans_plusplus_initializer(data=X, amount_centers=1, random_state=RANDOM_STATE).initialize()
@@ -202,7 +204,7 @@ print(f'Number of clusters found by xmeans using MDL score and setting the maxim
 
 # %% [markdown]
 # X-means terminates with k equal to the maximum number of clusters allowed (30 in our case). This means that the score always improved when splitting the clusters. No value of k is optimal according to these criteria.
-#
+# 
 # To choose the best value of k among the ones identified by the elbow method, we will compute other metrics to evaluate the quality of the clustering. The following function fits the k-means algorithm with a given set of parameters and computes the following metrics:
 # - SSE
 # - BSS (i.e. between-cluster sum of squares; the higher the better)
@@ -247,12 +249,12 @@ results_df.drop(columns=['model'])
 
 # %% [markdown]
 # We observe that:
-# - SSE and BSS are both best for k=7, but these metrics are expected toimprove while increasing the number of clusters
+# - SSE and BSS are both best for k=7, but these metrics are expected to improve while increasing the number of clusters
 # - Davies-Bouldin score is best for k=4
 # - Calinski-Harabasz score is best for k=4
 # - Silhouette score is best for k=4
-#
-#
+# 
+# 
 # We could have also used hierarchical clustering to identify the best value of k. However, because of the high computational cost of hierarchical clustering, we should have used a subset of the data. Furthermore, since the methods we used so far are concordant in identifying k=4 as the best value of k, we decided to conclude the analysis here and use k=4 for the final clustering.
 
 # %%
@@ -289,7 +291,7 @@ plt.title(f'Centroids of {k}-means clusters');
 
 # %% [markdown]
 # We observe that some feature do not vary much between the clusters (i.e. location_imp, surprisal_address_type, age_range, avg_age, surprisal_min_age, n_child_prop, n_males_prop, suprisal_n_males, surprisal_day).
-#
+# 
 # Regarding the centroids, we observe that:
 # - The centroid of cluster 0 has an higher proportion of injured people and teens; the values of surprisal_characteristics and the proportion of arrested people, instead, are lower.
 # - The centroid of cluster 1 has an higher proportion of arrested people.
@@ -373,7 +375,7 @@ plot_bars_by_cluster(df=incidents_df, feature='shots', cluster_column='cluster')
 
 # %% [markdown]
 # In cluster 0 and cluster 2 - those with highest values of n_injured_prop and n_killed_prop - the majority of incidents were shooting incidents (as expected).
-#
+# 
 # In cluster 1 - characterized by the highest value of n_arrestes_prop - the proportion of incidents that did not involved firearms is higher than in the whole dataset
 
 # %%
@@ -414,7 +416,7 @@ plot_bars_by_cluster(df=incidents_df, feature='death', cluster_column='cluster')
 plot_bars_by_cluster(df=incidents_df, feature='illegal_holding', cluster_column='cluster')
 
 # %% [markdown]
-# Cluster 0 and cluster 2 - the one with highest value of n_injured_prop and n_killed_prop and respectively - have fewer incidents in which participants were illegally armed.
+# Cluster 0 and cluster 2 - the one with highest value of n_injured_prop and n_killed_prop respectively - have fewer incidents in which participants were illegally armed.
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='children', cluster_column='cluster')
@@ -422,8 +424,6 @@ plot_bars_by_cluster(df=incidents_df, feature='children', cluster_column='cluste
 # %% [markdown]
 # The distribution of incidents involving children in each cluster is similar to the one in the whole dataset.
 
-# %% [markdown]
-# Most of the incidents involving children are in cluster 8 - the one having the highest value of n_child_prop. Some of them are in cluster 6 - the one with the highest value of age_range.
 
 # %%
 plot_bars_by_cluster(df=incidents_df, feature='drugs', cluster_column='cluster')
@@ -516,7 +516,7 @@ plt.legend();
 
 # %% [markdown]
 # The first 6 components contribute the most to the overall variance in the dataset.
-#
+# 
 # We visualize the clusters in the feature spaces obtained by pairing the first 6 principal components:
 
 # %%
@@ -568,7 +568,7 @@ for feature in features_to_cluster:
 
 # %% [markdown]
 # ## Evaluation of the clustering results
-#
+# 
 # ### Internal indices
 
 # %% [markdown]
@@ -588,7 +588,7 @@ plot_scores_per_point(
 
 # %% [markdown]
 # Few points have a negative silhouette score. The majority of points with a negative silhouette score belong to cluster 3. Also, the majority of points of cluster 3 have a silhouette score below the average.
-#
+# 
 # Now we color in black points with a negative silhouette score in the principal component feature space:
 
 # %%
@@ -625,7 +625,7 @@ scatter_pca_features_by_score(
 
 # %% [markdown]
 # In the feature space of the first two principal components, points from cluster 1 are not well separated by their sihlouette score.
-#
+# 
 # We plot now the first and third principal components:
 
 # %%
@@ -642,7 +642,7 @@ scatter_pca_features_by_score(
 
 # %% [markdown]
 # In this feature space none of the clusters are well separated by their sihlouette score.
-#
+# 
 # We finally plot the first and third principal components:
 
 # %%
@@ -679,11 +679,11 @@ plt.title('SSE per feature');
 
 # %% [markdown]
 # The features that contribute the most to the SSE are n_males_prop and n_teen_prop. The feature that contributes less is n_participants.
-#
+# 
 # We now compute the SSE for each point and display the 5 points with highest SSE.
 
 # %%
-se_per_point = compute_se_per_point(X=X, clusters=clusters, centroids=centroids) # TODO:??
+se_per_point = compute_se_per_point(X=X, clusters=clusters, centroids=centroids)
 indices_of_top_contributors = np.argsort(se_per_point)[-5:]
 incidents_df.iloc[indices_of_top_contributors]
 
@@ -706,12 +706,6 @@ plot_scores_per_point(
 
 # %% [markdown]
 # Points with the highest SSE are in cluster 0. SSE in cluster 3 (the cluster containing points with negative silhouette score) is not higher than in the other clusters.
-
-# %%
-# TODO: capire cosa rappresentano le componenti
-
-# %%
-# TODO: plot con cerchi
 
 # %% [markdown]
 # We now compute cohesion (SSE) and separation (BSS) for each cluster and visualize it:
@@ -750,6 +744,16 @@ plt.suptitle('Cohesion and separation measures for each cluster', fontweight='bo
 
 # %% [markdown]
 # Cluster 0 is the less cohesive but it is the most separated. Cluster 1 is both cohesive and well separated. Cluster 3 is the lowest separated (this was also evident from the silhouette score).
+# 
+# To evaluate the separation we also display an embedding of the cluster centers in 2 dimensions, using the implementation of [Yellowbrick](https://www.scikit-yb.org/en/latest/index.html):
+
+# %%
+visualizer = InterclusterDistance(kmeans)
+visualizer.fit(X)
+visualizer.show()
+
+# %% [markdown]
+# Clusters are well separated.
 
 # %% [markdown]
 # We visualize the distance matrix sorted by cluster computed on a stratified subsample of 5000 points:
@@ -759,11 +763,11 @@ dm, idm = plot_distance_matrices(X=X, n_samples=5000, clusters=clusters, random_
 
 # %% [markdown]
 # The pearson correlation coefficient between the two matrix is 0.62. Indeed, the matrix has a sharp block diagonal structure, meaning that clusters are well separated.
-#
+# 
 # ### External indices
-#
+# 
 # We measure the extent to which the discovered clustering structure matches some categorical features of the dataset, using the following permutation invariant scores:
-# - **Adjusted rand score**: this score computes a similarity measure between two clusterings by considering all pairs of samples and counting pairs that are assigned in the same or different clusters in the predicted and true clusterings. It is 0 for random labeling, 1.0 when the clusterings are identical and is bounded below by -0.5 for especially discordant clusterings.
+# - **Adjusted rand score**: this score computes a similarity measure between two clusterings by considering all pairs of samples and counting pairs that are assigned in the same or different clusters in the predicted and true clusterings. It is 0.0 for random labeling, 1.0 when the clusterings are identical and is bounded below by -0.5 for especially discordant clusterings.
 # - **Normalized mutual information**: is a normalization of the Mutual Information (MI) score to scale the results between 0 (no mutual information) and 1 (perfect correlation). Mutual Information is a function that measures the agreement of the two assignments, ignoring permutations.
 # - **Homogeneity**: measure the degree to which each cluster contains only members of a single class; it ranges between 0 and 1, with 1 denoting perfectly homogeneous labeling.
 # - **Completeness**: measure the degree to ewhich data points that are members of a given class are also elements of the same cluster; it ranges between 0 and 1, with 1 denoting perfectly complete labeling.
@@ -771,10 +775,12 @@ dm, idm = plot_distance_matrices(X=X, n_samples=5000, clusters=clusters, random_
 # %%
 incidents_df['unharmed'] = incidents_df['n_unharmed'] > 0
 incidents_df['arrested'] = incidents_df['n_arrested'] > 0
+incidents_df['males'] = incidents_df['n_males'] > 0
+incidents_df['females'] = incidents_df['n_females'] > 0
 external_scores_df = compute_permutation_invariant_external_metrics(
     incidents_df,
     'cluster',
-    ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested']
+    ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested', 'males', 'females']
 )
 external_scores_df
 
@@ -785,18 +791,17 @@ external_scores_df
 # We save the clustering labels and scores for later use:
 
 # %%
-write_clusters_to_csv(clusters, f'./{k}-Means_clusters.csv')
-results_df.loc[f'{k}means'].to_csv(f'./{k}-Means_internal_scores.csv')
-external_scores_df.to_csv(f'./{k}-Means_external_scores.csv')
-pd.DataFrame(incidents_df.index).to_csv(f'./{k}-Means_indexes.csv')
+write_clusters_to_csv(clusters, f'../data/clustering_labels/{k}-Means_clusters.csv')
+results_df.loc[f'{k}means'].to_csv(f'../data/clustering_labels/{k}-Means_internal_scores.csv')
+external_scores_df.to_csv(f'../data/clustering_labels/{k}-Means_external_scores.csv')
 
 # %% [markdown]
 # ## Final considerations
-#
+# 
 # Advantages of K-means:
 # - Is computationally efficient and can be used on large datasets (as the one we used); if using the euclidean distance it converges quickly
 # - Is restricted to data for which there is a notion of centroid
-#
+# 
 # Disadvantages:
 # - To run the algorithm the number of clusters must be known a priori
 # - It finds clusters with globular shapes, therefore does not work with clusters of differing sizes or densities
@@ -812,6 +817,6 @@ results_df = pd.DataFrame(results).T
 results_df.drop(columns=['model'])
 
 # %% [markdown]
-# We observe a slight improvement in the Davies-Bouldin score and in the silhouette score. The other metrics do not improve. The repetition of execution with different initializations already addressed the problem of the instability of the results.
+# We observe a slight improvement in the Davies-Bouldin score and in the silhouette score. The other metrics do not improve. The repeated execution with different initializations already addressed the problem of the instability of the results.
 
 
