@@ -561,7 +561,7 @@ incidents_df[indicators_names].describe()
 # We drop incidents having at least a nan indicator:
 
 # %%
-incidents_clf = incidents_df.dropna(subset=indicators_names)
+incidents_clf = incidents_df.dropna(subset=indicators_names).copy()
 incidents_clf.drop_duplicates(subset=indicators_names, inplace=True) # TODO: hanno stessa x, y, data, caratteristiche...
 incidents_nan = incidents_df[incidents_df[indicators_names].isna().any(axis=1)]
 
@@ -619,6 +619,7 @@ incidents_clf[
 # %%
 pca = PCA()
 std_scaler = MinMaxScaler()
+# TODO: scegliere quali visualizzare
 numeric_indicators = ['location_imp', 'x', 'y', 'age_range', 'avg_age', 'n_child_prop', 'n_teen_prop', 'n_males_prop', 'n_participants', 'poverty_perc']
 X_minmax = std_scaler.fit_transform(incidents_clf[numeric_indicators].values)
 X_pca = pca.fit_transform(X_minmax)
