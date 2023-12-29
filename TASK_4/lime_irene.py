@@ -456,6 +456,13 @@ pd.concat([
 # ## Evaluation
 
 # %%
+# load the already computed default values for features
+non_fatal_db_default = pd.read_csv(data_dir+'non_fatal_db_default_features.csv').to_numpy()[0]
+fatal_db_default = pd.read_csv(data_dir+'fatal_db_default_features.csv').to_numpy()[0]
+non_fatal_rb_default = pd.read_csv(data_dir+'non_fatal_rb_default_features.csv').to_numpy()[0]
+fatal_rb_default = pd.read_csv(data_dir+'fatal_rb_default_features.csv').to_numpy()[0]
+
+# %%
 # TODO: assicurarsi di accedere a quelli giusti!
 
 clf_names = [DT, RF] # TODO: da togliere quando li abbiamo tutti
@@ -475,7 +482,17 @@ for clf_name in clf_names:
         prediction = model.predict(samples[i].reshape(1,-1))[0]
         explanation = explainer.explain_instance(samples[i], model.predict_proba, num_features=samples.shape[1], top_labels=1)
         feature_importances = get_lime_feature_importances(explanation, prediction)
-        sample_metric = evaluate_explanation(model, samples[i], feature_importances)
+        if clf_name in rb_clf_names:
+            if prediction == 0:
+                feature_defaults = non_fatal_rb_default
+            else:
+                feature_defaults = fatal_rb_default
+        else:
+            if prediction == 0:
+                feature_defaults = non_fatal_db_default
+            else:
+                feature_defaults = fatal_db_default
+        sample_metric = evaluate_explanation(model, samples[i], feature_importances, feature_defaults)
         clf_metrics[names_to_evaluate[i]] = sample_metric
 
     clf_metrics_df = pd.DataFrame(clf_metrics).T
@@ -518,11 +535,21 @@ for clf_name in clf_names:
         prediction = model.predict(samples[i].reshape(1,-1))[0]
         explanation = explainer.explain_instance(samples[i], model.predict_proba, num_features=samples.shape[1], top_labels=1)
         feature_importances = get_lime_feature_importances(explanation, prediction)
-        sample_metric = evaluate_explanation(model, samples[i], feature_importances) # TODO: warning qui nella faithfulness (forse quando calcola correlazione perchè un array ha std nulla)
+        if clf_name in rb_clf_names:
+            if prediction == 0:
+                feature_defaults = non_fatal_rb_default
+            else:
+                feature_defaults = fatal_rb_default
+        else:
+            if prediction == 0:
+                feature_defaults = non_fatal_db_default
+            else:
+                feature_defaults = fatal_db_default
+        sample_metric = evaluate_explanation(model, samples[i], feature_importances, feature_defaults)
         faithfulness.append(sample_metric['faithfulness'])
         #monotonity.append(sample_metric['monotonity'])
-    clfs_metrics[clf_name]['mean faithfulness'] = np.nanmean(faithfulness) # serve nan per il warning sopra (credo)
-    clfs_metrics[clf_name]['std faithfulness'] = np.nanstd(faithfulness) # serve nan per il warning sopra (credo)
+    clfs_metrics[clf_name]['mean faithfulness'] = np.nanmean(faithfulness)
+    clfs_metrics[clf_name]['std faithfulness'] = np.nanstd(faithfulness)
 
 pd.DataFrame(clfs_metrics)
 

@@ -1,9 +1,8 @@
 import numpy as np
-from aix360.metrics import faithfulness_metric, monotonicity_metric # TODO: provarne altre?
+from aix360.metrics import faithfulness_metric, monotonicity_metric
 
-def evaluate_explanation(model, instance, feature_importances): 
+def evaluate_explanation(model, instance, feature_importances, feature_defaults):
     metrics = {}
-    base = np.zeros(instance.shape[0]) # TODO: valutare
-    metrics['faithfulness'] = faithfulness_metric(model, instance, feature_importances, base)
-    metrics['monotonity'] = monotonicity_metric(model, instance, feature_importances, base)
+    metrics['faithfulness'] = faithfulness_metric(model, instance, feature_importances, feature_defaults)
+    metrics['monotonity'] = monotonicity_metric(model, instance, feature_importances, feature_defaults)
     return metrics
