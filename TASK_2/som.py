@@ -51,8 +51,8 @@ X = minmax_scaler.fit_transform(indicators_df.values)
 
 # %%
 som_params = som_parameters()
-rows = 8
-cols = 8
+rows = 3
+cols = 3
 n_clusters = rows*cols
 structure = type_conn.grid_four
 network = som(rows, cols, structure, som_params)
@@ -381,6 +381,6 @@ external_score_df = compute_permutation_invariant_external_metrics(
 external_score_df
 
 # %%
-#write_clusters_to_csv(clusters, f'./SOM_clusters.csv')
-#pd.DataFrame(clustering_scores, index=['SOM']).to_csv(f'./SOM_internal_scores.csv')
-#external_score_df.to_csv(f'./SOM_external_scores.csv')
+write_clusters_to_csv(clusters, f'./SOM_clusters.csv')
+pd.DataFrame(clustering_scores, index=['SOM']).to_csv(f'./SOM_internal_scores.csv')
+external_score_df.to_csv(f'./SOM_external_scores.csv')
