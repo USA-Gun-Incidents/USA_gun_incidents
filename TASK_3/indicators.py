@@ -765,6 +765,65 @@ train_test_infos['total'] = [X_train.shape[0], X_test.shape[0]]
 pd.DataFrame(train_test_infos, index=['train', 'test'])
 
 # %% [markdown]
+# We write to json files the names of the features to use with distance or rule based classifiers:
+
+# %%
+# distance based features
+features_db = [
+    'location_imp', 'x', 'y',
+    'age_range', 'avg_age', 'n_child_prop', 'n_teen_prop', 
+    'n_males_prop',
+    'n_participants',
+    'day_x', 'day_y', 'day_of_week_x', 'day_of_week_y', 'month_x', 'month_y', 'year', 'days_from_first_incident',
+    'poverty_perc', 'democrat', 'gun_law_rank', 
+    'aggression', 'accidental', 'defensive', 'suicide', 'road', 'house', 'school', 'business', 'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
+]
+with open('../data/clf_indicators_names_distance_based.json', 'w') as f:
+    json.dump(features_db, f)
+
+# rule based features
+features_rb = [
+    'location_imp', 'x', 'y',
+    'age_range', 'avg_age', 'n_child_prop', 'n_teen_prop',
+    'n_males_prop',
+    'n_participants',
+    'day', 'day_of_week', 'month', 'year', 'days_from_first_incident',
+    'poverty_perc', 'democrat', 'gun_law_rank',
+    'aggression', 'accidental', 'defensive', 'suicide', 'road', 'house', 'school', 'business', 'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
+]
+with open('../data/clf_indicators_names_rule_based.json', 'w') as f:
+    json.dump(features_rb, f)
+
+# %% [markdown]
+# We define a function to compute and save the most frequent values for each feature:
+
+# %%
+def save_default_feature_values(df, path):
+    # compute the most frequent value for each feature
+    default = df.agg(lambda x: x.value_counts().index[0])
+    if 'day_of_week_x' in df.columns: # distance based features
+        default_day_of_week_x, default_day_of_week_y = df.groupby(["day_of_week_x", "day_of_week_y"]).size().sort_values(ascending=False).index[0]
+        default['day_of_week_x'] = default_day_of_week_x
+        default['day_of_week_y'] = default_day_of_week_y
+        # TODO: volendo si può raggruppare per day_x, day_y, day_of_week_x, day_of_week_y (giorno dell'anno più frequente)
+        default_day_x, default_day_y = df.groupby(["day_x", "day_y"]).size().sort_values(ascending=False).index[0]
+        default['day_x'] = default_day_x
+        default['day_y'] = default_day_y
+        default_month_x, default_month_y = df.groupby(["month_x", "month_y"]).size().sort_values(ascending=False).index[0]
+        default['month_x'] = default_month_x
+        default['month_y'] = default_month_y
+    default.to_frame().T.to_csv(path, index=False)
+
+# %% [markdown]
+# We apply that function to compute the most frequent values for each feature in fatal and non-fatal incidents:
+
+# %%
+save_default_feature_values(df=X_train[y_train==1][features_rb], path='../data/classification_results/fatal_rb_default_features.csv')
+save_default_feature_values(df=X_train[y_train==0][features_rb], path='../data/classification_results/non_fatal_rb_default_features.csv')
+save_default_feature_values(df=X_train[y_train==1][features_db], path='../data/classification_results/fatal_db_default_features.csv')
+save_default_feature_values(df=X_train[y_train==0][features_db], path='../data/classification_results/non_fatal_db_default_features.csv')
+
+# %% [markdown]
 # TODO: compilare una volta definiti
 # 
 # # Final Indicators semantics
