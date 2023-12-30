@@ -40,6 +40,20 @@ indicators_train_rb_df = incidents_train_df[features_rb]
 indicators_test_db_df = incidents_test_df[features_db]
 indicators_test_rb_df = incidents_test_df[features_rb]
 
+# features to analyze
+features_to_explore = [
+    'date', 'day_of_week', 'days_from_first_incident',
+    'state', 'address', 'city',  'min_age', 'max_age',
+    'n_child', 'n_teen', 'n_adult', 'n_males', 'n_females',
+    'n_killed', 'n_injured', 'n_arrested', 'n_unharmed', 
+    'n_participants', 'notes', 'incident_characteristics1',
+    'incident_characteristics2', 'democrat', 'poverty_perc',
+    'gun_law_rank', 'aggression', 'accidental', 'defensive',
+    'suicide', 'road', 'house', 'school', 'business',
+    'illegal_holding', 'drug_alcohol', 'officers',
+    'organized', 'social_reasons', 'abduction'
+]
+
 clf_names = [clf.value for clf in Classifiers]
 rb_clf_names = [Classifiers.DT.value, Classifiers.RF.value, Classifiers.XGB.value, Classifiers.RIPPER.value]
 
@@ -232,8 +246,7 @@ for clf_name in clf_names:
     for i in range(instances.shape[0]):
         prediction = classifier.predict(instances[i].reshape(1,-1))[0]
         feature_importances = shap_values[clf_name][prediction][positions_to_explain[i]] # TODO: diversi shap values
-        feature_default = feature_defaults[0] if true_labels_test[i] == 1 else feature_defaults[1]
-        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_default)
+        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_defaults[true_labels_to_explain[i]])
         clf_metrics[instance_names_to_explain[i]] = sample_metric
 
     clf_metrics_df = pd.DataFrame(clf_metrics).T
@@ -246,12 +259,12 @@ metrics_selected_records_df['True Label'] = true_labels_to_explain
 # save faithfulness
 faithfulness_df = metrics_selected_records_df[['faithfulness']]
 faithfulness_df.columns = faithfulness_df.columns.droplevel()
-faithfulness_df.to_csv('../data/explanation_results/shap_faithfulness.csv')
+faithfulness_df.to_csv('../data/explanation_results/shap_faithfulness_selected_records.csv')
 
 # save monotonity
-monotonity_df = metrics_selected_records_df[['monotonity']]
+monotonity_df = metrics_selected_records_df[['monotonicity']]
 monotonity_df.columns = monotonity_df.columns.droplevel()
-monotonity_df.to_csv('../data/explanation_results/shap_monotonity.csv')
+monotonity_df.to_csv('../data/explanation_results/shap_monotonicity_selected_records.csv')
 
 metrics_selected_records_df
 
@@ -274,8 +287,7 @@ for clf_name in clf_names:
     for i in range(instances.shape[0]):
         prediction = classifier.predict(instances[i].reshape(1,-1))[0]
         feature_importances = shap_values[clf_name][prediction][positions_to_explain[i]]
-        feature_default = feature_defaults[0] if true_labels_test[i] == 1 else feature_defaults[1]
-        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_default)
+        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_defaults[true_labels_to_explain[i]])
         faithfulness.append(sample_metric['faithfulness'])
     
     metrics_random_records[clf_name] = {}

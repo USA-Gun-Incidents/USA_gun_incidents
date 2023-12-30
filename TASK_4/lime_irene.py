@@ -317,9 +317,9 @@ faithfulness_df.columns = faithfulness_df.columns.droplevel()
 faithfulness_df.to_csv('../data/explanation_results/lime_faithfulness_selected_records.csv')
 
 # save monotonity
-monotonity_df = metrics_selected_records_df[['monotonity']]
+monotonity_df = metrics_selected_records_df[['monotonicity']]
 monotonity_df.columns = monotonity_df.columns.droplevel()
-monotonity_df.to_csv('../data/explanation_results/lime_monotonity_selected_records.csv')
+monotonity_df.to_csv('../data/explanation_results/lime_monotonicity_selected_records.csv')
 
 metrics_selected_records_df
 

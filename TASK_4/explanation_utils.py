@@ -11,7 +11,7 @@ from pytorch_tabnet.tab_model import TabNetClassifier
 def evaluate_explanation(model, instance, feature_importances, feature_defaults):
     metrics = {}
     metrics['faithfulness'] = faithfulness_metric(model, instance, feature_importances, feature_defaults)
-    metrics['monotonity'] = monotonicity_metric(model, instance, feature_importances, feature_defaults)
+    metrics['monotonicity'] = monotonicity_metric(model, instance, feature_importances, feature_defaults)
     return metrics
 
 class Classifiers(Enum):
