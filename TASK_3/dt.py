@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import json
@@ -11,6 +12,8 @@ from sklearn.tree import DecisionTreeClassifier, export_graphviz
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import make_scorer, f1_score
 from time import time
+from imblearn.over_sampling import RandomOverSampler
+from imblearn.over_sampling import SMOTENC
 from classification_utils import *
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
@@ -47,7 +50,7 @@ print(f'Number of features: {len(features_for_clf)}')
 # - class_weight: Weights associated with classes. We will try both 'balanced' (classes are assigned weights that are inversely proportional to their frequencies) and not.
 # - min_samples_split: The minimum number of samples required to split an internal node. We will try 2 (the minimum possible) and different fractions of the training set.
 # - min_samples_leaf: The minimum number of samples required to be at a leaf node. We will try 1 (the minimum possible) and different fractions of the training set.
-# 
+#
 # Fixed parameters:
 # - splitter: The strategy used to choose the split at each node. We won't try random beacuse we will experiment a similar approach using Random Forests.
 # - max_depth: The maximum depth of the tree. We won't limit the depth of the tree through this parameter. We will control the depth of the tree using the 'min_samples_split' and 'min_samples_leaf', parameter.
@@ -198,6 +201,129 @@ test_scores = compute_clf_scores(
 test_scores
 
 # %%
+train_test_infos = {}
+train_test_infos['Fatal'] = [true_labels_train.sum(), true_labels_test.sum()]
+train_test_infos['Fatal (%)'] = [(true_labels_train.sum()/true_labels_train.shape[0])*100, (true_labels_test.sum()/true_labels_test.shape[0])*100]
+train_test_infos['Non_Fatal'] = [(true_labels_train == 0).sum(), (true_labels_test == 0).sum()]
+train_test_infos['Non_Fatal (%)'] = [((true_labels_train == 0).sum()/true_labels_train.shape[0])*100, ((true_labels_test == 0).sum()/true_labels_test.shape[0])*100]
+train_test_infos['total'] = [true_labels_train.shape[0], true_labels_test.shape[0]]
+pd.DataFrame(train_test_infos, index=['train', 'test'])
+
+# %%
+oversample = RandomOverSampler(sampling_strategy=0.4/0.6)
+indicators_over_train_df, true_labels_over_train = oversample.fit_resample(indicators_train_df, true_labels_train)
+
+train_over_infos = {}
+train_over_infos['Fatal'] = [true_labels_over_train.sum()]
+train_over_infos['Fatal (%)'] = [(true_labels_over_train.sum()/true_labels_over_train.shape[0])*100]
+train_over_infos['Non_Fatal'] = [(true_labels_over_train == 0).sum()]
+train_over_infos['Non_Fatal (%)'] = [((true_labels_over_train == 0).sum()/true_labels_over_train.shape[0])*100]
+train_over_infos['total'] = [true_labels_over_train.shape[0]]
+pd.DataFrame(train_over_infos, index=['train'])
+
+# %%
+# fit the model on all the training data
+fit_start = time()
+best_model_over = DecisionTreeClassifier(**best_model_params)
+best_model_over.fit(indicators_over_train_df, true_labels_over_train)
+fit_over_time = time()-fit_start
+
+# get the predictions on the training data
+train_score_start = time()
+pred_labels_over_train = best_model_over.predict(indicators_over_train_df)
+train_score_over_time = time()-train_score_start
+pred_probas_over_train = best_model_over.predict_proba(indicators_over_train_df)
+
+# get the predictions on the test data
+test_score_start = time()
+pred_labels_over_test = best_model_over.predict(indicators_test_df)
+test_score_over_time = time()-test_score_start
+pred_probas_over_test = best_model_over.predict_proba(indicators_test_df)
+
+# save the predictions
+pd.DataFrame(
+    {'labels': pred_labels_over_test, 'probs': pred_probas_over_test[:,1]}
+).to_csv(f'{RESULTS_DIR}/{clf_name}_oversample_preds.csv')
+
+# save the model
+file = open(f'{RESULTS_DIR}/{clf_name}_oversample.pkl', 'wb')
+pickle.dump(obj=best_model_over, file=file)
+file.close()
+
+# %%
+categorical_features = [
+    'day', 'day_of_week', 'month', 'year',
+    'democrat', 'gun_law_rank',
+    'aggression', 'accidental', 'defensive', 'suicide',
+    'road', 'house', 'school', 'business',
+    'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
+]
+smote_oversample = SMOTENC(categorical_features=categorical_features, sampling_strategy=0.4/0.6)
+indicators_smote_train_df, true_labels_smote_train = smote_oversample.fit_resample(indicators_train_df, true_labels_train)
+
+train_smote_infos = {}
+train_smote_infos['Fatal'] = [true_labels_smote_train.sum()]
+train_smote_infos['Fatal (%)'] = [(true_labels_smote_train.sum()/true_labels_smote_train.shape[0])*100]
+train_smote_infos['Non_Fatal'] = [(true_labels_smote_train == 0).sum()]
+train_smote_infos['Non_Fatal (%)'] = [((true_labels_smote_train == 0).sum()/true_labels_smote_train.shape[0])*100]
+train_smote_infos['total'] = [true_labels_smote_train.shape[0]]
+pd.DataFrame(train_smote_infos, index=['train'])
+
+# %%
+# fit the model on all the training data
+fit_start = time()
+best_model_smote = DecisionTreeClassifier(**best_model_params)
+best_model_smote.fit(indicators_smote_train_df, true_labels_smote_train)
+fit_smote_time = time()-fit_start
+
+# get the predictions on the training data
+train_score_start = time()
+pred_labels_smote_train = best_model_smote.predict(indicators_smote_train_df)
+train_score_smote_time = time()-train_score_start
+pred_probas_smote_train = best_model_smote.predict_proba(indicators_smote_train_df)
+
+# get the predictions on the test data
+test_score_start = time()
+pred_labels_smote_test = best_model_smote.predict(indicators_test_df)
+test_score_smote_time = time()-test_score_start
+pred_probas_smote_test = best_model_smote.predict_proba(indicators_test_df)
+
+# save the predictions
+pd.DataFrame(
+    {'labels': pred_labels_smote_test, 'probs': pred_probas_smote_test[:,1]}
+).to_csv(f'{RESULTS_DIR}/{clf_name}_smote_preds.csv')
+
+# save the model
+file = open(f'{RESULTS_DIR}/{clf_name}_smote.pkl', 'wb')
+pickle.dump(obj=best_model_smote, file=file)
+file.close()
+
+# %%
+test_over_scores = compute_clf_scores(
+    y_true=true_labels_test,
+    y_pred=pred_labels_over_test,
+    train_time=fit_over_time,
+    score_time=test_score_over_time,
+    params=best_model_params,
+    prob_pred=pred_probas_over_test,
+    clf_name=clf_name+' over',
+    path=f'{RESULTS_DIR}/{clf_name}_over_test_scores.csv'
+)
+
+test_smote_scores = compute_clf_scores(
+    y_true=true_labels_test,
+    y_pred=pred_labels_smote_test,
+    train_time=fit_smote_time,
+    score_time=test_score_smote_time,
+    params=best_model_params,
+    prob_pred=pred_probas_smote_test,
+    clf_name=clf_name+' SMOTE',
+    path=f'{RESULTS_DIR}/{clf_name}_smote_test_scores.csv'
+)
+
+pd.concat([test_scores, test_over_scores, test_smote_scores])
+
+# %%
 # load the training data with nan values
 incidents_train_nan_df = pd.read_csv('../data/clf_indicators_train_nan.csv', index_col=0)
 true_labels_train_nan_df = pd.read_csv('../data/clf_y_train_nan.csv', index_col=0)
@@ -241,6 +367,9 @@ test_scores_nan = compute_clf_scores(
     path=f'{RESULTS_DIR}/{clf_name}_nan_test_scores.csv'
 )
 pd.concat([test_scores, test_scores_nan])
+
+# %%
+# TODO: da qui in giù analizza la miglior tecnica di oversampling?
 
 # %%
 dot_data = export_graphviz(
