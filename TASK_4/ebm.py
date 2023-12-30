@@ -288,7 +288,7 @@ ebm_local = best_model.explain_local(
 show(ebm_local)
 
 # %%
-# TODO: mass shooting
+# TODO: mass shooting (passa tutto il set)
 
 # %%
 ebm_perf = ROC(best_model.predict_proba).explain_perf(incidents_test_df, true_labels_test, name='EBM')
@@ -303,14 +303,14 @@ positions_to_explain = selected_records_to_explain_df['positions'].to_list()
 instance_names_to_explain = selected_records_to_explain_df['instance names'].to_list()
 true_labels_to_explain = selected_records_to_explain_df['true labels'].to_list()
 
-samples = indicators_test_df.iloc[positions_to_explain].values
+instances = indicators_test_df.iloc[positions_to_explain].values
 metrics_selected_records = {}
-for i in range(samples.shape[0]):
-    prediction = best_model.predict(samples[i].reshape(1,-1))
-    explanation = best_model.explain_local(samples[i], true_labels_test[i].reshape(1, -1))
+for i in range(instances.shape[0]):
+    prediction = best_model.predict(instances[i].reshape(1,-1))
+    explanation = best_model.explain_local(instances[i], true_labels_test[i].reshape(1, -1))
     feature_importances = np.array(explanation._internal_obj['specific'][0]['scores'][:-10]) # TODO: le ultime feature sono combinazioni delle altre (?)
     feature_default = non_fatal_rb_default if true_labels_test[i] == 1 else fatal_rb_default
-    sample_metric = evaluate_explanation(best_model, samples[i], feature_importances, feature_default)
+    sample_metric = evaluate_explanation(best_model, instances[i], feature_importances, feature_default)
     metrics_selected_records[instance_names_to_explain[i]] = sample_metric
 
 metrics_selected_records_df = pd.DataFrame(metrics_selected_records).T
@@ -322,14 +322,14 @@ random_records_to_explain_df = pd.read_csv('../data/explanation_results/random_r
 positions_to_explain = random_records_to_explain_df['positions'].to_list()
 true_labels_to_explain = random_records_to_explain_df['true labels'].to_list()
 
-samples = indicators_test_df.iloc[positions_to_explain].values
+instances = indicators_test_df.iloc[positions_to_explain].values
 faithfulness = []
-for i in range(samples.shape[0]):
-    prediction = best_model.predict(samples[i].reshape(1,-1))
-    explanation = best_model.explain_local(samples[i], true_labels_test[i].reshape(1, -1))
+for i in range(instances.shape[0]):
+    prediction = best_model.predict(instances[i].reshape(1,-1))
+    explanation = best_model.explain_local(instances[i], true_labels_test[i].reshape(1, -1))
     feature_importances = np.array(explanation._internal_obj['specific'][0]['scores'][:-10]) # TODO: le ultime feature sono combinazioni delle altre (?)
     feature_default = non_fatal_rb_default if true_labels_test[i] == 1 else fatal_rb_default
-    sample_metric = evaluate_explanation(best_model, samples[i], feature_importances, feature_default)
+    sample_metric = evaluate_explanation(best_model, instances[i], feature_importances, feature_default)
     faithfulness.append(sample_metric['faithfulness'])
 
 metrics_random_records = {}

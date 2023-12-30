@@ -460,7 +460,7 @@ def display_feature_importances(
     :param path: path where to save the feature importances
     '''
 
-    sorted_idx = np.flip(np.argsort(feature_importances))
+    sorted_idx = np.argsort(feature_importances)
     sorted_features_names = [feature_names[i] for i in sorted_idx]
     sorted_features_imp = [feature_importances[i] for i in sorted_idx]
     if path is not None:
@@ -469,11 +469,9 @@ def display_feature_importances(
             'importances': sorted_features_imp,
             'rank': rankdata([-imp for imp in sorted_features_imp], method='dense')
         }).to_csv(path)
-    axs.bar(
-        x=sorted_features_names,
-        height=sorted_features_imp
+    axs.barh(
+        y=sorted_features_names,
+        width=sorted_features_imp
     )
-    for tick in axs.get_xticklabels():
-        tick.set_rotation(90);
     if title is not None:
         axs.set_title(title)

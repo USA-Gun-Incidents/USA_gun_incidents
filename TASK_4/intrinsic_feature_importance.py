@@ -26,7 +26,7 @@ SVM = 'SupportVectorMachineClassifier'
 NN = 'NeuralNetworkClassifier'
 TN = 'TabNetClassifier'
 RIPPER = 'RipperClassifier'
-
+EBM = 'ExplainableBoostingMachineClassifier'
 # load the data
 incidents_train_df = pd.read_csv('../data/clf_indicators_train.csv', index_col=0)
 true_labels_train_df = pd.read_csv('../data/clf_y_train.csv', index_col=0)
@@ -46,7 +46,7 @@ indicators_test_db_df = incidents_test_df[features_db]
 indicators_test_rb_df = incidents_test_df[features_rb]
 
 # %%
-clf_names = [DT, RF, XGB, SVM, TN] # NN, NC, KNN
+clf_names = [DT, RF, XGB, SVM, TN, EBM] # NN, NC, KNN
 feature_imp = {}
 for clf in clf_names:
     feature_imp[clf] = {}

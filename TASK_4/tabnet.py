@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import json
@@ -5,8 +6,11 @@ from pytorch_tabnet.tab_model import TabNetClassifier
 from sklearn.preprocessing import MinMaxScaler
 from pytorch_tabnet.augmentations import ClassificationSMOTE
 from sklearn.model_selection import train_test_split
+import os, sys
+sys.path.append(os.path.abspath('../TASK_3/'))
 from classification_utils import *
 from time import time
+from explanation_utils import *
 RESULTS_DIR = '../data/classification_results'
 clf_name = 'TabNetClassifier'
 # paper: https://arxiv.org/pdf/1908.07442.pdf
@@ -41,8 +45,6 @@ train_set, val_set, train_labels, val_labels = train_test_split( # FIXME: qui di
 )
 
 # %%
-aug = ClassificationSMOTE(p=0.2)
-# TODO: valutare p
 # TODO: embedding di feature cateoriche come fanno qui?
 # https://github.com/dreamquark-ai/tabnet/blob/develop/census_example.ipynb
 
@@ -55,7 +57,7 @@ tabnet.fit(
   eval_name=['train', 'val'],
   eval_metric=['balanced_accuracy', 'logloss'],
   max_epochs=2, # TODO: cambiare
-  augmentations=aug, # TODO: valutare se togliere
+  augmentations=None, # TODO: aug = ClassificationSMOTE(p=0.2); ma lo facciamo dopo?
 )
 fit_time = time()-fit_start
 
@@ -205,8 +207,11 @@ plot_distribution_missclassifications(
     bins=5
 )
 
+# %% [markdown]
+# ## Global interpretation
+
 # %%
-fig, axs = plt.subplots(1, 1, figsize=(8,4))
+fig, axs = plt.subplots(1, 1, figsize=(7,6))
 display_feature_importances(
     features_for_clf,
     tabnet.feature_importances_,
@@ -215,4 +220,101 @@ display_feature_importances(
     path=f'{RESULTS_DIR}/{clf_name}_feature_importances.csv'
 )
 
+# %% [markdown]
+# # Local interpretation
+#
+# ## Attempted Suicide
 
+# %%
+selected_records_to_explain_df = pd.read_csv('../data/explanation_results/selected_records_to_explain.csv', index_col=0)
+attempted_suicide_pos = selected_records_to_explain_df[selected_records_to_explain_df['instance names']=='Attempted Suicide']['positions'][0]
+
+# %%
+explanation, mask = tabnet.explain(indicators_test_df.iloc[attempted_suicide_pos].values.reshape(1,-1), normalize=False)
+
+# %%
+# TODO: devo usare la maschera o la explaination per ottenere le feature importances???
+# M_explain (matrix)- Importance per sample, per columns.
+# masks (matrix) - Sparse matrix showing attention masks used by network
+
+# nel tutorial usano mask
+
+# %%
+fig, axs = plt.subplots(1, 3, figsize=(16, 6), sharex=True)
+mask_sum = np.zeros_like(mask[0][0])
+for i in range(3):
+    mask_sum += mask[i][0]
+    sorted_idx = np.argsort(mask[i][0])
+    sorted_features_names = [features_for_clf[j] for j in sorted_idx]
+    sorted_features_imp = [mask[i][0][j] for j in sorted_idx]
+    axs[i].barh(y=sorted_features_names, width=sorted_features_imp)
+    axs[i].set_title(f"mask {i}")
+    for tick in axs[i].get_xticklabels():
+        tick.set_rotation(90);
+    axs[i].set_ylabel('feature importance')
+fig.tight_layout()
+
+# %%
+fig, axs = plt.subplots(1, figsize=(7, 6))
+sorted_idx = np.argsort(mask_sum)
+sorted_features_names = [features_for_clf[j] for j in sorted_idx]
+sorted_features_imp = [mask_sum[j] for j in sorted_idx]
+plt.barh(y=sorted_features_names, width=sorted_features_imp)
+axs.set_xlabel('feature importance (mask 1 + mask 2 + mask 3)')
+
+# %%
+sorted_idx = np.argsort(explanation[0])
+sorted_features_names = [features_for_clf[j] for j in sorted_idx]
+sorted_features_imp = [explanation[0][j] for j in sorted_idx]
+plt.barh(y=sorted_features_names, width=sorted_features_imp)
+axs.set_xlabel('feature importance (explanation)')
+
+# %%
+# TODO: mass shooting
+
+# %%
+non_fatal_default = pd.read_csv(RESULTS_DIR+'/non_fatal_db_default_features.csv').to_numpy()[0]
+fatal_default = pd.read_csv(RESULTS_DIR+'/fatal_db_default_features.csv').to_numpy()[0]
+
+# %%
+positions_to_explain = selected_records_to_explain_df['positions'].to_list()
+instance_names_to_explain = selected_records_to_explain_df['instance names'].to_list()
+true_labels_to_explain = selected_records_to_explain_df['true labels'].to_list()
+
+instances = indicators_test_df.iloc[positions_to_explain].values
+metrics_selected_records = {}
+for i in range(instances.shape[0]):
+    prediction = tabnet.predict(instances[i].reshape(1,-1))
+    feature_importances, _ = tabnet.explain(instances[i].reshape(1,-1), normalize=False)
+    feature_default = non_fatal_default if true_labels_test[i] == 1 else fatal_default
+    sample_metric = evaluate_explanation(tabnet, instances[i], feature_importances, feature_default)
+    metrics_selected_records[instance_names_to_explain[i]] = sample_metric
+
+metrics_selected_records_df = pd.DataFrame(metrics_selected_records).T
+metrics_selected_records_df.to_csv('../data/explanation_results/tabnet_metrics_selected_records.csv')
+metrics_selected_records_df
+
+# %%
+random_records_to_explain_df = pd.read_csv('../data/explanation_results/random_records_to_explain.csv', index_col=0)
+positions_to_explain = random_records_to_explain_df['positions'].to_list()
+true_labels_to_explain = random_records_to_explain_df['true labels'].to_list()
+
+instances = indicators_test_df.iloc[positions_to_explain].values
+faithfulness = []
+for i in range(instances.shape[0]):
+    prediction = tabnet.predict(instances[i].reshape(1,-1))
+    feature_importances, _ = tabnet.explain(instances[i].reshape(1,-1), normalize=False)
+    feature_default = non_fatal_default if true_labels_test[i] == 1 else fatal_default
+    sample_metric = evaluate_explanation(tabnet, instances[i], feature_importances, feature_default)
+    faithfulness.append(sample_metric['faithfulness'])
+
+metrics_random_records = {}
+metrics_random_records['mean faithfulness'] = np.nanmean(faithfulness)
+metrics_random_records['std faithfulness'] = np.nanstd(faithfulness)
+metrics_random_records_df = pd.DataFrame(metrics_random_records, index=[clf_name])
+metrics_random_records_df.to_csv('../data/explanation_results/tabnet_metrics_random_records.csv')
+metrics_random_records_df
+
+# %%
+# TODO:
+# riporta nel notebook di comparison anche questi score a confronto con EBM
