@@ -80,7 +80,7 @@ clusters = np.array(incidents_df['cluster'].astype(int))
 
 # %%
 fig, axs = plt.subplots(1, figsize=(6,4))
-award_mtx = np.array(network._award).reshape(network._rows, network._cols)
+award_mtx = np.array(network.awards).reshape(network._rows, network._cols)
 sns.heatmap(award_mtx, annot=True, ax=axs, fmt='.0f')
 axs.set_xticks([])
 axs.set_yticks([])
@@ -209,7 +209,7 @@ network.show_distance_matrix()
 # %%
 pca = PCA()
 X_pca = pca.fit_transform(X)
-palette = [sns.color_palette('tab10')[i] for i in range(n_clusters)]
+palette = [sns.color_palette('tab10')[i % len(sns.color_palette('tab10'))] for i in range(n_clusters)]
 scatter_pca_features_by_cluster(
     X_pca=X_pca,
     n_components=6,

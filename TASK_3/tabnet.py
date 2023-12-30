@@ -206,29 +206,6 @@ plot_distribution_missclassifications(
 )
 
 # %%
-# TODO: spostare ciò che segue nel task di explainability
-
-# %%
-explain_matrix, masks = tabnet.explain(train_set)
-fig, axs = plt.subplots(1, 3, figsize=(20,40), sharey=True)
-for i in range(3):
-    axs[i].imshow(masks[i][:50].T) # TODO: + o - di 50?
-    axs[i].set_title(f"mask {i}")
-    axs[i].set_yticks(np.arange(len(features_for_clf)))
-    axs[i].set_yticklabels(labels = features_for_clf)
-fig.tight_layout()
-# vedere qui https://www.mdpi.com/2227-7390/11/9/2030 per capire come interpretarle?
-
-# %%
-explain_matrix.shape
-
-# %%
-len(masks)
-
-# %%
-len(masks[0])
-
-# %%
 fig, axs = plt.subplots(1, 1, figsize=(8,4))
 display_feature_importances(
     features_for_clf,
