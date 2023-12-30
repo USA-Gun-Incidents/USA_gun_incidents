@@ -1,0 +1,307 @@
+state,grade,year
+California,3,2013
+Connecticut,3,2013
+New Jersey,3,2013
+Maryland,3,2013
+New York,3,2013
+Massachusetts,4,2013
+Hawaii,4,2013
+Illinois,5,2013
+Rhode Island,6,2013
+Delaware,6,2013
+Pennsylvania,8,2013
+Minnesota,8,2013
+Washington,8,2013
+Michigan,8,2013
+Colorado,8,2013
+Iowa,9,2013
+Wisconsin,9,2013
+Oregon,10,2013
+Ohio,11,2013
+Virginia,11,2013
+Nebraska,11,2013
+New Hampshire,12,2013
+Indiana,12,2013
+Alabama,12,2013
+Florida,13,2013
+Maine,13,2013
+West Virginia,13,2013
+Georgia,13,2013
+North Dakota,13,2013
+Tennessee,13,2013
+North Carolina,13,2013
+Nevada,13,2013
+Texas,13,2013
+Arkansas,13,2013
+Oklahoma,13,2013
+South Carolina,13,2013
+Idaho,13,2013
+New Mexico,13,2013
+Missouri,13,2013
+Louisiana,13,2013
+Utah,13,2013
+Montana,13,2013
+Kentucky,13,2013
+Kansas,13,2013
+Mississippi,13,2013
+Vermont,13,2013
+South Dakota,13,2013
+Wyoming,13,2013
+Alaska,13,2013
+Arizona,13,2013
+District of Columbia,1,2013
+California,3,2014
+Connecticut,3,2014
+New Jersey,3,2014
+Maryland,3,2014
+New York,3,2014
+Massachusetts,3,2014
+Hawaii,4,2014
+Illinois,4,2014
+Rhode Island,4,2014
+Delaware,6,2014
+Washington,6,2014
+Minnesota,8,2014
+Pennsylvania,8,2014
+Michigan,8,2014
+Iowa,9,2014
+Colorado,9,2014
+Wisconsin,9,2014
+Oregon,10,2014
+Ohio,11,2014
+Virginia,11,2014
+Nebraska,11,2014
+New Hampshire,12,2014
+Indiana,12,2014
+Maine,13,2014
+Oklahoma,13,2014
+West Virginia,13,2014
+Georgia,13,2014
+North Dakota,13,2014
+Nevada,13,2014
+North Carolina,13,2014
+Texas,13,2014
+Arkansas,13,2014
+Florida,13,2014
+New Mexico,13,2014
+South Carolina,13,2014
+Tennessee,13,2014
+Alabama,13,2014
+Utah,13,2014
+Idaho,13,2014
+Montana,13,2014
+Kansas,13,2014
+Vermont,13,2014
+South Dakota,13,2014
+Alaska,13,2014
+Missouri,13,2014
+Wyoming,13,2014
+Kentucky,13,2014
+Arizona,13,2014
+Mississippi,13,2014
+Louisiana,13,2014
+District of Columbia,1,2014
+California,3,2015
+Connecticut,3,2015
+New Jersey,3,2015
+Maryland,3,2015
+Massachusetts,3,2015
+New York,3,2015
+Hawaii,4,2015
+Illinois,4,2015
+Rhode Island,4,2015
+Delaware,5,2015
+Washington,6,2015
+Minnesota,8,2015
+Pennsylvania,8,2015
+Oregon,8,2015
+Michigan,8,2015
+Colorado,9,2015
+Iowa,9,2015
+Wisconsin,11,2015
+Ohio,11,2015
+Virginia,11,2015
+Nebraska,11,2015
+New Hampshire,11,2015
+Indiana,12,2015
+West Virginia,12,2015
+Oklahoma,13,2015
+North Carolina,13,2015
+Nevada,13,2015
+South Carolina,13,2015
+Georgia,13,2015
+Florida,13,2015
+North Dakota,13,2015
+Tennessee,13,2015
+New Mexico,13,2015
+Texas,13,2015
+Maine,13,2015
+Alabama,13,2015
+Montana,13,2015
+Arkansas,13,2015
+Utah,13,2015
+South Dakota,13,2015
+Missouri,13,2015
+Vermont,13,2015
+Kentucky,13,2015
+Louisiana,13,2015
+Idaho,13,2015
+Alaska,13,2015
+Arizona,13,2015
+Wyoming,13,2015
+Mississippi,13,2015
+Kansas,13,2015
+District of Columbia,1,2015
+California,2,2016
+Connecticut,3,2016
+New Jersey,3,2016
+Massachusetts,3,2016
+Maryland,3,2016
+New York,3,2016
+Hawaii,3,2016
+Illinois,4,2016
+Rhode Island,4,2016
+Washington,5,2016
+Delaware,5,2016
+Minnesota,7,2016
+Pennsylvania,8,2016
+Colorado,8,2016
+Oregon,8,2016
+Iowa,8,2016
+Michigan,8,2016
+Nevada,9,2016
+Wisconsin,9,2016
+Nebraska,11,2016
+Ohio,11,2016
+Virginia,11,2016
+New Hampshire,11,2016
+Indiana,12,2016
+North Carolina,12,2016
+Florida,13,2016
+Oklahoma,13,2016
+Tennessee,13,2016
+Georgia,13,2016
+New Mexico,13,2016
+North Dakota,13,2016
+South Carolina,13,2016
+Utah,13,2016
+Texas,13,2016
+West Virginia,13,2016
+Maine,13,2016
+Alabama,13,2016
+Arkansas,13,2016
+Montana,13,2016
+South Dakota,13,2016
+Vermont,13,2016
+Kentucky,13,2016
+Louisiana,13,2016
+Alaska,13,2016
+Wyoming,13,2016
+Idaho,13,2016
+Arizona,13,2016
+Kansas,13,2016
+Missouri,13,2016
+Mississippi,13,2016
+District of Columbia,1,2016
+Alabama,13,2017
+Alaska,13,2017
+Arizona,13,2017
+Arkansas,13,2017
+California,2,2017
+Colorado,8,2017
+Connecticut,3,2017
+Delaware,5,2017
+Florida,13,2017
+Georgia,13,2017
+Hawaii,3,2017
+Idaho,13,2017
+Illinois,4,2017
+Indiana,12,2017
+Iowa,9,2017
+Kansas,13,2017
+Kentucky,13,2017
+Louisiana,13,2017
+Maine,13,2017
+Maryland,3,2017
+Massachusetts,3,2017
+Michigan,8,2017
+Minnesota,7,2017
+Mississippi,13,2017
+Missouri,13,2017
+Montana,13,2017
+Nebraska,11,2017
+Nevada,11,2017
+New Hampshire,13,2017
+New Jersey,3,2017
+New Mexico,13,2017
+New York,3,2017
+North Carolina,12,2017
+North Dakota,13,2017
+Ohio,11,2017
+Oklahoma,13,2017
+Oregon,8,2017
+Pennsylvania,8,2017
+Rhode Island,4,2017
+South Carolina,13,2017
+South Dakota,13,2017
+Tennessee,12,2017
+Texas,13,2017
+Utah,13,2017
+Vermont,13,2017
+Virginia,11,2017
+Washington,5,2017
+West Virginia,13,2017
+Wisconsin,9,2017
+Wyoming,13,2017
+District of Columbia,1,2017
+Alabama,13,2018
+Alaska,13,2018
+Arizona,13,2018
+Arkansas,13,2018
+California,2,2018
+Colorado,8,2018
+Connecticut,3,2018
+Delaware,5,2018
+Florida,9,2018
+Georgia,13,2018
+Hawaii,3,2018
+Idaho,13,2018
+Illinois,4,2018
+Indiana,12,2018
+Iowa,8,2018
+Kansas,13,2018
+Kentucky,13,2018
+Louisiana,13,2018
+Maine,13,2018
+Maryland,3,2018
+Massachusetts,3,2018
+Michigan,8,2018
+Minnesota,7,2018
+Mississippi,13,2018
+Missouri,13,2018
+Montana,13,2018
+Nebraska,9,2018
+Nevada,11,2018
+New Hampshire,13,2018
+New Jersey,2,2018
+New Mexico,13,2018
+New York,3,2018
+North Carolina,11,2018
+North Dakota,13,2018
+Ohio,11,2018
+Oklahoma,13,2018
+Oregon,7,2018
+Pennsylvania,7,2018
+Rhode Island,4,2018
+South Carolina,13,2018
+South Dakota,13,2018
+Tennessee,12,2018
+Texas,13,2018
+Utah,12,2018
+Vermont,10,2018
+Virginia,11,2018
+Washington,4,2018
+West Virginia,13,2018
+Wisconsin,9,2018
+Wyoming,13,2018
+District of Columbia,1,2018
