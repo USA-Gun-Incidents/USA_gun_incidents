@@ -232,7 +232,8 @@ for clf_name in clf_names:
     for i in range(instances.shape[0]):
         prediction = classifier.predict(instances[i].reshape(1,-1))[0]
         feature_importances = shap_values[clf_name][prediction][positions_to_explain[i]] # TODO: diversi shap values
-        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_defaults[true_labels_to_explain[i]])
+        feature_default = feature_defaults[0] if true_labels_test[i] == 1 else feature_defaults[1]
+        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_default)
         clf_metrics[instance_names_to_explain[i]] = sample_metric
 
     clf_metrics_df = pd.DataFrame(clf_metrics).T
@@ -273,7 +274,8 @@ for clf_name in clf_names:
     for i in range(instances.shape[0]):
         prediction = classifier.predict(instances[i].reshape(1,-1))[0]
         feature_importances = shap_values[clf_name][prediction][positions_to_explain[i]]
-        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_defaults[true_labels_to_explain[i]])
+        feature_default = feature_defaults[0] if true_labels_test[i] == 1 else feature_defaults[1]
+        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_default)
         faithfulness.append(sample_metric['faithfulness'])
     
     metrics_random_records[clf_name] = {}

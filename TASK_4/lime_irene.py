@@ -300,7 +300,8 @@ for clf_name in clf_names:
         prediction = classifier.predict(instances[i].reshape(1,-1))[0]
         explanation = explainer.explain_instance(instances[i], classifier.predict_proba, num_features=instances.shape[1], top_labels=1)
         feature_importances = get_lime_importance_from_explanation(explanation, prediction)
-        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_defaults[true_labels_to_explain[i]])
+        feature_default = feature_defaults[0] if true_labels_test[i] == 1 else feature_defaults[1]
+        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_default)
         clf_metrics[instance_names_to_explain[i]] = sample_metric
 
     clf_metrics_df = pd.DataFrame(clf_metrics).T
@@ -344,7 +345,8 @@ for clf_name in clf_names:
         prediction = classifier.predict(instances[i].reshape(1,-1))[0]
         explanation = explainer.explain_instance(instances[i], classifier.predict_proba, num_features=instances.shape[1], top_labels=1)
         feature_importances = get_lime_importance_from_explanation(explanation, prediction)
-        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_defaults[true_labels_to_explain[i]])
+        feature_default = feature_defaults[0] if true_labels_test[i] == 1 else feature_defaults[1]
+        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_default)
         faithfulness.append(sample_metric['faithfulness'])
     
     metrics_random_records[clf_name] = {}
