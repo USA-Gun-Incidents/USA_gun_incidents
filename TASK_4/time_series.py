@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Time Series Analysis
 
@@ -28,7 +29,7 @@ incidents_df['year'].unique()
 
 # %% [markdown]
 # First monday of 2014: Monday 6th 
-# 
+#
 # weeks strat from monday
 
 # %%
@@ -37,7 +38,7 @@ incidents_df['week'] = (incidents_df['date'] - pd.to_datetime('2013-12-30')).dt.
 
 # %% [markdown]
 # settimane numerate da 0 (da mercoledi 1 gennaio 2014 a domanica 5 gennaio 2014: prima settimana di 5 giorni) a 208
-# 
+#
 # 2017 finisce di domenica
 
 # %%
@@ -111,7 +112,7 @@ incidents_df.groupby(['city', 'state'])['week'].count().sort_values(ascending=Fa
 
 # %% [markdown]
 # Time series: mean number of participants per incident per week in each city
-# 
+#
 # 0 if we have no incidents in the week or NaN values (i.e. incidents where we don not know the nember of participants)
 
 # %%
@@ -373,7 +374,7 @@ plt.title('Number of cities per cluster');
 
 # %% [markdown]
 # Piecewise Aggregate Approximation (PAA) is a technique used in time series analysis to reduce the dimensionality of a time series while preserving its essential characteristics.
-# 
+#
 # PAA approximates a time-series $X$ of length $n$ into vector $\hat{X}=(\hat{x}_1,…,\hat{x}_M)$
 #  of any arbitrary length  $M\leq n$
 #  
@@ -439,11 +440,12 @@ plt.title('Number of cities per cluster');
 # ## Matrix profile
 
 # %%
-from matrixprofile-ts.matrixprofile import matrixProfile
+#from matrixprofile-ts.matrixprofile import matrixProfile
+from matrixprofile import *
 
 # %%
 w = 3
-mp, mpi = matrixProfile.stomp(incidents_by_city_df.values, w)
+mp, mpi = matrixProfile.stomp(incidents_by_city_df[0].values, w)
 
 plt.plot(mp)
 plt.title('Matrix Profile');
