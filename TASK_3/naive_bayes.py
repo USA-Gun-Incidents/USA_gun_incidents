@@ -33,6 +33,8 @@
 import pandas as pd
 import numpy as np
 from sklearn.naive_bayes import GaussianNB, MultinomialNB, ComplementNB, BernoulliNB
+from imblearn.over_sampling import RandomOverSampler
+from sklearn.preprocessing import OneHotEncoder
 from classification_utils import compute_clf_scores, plot_confusion_matrix
 
 # %% [markdown]
@@ -40,28 +42,15 @@ from classification_utils import compute_clf_scores, plot_confusion_matrix
 
 # %%
 # load the data
-incidents_train_df = pd.read_csv('../data/clf_indicators_train.csv', index_col=0)
-incidents_test_df = pd.read_csv('../data/clf_indicators_test.csv', index_col=0)
-true_labels_train_df = pd.read_csv('../data/clf_y_train.csv', index_col=0)
-true_labels_train = true_labels_train_df.values.ravel()
-true_labels_test_df = pd.read_csv('../data/clf_y_test.csv', index_col=0)
-true_labels_test = true_labels_test_df.values.ravel()
-
-# load the names of the features to use for the classification task
-features_for_clf = [
-    'location_imp', 'latitude', 'longitude', 'state_code', 'congressional_district', 
-    'age_range', 'avg_age', 'n_child_prop', 'n_teen_prop', 'n_males_prop', 'n_participants', 
-    'day', 'day_of_week', 'month', 'poverty_perc', 'democrat', 
-    'aggression', 'accidental', 'defensive', 'suicide', 'road', 'house', 'school', 'business',
-    'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
-]
-
-# project on the features_to_use
-indicators_train_df = incidents_train_df[features_for_clf]
-indicators_test_df = incidents_test_df[features_for_clf]
+incidents_train_df = pd.read_csv('../data/clf_indicators_train.csv')
+incidents_test_df = pd.read_csv('../data/clf_indicators_test.csv')
 
 # %%
-indicators_train_df.head(2)
+incidents_train_df.head(2)
+
+# %%
+true_labels_train = np.where(incidents_train_df['n_killed'] > 0, True, False)
+true_labels_test = np.where(incidents_test_df['n_killed'] > 0, True, False)
 
 # %%
 print(f'Number of label True in train set: {np.sum(true_labels_train)}, ({np.sum(true_labels_train)/len(true_labels_train)*100}%)')
@@ -75,6 +64,8 @@ print(f'Number of label False in test set: {len(true_labels_test)-np.sum(true_la
 # %% [markdown]
 # GaussianNB implements the Gaussian Naive Bayes algorithm for classification. The likelihood of the features is assumed to be Gaussian.
 # 
+# Bernulli (requires samples to be represented as binary-valued feature vectors)
+# 
 # Multi-variate Bernoulli does not capture the number of
 # times each word occurs, and that it explicitly includes
 # the non-occurrence probability of words that do not appear in the document.
@@ -86,6 +77,49 @@ print(f'Number of label False in test set: {len(true_labels_test)-np.sum(true_la
 
 # %% [markdown]
 # ### Gaussian Naive Bayes Classifier
+
+# %% [markdown]
+# Choose features for classification:
+
+# %%
+features_for_clf = [
+    'latitude', 'longitude', 'state_code', 'congressional_district', 
+    'poverty_perc', 'location_imp', 'year', 'month',
+    'age_range', 'max_age', 'avg_age',
+    'n_participants', 'n_child_prop', 'n_teen_prop', 'n_males_prop',
+    # tag
+    #'aggression', 'accidental', 'defensive', 'suicide', 'road', 'house', 'school', 'business',
+    #'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
+    ]
+
+indicators_train_df = incidents_train_df[features_for_clf]
+indicators_test_df = incidents_test_df[features_for_clf]
+
+# %% [markdown]
+# Prepare Train set and Test set:
+
+# %%
+# train set
+indicators_train_df.dropna(inplace=True)
+true_labels_train = np.where(incidents_train_df['n_killed'][indicators_train_df.index] > 0, True, False)
+
+#test set
+indicators_test_df.dropna(inplace=True)
+true_labels_test = np.where(incidents_test_df['n_killed'][indicators_test_df.index] > 0, True, False)
+
+# %% [markdown]
+# Oversampling of the minority class:
+
+# %%
+ros = RandomOverSampler(random_state=42)
+indicators_train_df, true_labels_train = ros.fit_resample(indicators_train_df, true_labels_train)
+
+# %%
+print(f'Number of label True in train set: {np.sum(true_labels_train)}, ({np.sum(true_labels_train)/len(true_labels_train)*100}%)')
+print(f'Number of label False in train set: {len(true_labels_train)-np.sum(true_labels_train)}, ({(len(true_labels_train)-np.sum(true_labels_train))/len(true_labels_train)*100}%)')
+
+# %% [markdown]
+# Classification:
 
 # %%
 gnb = GaussianNB()
@@ -114,48 +148,72 @@ plot_confusion_matrix(
 )
 
 # %% [markdown]
-# ### Bernulli Naive Bayes Classifier
-
-# %%
-bnb = BernoulliNB()
-bnb.fit(indicators_train_df, true_labels_train)
-y_pred = bnb.predict(indicators_test_df)
-
-print("Number of mislabeled points out of a total %d points : %d" % (indicators_test_df.shape[0], (true_labels_test != y_pred).sum()))
-
-# %%
-test_scores = compute_clf_scores(
-    y_true=true_labels_test,
-    y_pred=y_pred,
-    params=None,
-    train_time=None,
-    score_time=None,
-    prob_pred=None,
-    clf_name='BernoulliNB',
-)
-test_scores
-
-# %%
-plot_confusion_matrix(
-    y_true=true_labels_test,
-    y_pred=y_pred,
-    title='BernoulliNB'
-)
-
-# %% [markdown]
 # ### Multinomial Naive Bayes Classifier
 
+# %% [markdown]
+# Choose features for classification:
+
 # %%
-# remuving not positive features
 features_for_clf = [
-    'location_imp', 'state_code', 'congressional_district', 
-    'age_range', 'avg_age', 'n_child_prop', 'n_teen_prop', 'n_males_prop', 'n_participants', 
-    'day', 'day_of_week', 'month', 'poverty_perc', 'democrat', 'aggression', 'accidental',
-    'defensive', 'suicide', 'road', 'house', 'school', 'business',
-    'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction']
+    'state_code', 'congressional_district', 'month',
+    'age_range', 'max_age',
+    'n_participants', 'n_adult',
+    #'n_injured', 'n_arrested', 'n_unharmed',
+    # tag
+    'aggression', 'accidental', 'defensive', 'suicide', 'road', 'house', 'school', 'business',
+    'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
+    ]
 
 indicators_train_df = incidents_train_df[features_for_clf]
 indicators_test_df = incidents_test_df[features_for_clf]
+
+# %% [markdown]
+# Discretize latitude and longitude:
+
+# %%
+print(f'Latidude: max value {max(incidents_train_df["latitude"].max(), incidents_test_df["latitude"].max())}, \
+    min value {min(incidents_train_df["latitude"].min(), incidents_test_df["latitude"].min())}')
+print(f'Longitude: max value {max(incidents_train_df["longitude"].max(), incidents_test_df["longitude"].max())}, \
+    min value {min(incidents_train_df["longitude"].min(), incidents_test_df["longitude"].min())}')
+
+# %%
+# discetize lat and long
+lat_bins = np.linspace(19, 72, 72-19)
+long_bins = np.linspace(-166, -67, 166-67)
+
+# train set
+indicators_train_df.loc[:, 'latitude_disc'] = pd.cut(incidents_train_df['latitude'], bins=lat_bins, labels=False)
+indicators_train_df.loc[:, 'longitude_disc'] = pd.cut(incidents_train_df['longitude'], bins=long_bins, labels=False)
+
+# test set
+indicators_test_df.loc[:, 'latitude_disc'] = pd.cut(incidents_test_df['latitude'], bins=lat_bins, labels=False)
+indicators_test_df.loc[:, 'longitude_disc'] = pd.cut(incidents_test_df['longitude'], bins=long_bins, labels=False)
+
+# %% [markdown]
+# Prepare Train set and Test set:
+
+# %%
+# train set
+indicators_train_df.dropna(inplace=True)
+true_labels_train = np.where(incidents_train_df['n_killed'][indicators_train_df.index] > 0, True, False)
+
+#test set
+indicators_test_df.dropna(inplace=True)
+true_labels_test = np.where(incidents_test_df['n_killed'][indicators_test_df.index] > 0, True, False)
+
+# %% [markdown]
+# Oversampling of the minority class:
+
+# %%
+ros = RandomOverSampler(random_state=42)
+indicators_train_df, true_labels_train = ros.fit_resample(indicators_train_df, true_labels_train)
+
+# %%
+print(f'Number of label True in train set: {np.sum(true_labels_train)}, ({np.sum(true_labels_train)/len(true_labels_train)*100}%)')
+print(f'Number of label False in train set: {len(true_labels_train)-np.sum(true_labels_train)}, ({(len(true_labels_train)-np.sum(true_labels_train))/len(true_labels_train)*100}%)')
+
+# %% [markdown]
+# Classification:
 
 # %%
 mnb = MultinomialNB()
@@ -210,6 +268,124 @@ plot_confusion_matrix(
     y_true=true_labels_test,
     y_pred=y_pred,
     title='ComplementNB'
+)
+
+# %% [markdown]
+# ### Bernulli Naive Bayes Classifier
+
+# %%
+features_for_clf = [
+    # tag: (binary data)
+    'aggression', 'accidental', 'defensive', 'suicide', 'road', 'house', 'school', 'business',
+    'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
+    ]
+
+indicators_train_df = incidents_train_df[features_for_clf]
+indicators_test_df = incidents_test_df[features_for_clf]
+
+# %%
+def one_hot_encoder(data_train, data_test):
+    ohe = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+    ohe.fit(data_train)
+    return ohe.transform(data_train), ohe.transform(data_test)
+
+# %%
+# binarize lat and long: one hot encoding
+lat_bins = np.linspace(19, 72, 10)
+long_bins = np.linspace(-166, -67, 10)
+
+lat_train, lat_test = one_hot_encoder(
+    data_train=np.array(pd.cut(incidents_train_df['latitude'], bins=lat_bins, labels=False)).reshape(-1, 1), 
+    data_test=np.array(pd.cut(incidents_test_df['latitude'], bins=lat_bins, labels=False)).reshape(-1, 1))
+long_train, long_test = one_hot_encoder(
+    data_train=np.array(pd.cut(incidents_train_df['longitude'], bins=long_bins, labels=False)).reshape(-1, 1), 
+    data_test=np.array(pd.cut(incidents_test_df['longitude'], bins=long_bins, labels=False)).reshape(-1, 1))
+
+for i in range(9):
+    # train set
+    indicators_train_df.loc[:, f'latitude_{i}'] = lat_train[:, i]
+    indicators_train_df.loc[:, f'longitude_{i}'] = long_train[:, i]
+    # test set
+    indicators_test_df.loc[:, f'latitude_{i}'] = lat_test[:, i]
+    indicators_test_df.loc[:, f'longitude_{i}'] = long_test[:, i]
+
+# %%
+# binarize age_range
+age_range_train, age_range_test = one_hot_encoder(
+    data_train=np.array(incidents_train_df['age_range']).reshape(-1, 1), 
+    data_test=np.array(incidents_test_df['age_range']).reshape(-1, 1))
+for i in range(age_range_train.shape[1]):
+    indicators_train_df.loc[:, f'age_range_{i}'] = age_range_train[:, i] # train set
+    indicators_test_df.loc[:, f'age_range_{i}'] = age_range_test[:, i] # test set
+
+# %%
+# binarize n_participants
+n_participants_train, n_participants_test = one_hot_encoder(
+    data_train=np.array(incidents_train_df['n_participants']).reshape(-1, 1), 
+    data_test=np.array(incidents_test_df['n_participants']).reshape(-1, 1))
+for i in range(n_participants_train.shape[1]):
+    indicators_train_df.loc[:, f'n_participants_{i}'] = n_participants_train[:, i] # train set
+    indicators_test_df.loc[:, f'n_participants_{i}'] = n_participants_test[:, i] # test set
+
+"""# binarize n_adult
+n_adult_train, n_adult_test = one_hot_encoder(
+    data_train=np.array(incidents_train_df['n_adult']).reshape(-1, 1), 
+    data_test=np.array(incidents_test_df['n_adult']).reshape(-1, 1))
+for i in range(n_adult_train.shape[1]):
+    indicators_train_df.loc[:, f'n_adult_{i}'] = n_adult_train[:, i] # train set
+    indicators_test_df.loc[:, f'n_adult_{i}'] = n_adult_test[:, i] # test set"""
+
+
+# %% [markdown]
+# Prepare train set and Test set:
+
+# %%
+# train set
+indicators_train_df.dropna(inplace=True)
+true_labels_train = np.where(incidents_train_df['n_killed'][indicators_train_df.index] > 0, True, False)
+
+#test set
+indicators_test_df.dropna(inplace=True)
+true_labels_test = np.where(incidents_test_df['n_killed'][indicators_test_df.index] > 0, True, False)
+
+# %% [markdown]
+# Oversampling of the minority class:
+
+# %%
+ros = RandomOverSampler(random_state=42)
+indicators_train_df, true_labels_train = ros.fit_resample(indicators_train_df, true_labels_train)
+
+# %%
+print(f'Number of label True in train set: {np.sum(true_labels_train)}, ({np.sum(true_labels_train)/len(true_labels_train)*100}%)')
+print(f'Number of label False in train set: {len(true_labels_train)-np.sum(true_labels_train)}, ({(len(true_labels_train)-np.sum(true_labels_train))/len(true_labels_train)*100}%)')
+
+# %% [markdown]
+# Classification:
+
+# %%
+bnb = BernoulliNB()
+bnb.fit(indicators_train_df, true_labels_train)
+y_pred = bnb.predict(indicators_test_df)
+
+print("Number of mislabeled points out of a total %d points : %d" % (indicators_test_df.shape[0], (true_labels_test != y_pred).sum()))
+
+# %%
+test_scores = compute_clf_scores(
+    y_true=true_labels_test,
+    y_pred=y_pred,
+    params=None,
+    train_time=None,
+    score_time=None,
+    prob_pred=None,
+    clf_name='BernoulliNB',
+)
+test_scores
+
+# %%
+plot_confusion_matrix(
+    y_true=true_labels_test,
+    y_pred=y_pred,
+    title='BernoulliNB'
 )
 
 # %% [markdown]
