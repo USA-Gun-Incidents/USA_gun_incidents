@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Time Series Analysis
 
@@ -7,52 +6,56 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from tslearn.clustering import TimeSeriesKMeans
-from tslearn.preprocessing import TimeSeriesScalerMeanVariance
-import plotly.express as px
 
 # %%
 incidents_df = pd.read_csv(
-    '../data/incidents_indicators.csv',
+    '../data/incidents_cleaned.csv',
     index_col=0,
     parse_dates=['date', 'date_original'],
     date_parser=lambda x: pd.to_datetime(x, format='%Y-%m-%d')
 )
-
-# Drop rows where year is outside of 2014-2017
+incidents_df.drop_duplicates(inplace=True)
+# keep only incidents between 2014 and 2017
 incidents_df = incidents_df[incidents_df['year'].between(2014, 2017)]
-
-# %%
-incidents_df.head(2)
-
-# %%
 incidents_df['year'].unique()
 
-# %% [markdown]
-# First monday of 2014: Monday 6th 
-#
-# weeks strat from monday
+# %%
+incidents_df['date'].min()
 
 # %%
-# Add columns week number, start from 0 for the first week of 2014
-incidents_df['week'] = (incidents_df['date'] - pd.to_datetime('2013-12-30')).dt.days // 7
+pd.to_datetime('2014-1-1', format='%Y-%m-%d').day_name()
+
+# %%
+pd.to_datetime('2014-1-6', format='%Y-%m-%d').day_name()
+
+# %%
+pd.to_datetime('2017-12-31', format='%Y-%m-%d').day_name()
+
+# %%
+incidents_df['week'] = (((incidents_df['date'] - pd.to_datetime('2014-1-1')).dt.days)+2) // 7
+
+# %%
+incidents_df[incidents_df['date'] == pd.to_datetime('2014-1-1')]['week'].unique()
 
 # %% [markdown]
-# settimane numerate da 0 (da mercoledi 1 gennaio 2014 a domanica 5 gennaio 2014: prima settimana di 5 giorni) a 208
-#
-# 2017 finisce di domenica
+# Weeks are numbered from 0. The first week has 2 days less than the others.
+
+# %%
+incidents_df[incidents_df['date'] == pd.to_datetime('2014-1-6')]['week'].unique()
+
+# %% [markdown]
+# 6th January 2014 is Monday and belongs to week 1 (the second).
 
 # %%
 # number of weeks in the dataset
-incidents_df['week'].max()
-
-# %%
-((365*4+1) - 5 ) / 7 # ok :)
+number_of_weeks = incidents_df['week'].max()+1
+number_of_weeks
 
 # %%
 incidents_df['week'].unique().shape # all weeks are present
 
 # %%
-# gruop by week and count incidents
+# group by week and count incidents
 plt.figure(figsize=(20, 5))
 plt.bar(
     incidents_df.groupby('week').size().index,
@@ -60,28 +63,21 @@ plt.bar(
 )
 plt.title('Number of incidents per week');
 
-# %% [markdown]
-# ### Group incidents by City and Week
-
 # %%
-# group by wee, city and state
-incidents_df.groupby(['week', 'city', 'state']).count()
+incidents_df.groupby(['city', 'state']).size().shape[0] # number of cities
 
 # %% [markdown]
-# We consider only cities with a number of weeks with incidents greater than 15% of the total number of the weeks of the 4 years.
+# We consider only cities with a number of weeks with incidents greater than 15% of the total number of the weeks of the 4 years, i.e. those having at least an incident in the following number of weeks
 
 # %%
-0.15 * 209 # consider only cities with incidents in more than 30 weeks
+0.15 * number_of_weeks
 
 # %%
-incidents_df.groupby(['city', 'state'])['week'].count() # 10200 distinct cities
-
-# %%
-(incidents_df.groupby(['city', 'state'])['week'].count() > 30).to_list().count(True) # 664 cities with incidents in more than 30 weeks
+incidents_df.groupby(['city', 'state'])['week'].count()
 
 # %%
 # list of index of incidents in city with incidents in more than 30 weeks
-index_list = np.where(incidents_df.groupby(['city', 'state'])['week'].transform('count') > 30)
+index_list = np.where(incidents_df.groupby(['city', 'state'])['week'].transform('count') > number_of_weeks*0.15)
 
 # %%
 # create a df with incidents_df where index is in index_list
@@ -89,10 +85,10 @@ incidents_df = incidents_df.iloc[index_list]
 incidents_df.head(2)
 
 # %%
-incidents_df.groupby(['week', 'city', 'state']).count()
+incidents_df.groupby(['city', 'state']).size().shape[0] # number of cities left
 
 # %%
-incidents_df['state'].unique().shape # 51: all states are present
+incidents_df['state'].unique().shape # all states are present
 
 # %%
 # gruop by week and count incidents
@@ -107,12 +103,169 @@ plt.title('Number of incidents per week');
 # ## Create Time series
 
 # %%
-# Model each city as a sequence of incidents
-incidents_df.groupby(['city', 'state'])['week'].count().sort_values(ascending=False) # 664 time series
+n_weeks_per_year = 52
+
+# %%
+incidents_df.shape[0]
+
+# %%
+incidents_killed_df = incidents_df.dropna(subset=['n_killed'])
+incidents_killed_df.shape[0]
+
+# %%
+killed_index_list = np.where(incidents_killed_df.groupby(['city', 'state'])['week'].transform('count') > number_of_weeks*0.15)
+incidents_killed_df = incidents_killed_df.iloc[killed_index_list]
+incidents_killed_df.shape[0]
+
+# %%
+
+
+# %%
+incidents_killed_df.groupby(['city', 'state']).size().shape[0] # number of cities
+
+# %%
+incidents_killed_by_city_df = incidents_killed_df.groupby(['city', 'state', 'week'])['n_killed'].mean().reset_index()
+incidents_killed_by_city_df = incidents_killed_by_city_df.pivot(index=['city', 'state'], columns='week', values='n_killed')
+#incidents_killed_by_city_df = incidents_killed_by_city_df.fillna(0)
+incidents_killed_by_city_df
+
+# %%
+plt.figure(figsize=(20, 5))
+plt.plot(np.nanmean(incidents_killed_by_city_df.values, axis=0), '.--')
+plt.axvline(x=n_weeks_per_year-1, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*2, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*3, color='k', linestyle='--')
+plt.title('Average number of killed people per week (mean over all cities)');
+
+
+# %%
+plt.figure(figsize=(20, 5))
+new_york_killed_ts = incidents_killed_by_city_df[(incidents_killed_by_city_df.index.get_level_values('city') == 'City of New York')].values[0]
+los_angeles_killed_ts = incidents_killed_by_city_df[(incidents_killed_by_city_df.index.get_level_values('city') == 'Los Angeles')].values[0]
+chicago_killed_ts = incidents_killed_by_city_df[(incidents_killed_by_city_df.index.get_level_values('city') == 'Chicago')].values[0]
+plt.plot(new_york_killed_ts, '.--', label='New York')
+plt.plot(los_angeles_killed_ts, '.--', label='Los Angeles')
+plt.plot(chicago_killed_ts, '.--', label='Chicago')
+plt.title('Average numbr of killed people per week');
+plt.axvline(x=n_weeks_per_year-1, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*2, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*3, color='k', linestyle='--')
+plt.legend();
+
+# %%
+from tslearn.utils import to_time_series_dataset
+X = [row[~np.isnan(row)] for row in incidents_killed_by_city_df.values]
+X = to_time_series_dataset(X)
+# se passo a kmeans nan non funziona (non da errori ma setta inertia a inf)
+
+# %%
+km = TimeSeriesKMeans(n_clusters=4, metric="dtw", max_iter=100, random_state=42)
+pred = km.fit_predict(X)
+
+# %%
+incidents_females_df = incidents_df.dropna(subset=['n_females'])
+incidents_females_df.shape[0]
+
+# %%
+females_index_list = np.where(incidents_females_df.groupby(['city', 'state'])['week'].transform('count') > number_of_weeks*0.15)
+incidents_females_df = incidents_females_df.iloc[females_index_list]
+incidents_females_df.shape[0]
+
+# %%
+incidents_females_df.groupby(['city', 'state']).size().shape[0] # number of cities
+
+# %%
+incidents_females_by_city_df = incidents_females_df.groupby(['city', 'state', 'week'])['n_females'].mean().reset_index()
+incidents_females_by_city_df = incidents_females_by_city_df.pivot(index=['city', 'state'], columns='week', values='n_females')
+#incidents_females_by_city_df = incidents_females_by_city_df.fillna(0)
+incidents_females_by_city_df
+
+# %%
+plt.figure(figsize=(20, 5))
+plt.plot(np.nanmean(incidents_females_by_city_df.values, axis=0), '.--')
+plt.axvline(x=n_weeks_per_year-1, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*2, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*3, color='k', linestyle='--')
+plt.title('Average number of females involved in incidents per week (mean over all cities)');
+
+# %%
+plt.figure(figsize=(20, 5))
+new_york_females_ts = incidents_females_by_city_df[(incidents_females_by_city_df.index.get_level_values('city') == 'City of New York')].values[0]
+los_angeles_females_ts = incidents_females_by_city_df[(incidents_females_by_city_df.index.get_level_values('city') == 'Los Angeles')].values[0]
+chicago_females_ts = incidents_females_by_city_df[(incidents_females_by_city_df.index.get_level_values('city') == 'Chicago')].values[0]
+plt.plot(new_york_females_ts, '.--', label='New York')
+plt.plot(los_angeles_females_ts, '.--', label='Los Angeles')
+plt.plot(chicago_females_ts, '.--', label='Chicago')
+plt.title('Average number of females involved in incidents per week');
+plt.axvline(x=n_weeks_per_year-1, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*2, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*3, color='k', linestyle='--')
+plt.legend();
+
+# %%
+incidents_females_df.dropna(subset=['n_killed'], inplace=True)
+
+incidents_fatal_females_by_city_df = incidents_females_df[incidents_females_df['n_killed']>0].groupby(['city', 'state', 'week'])['n_females'].mean().reset_index()
+incidents_fatal_females_by_city_df = incidents_fatal_females_by_city_df.pivot(index=['city', 'state'], columns='week', values='n_females')
+#incidents_fatal_females_by_city_df = incidents_fatal_females_by_city_df.fillna(0)
+
+incidents_nonfatal_females_by_city_df = incidents_females_df[incidents_females_df['n_killed']==0].groupby(['city', 'state', 'week'])['n_females'].mean().reset_index()
+incidents_nonfatal_females_by_city_df = incidents_nonfatal_females_by_city_df.pivot(index=['city', 'state'], columns='week', values='n_females')
+#incidents_nonfatal_females_by_city_df = incidents_nonfatal_females_by_city_df.fillna(0)
+
+plt.figure(figsize=(20, 5))
+plt.plot(np.nanmean(incidents_fatal_females_by_city_df.values, axis=0), '.--', label='fatal')
+plt.plot(np.nanmean(incidents_nonfatal_females_by_city_df.values, axis=0), '.--', label='non fatal')
+plt.axvline(x=n_weeks_per_year-1, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*2, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*3, color='k', linestyle='--')
+plt.title('Average number of females involved in incidents per week (mean over all cities)');
+plt.legend();
+
+# %%
+incidents_df['n_young'] = incidents_df['n_participants_child'] + incidents_df['n_participants_teen']
+incidents_young_df = incidents_df.dropna(subset=['n_young'])
+incidents_young_df.shape[0]
+
+# %%
+young_index_list = np.where(incidents_young_df.groupby(['city', 'state'])['week'].transform('count') > number_of_weeks*0.15)
+incidents_young_df = incidents_young_df.iloc[young_index_list]
+incidents_young_df.shape[0]
+
+# %%
+incidents_young_df.groupby(['city', 'state']).size().shape[0] # number of cities
+
+# %%
+incidents_young_by_city_df = incidents_young_df.groupby(['city', 'state', 'week'])['n_young'].mean().reset_index()
+incidents_young_by_city_df = incidents_young_by_city_df.pivot(index=['city', 'state'], columns='week', values='n_young')
+#incidents_young_by_city_df = incidents_young_by_city_df.fillna(0)
+incidents_young_by_city_df
+
+# %%
+plt.figure(figsize=(20, 5))
+plt.plot(np.nanmean(incidents_young_by_city_df.values, axis=0), '.--')
+plt.axvline(x=n_weeks_per_year-1, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*2, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*3, color='k', linestyle='--')
+plt.title('Average number of young people per week (mean over all cities)');
+
+# %%
+plt.figure(figsize=(20, 5))
+new_york_young_ts = incidents_young_by_city_df[(incidents_young_by_city_df.index.get_level_values('city') == 'City of New York')].values[0]
+los_angeles_young_ts = incidents_young_by_city_df[(incidents_young_by_city_df.index.get_level_values('city') == 'Los Angeles')].values[0]
+chicago_young_ts = incidents_young_by_city_df[(incidents_young_by_city_df.index.get_level_values('city') == 'Chicago')].values[0]
+plt.plot(new_york_young_ts, '.--', label='New York')
+plt.plot(los_angeles_young_ts, '.--', label='Los Angeles')
+plt.plot(chicago_young_ts, '.--', label='Chicago')
+plt.title('Average number of young people per week (amplitude scaling)');
+plt.axvline(x=n_weeks_per_year-1, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*2, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*3, color='k', linestyle='--')
+plt.legend();
 
 # %% [markdown]
 # Time series: mean number of participants per incident per week in each city
-#
+# 
 # 0 if we have no incidents in the week or NaN values (i.e. incidents where we don not know the nember of participants)
 
 # %%
@@ -124,7 +277,37 @@ incidents_by_city_df = incidents_by_city_df.fillna(0) # substitute NaN with 0
 incidents_by_city_df
 
 # %%
-incidents_by_city_df.groupby('state')[0].count().sort_values(ascending=False)
+incidents_by_city_df.groupby('state')[0].count().sort_values(ascending=False) # number of cities per state
+
+# %%
+# plot time series for big cities
+new_york_ts = incidents_by_city_df[(incidents_by_city_df.index.get_level_values('city') == 'City of New York')].values[0]
+los_angeles_ts = incidents_by_city_df[(incidents_by_city_df.index.get_level_values('city') == 'Los Angeles')].values[0]
+chicago_ts = incidents_by_city_df[(incidents_by_city_df.index.get_level_values('city') == 'Chicago')].values[0]
+plt.figure(figsize=(20, 5))
+plt.plot(new_york_ts, '.--', label='New York')
+plt.plot(los_angeles_ts, '.--', label='Los Angeles')
+plt.plot(chicago_ts, '.--', label='Chicago')
+plt.title('Number of participants per incident per week');
+plt.legend();
+
+# %%
+# offset translation
+plt.figure(figsize=(20, 5))
+plt.plot(new_york_ts - new_york_ts.mean(), '.--', label='New York')
+plt.plot(los_angeles_ts - los_angeles_ts.mean(), '.--', label='Los Angeles')
+plt.plot(chicago_ts - chicago_ts.mean(), '.--', label='Chicago')
+plt.title('Number of participants per incident per week (offset translation)');
+plt.legend();
+
+# %%
+# amplitude scaling
+plt.figure(figsize=(20, 5))
+plt.plot((new_york_ts-new_york_ts.mean()) / new_york_ts.std(), '.--', label='New York')
+plt.plot((los_angeles_ts-los_angeles_ts.mean()) / los_angeles_ts.std(), '.--', label='Los Angeles')
+plt.plot((chicago_ts-chicago_ts.mean()) / chicago_ts.std(), '.--', label='Chicago')
+plt.title('Number of participants per incident per week (amplitude scaling)');
+plt.legend();
 
 # %%
 # plot time series for city in ALASKA state
@@ -158,6 +341,10 @@ plt.legend(incidents_by_city_df[incidents_by_city_df.index.get_level_values('sta
 plt.figure(figsize=(20, 5))
 plt.plot(incidents_by_city_df.values.mean(axis=0), '.--')
 plt.title('Mean of number of participants per incident per week');
+n_weeks_per_year = 52
+plt.axvline(x=n_weeks_per_year-1, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*2, color='k', linestyle='--')
+plt.axvline(x=(n_weeks_per_year-1)*3, color='k', linestyle='--')
 
 # %% [markdown]
 # Grafico coerente, molti 0 nel dataset e la maggior parte degli incidenti aveva 1 solo partecipante
@@ -374,7 +561,7 @@ plt.title('Number of cities per cluster');
 
 # %% [markdown]
 # Piecewise Aggregate Approximation (PAA) is a technique used in time series analysis to reduce the dimensionality of a time series while preserving its essential characteristics.
-#
+# 
 # PAA approximates a time-series $X$ of length $n$ into vector $\hat{X}=(\hat{x}_1,…,\hat{x}_M)$
 #  of any arbitrary length  $M\leq n$
 #  
@@ -444,10 +631,10 @@ plt.title('Number of cities per cluster');
 #from matrixprofile import *
 
 # %%
-#w = 3
-#mp, mpi = matrixProfile.stomp(incidents_by_city_df[0].values, w)
+# w = 3
+# mp, mpi = matrixProfile.stomp(incidents_by_city_df[0].values, w)
 
-#plt.plot(mp)
-#plt.title('Matrix Profile');
+# plt.plot(mp)
+# plt.title('Matrix Profile');
 
 
