@@ -1,0 +1,2 @@
+,mean_fit_time,std_fit_time,mean_score_time,std_score_time,param_C,param_kernel,param_class_weight,param_degree,param_gamma,params,split0_test_score,split1_test_score,mean_test_score,std_test_score,rank_test_score
+SupportVectorMachineClassifier,707.7092218399048,23.644026279449463,139.2880518436432,1.0288476943969727,2,poly,balanced,4,scale,"{'svc__C': 2, 'svc__class_weight': 'balanced', 'svc__degree': 4, 'svc__gamma': 'scale', 'svc__kernel': 'poly'}",0.6598100918839499,0.6624203821656052,0.6611152370247775,0.0013051451408276349,1

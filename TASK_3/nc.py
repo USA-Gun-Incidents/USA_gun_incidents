@@ -2,22 +2,24 @@
 import pandas as pd
 import json
 import pickle
+from imblearn.over_sampling import RandomOverSampler
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import NearestCentroid
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, KFold
 from sklearn.metrics import make_scorer, f1_score
 from time import time
 from classification_utils import *
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 RESULTS_DIR = '../data/classification_results'
+SEED=42
 clf_name = 'NearestCentroidClassifier'
 
 # %%
 # load the data
 incidents_train_df = pd.read_csv('../data/clf_indicators_train.csv', index_col=0)
-incidents_test_df = pd.read_csv('../data/clf_scaled_indicators_test.csv', index_col=0)
+incidents_test_df = pd.read_csv('../data/clf_indicators_test.csv', index_col=0)
 true_labels_train_df = pd.read_csv('../data/clf_y_train.csv', index_col=0)
 true_labels_train = true_labels_train_df.values.ravel()
 true_labels_test_df = pd.read_csv('../data/clf_y_test.csv', index_col=0)
@@ -44,6 +46,12 @@ print(f'Number of features: {len(features_for_clf)}')
 # il centroide sta nel mezzo => la feature non è rilevante)
 
 # %%
+# minority oversampling
+oversampler = RandomOverSampler(sampling_strategy=0.67, random_state=SEED) # num_minority (40%) / num_majority (60%) = 0.67
+indicators_oversampled_train_df, true_oversampled_labels_train = oversampler.fit_resample(indicators_train_df, true_labels_train)
+
+# %%
+cv = KFold(n_splits=5, shuffle=True, random_state=SEED)
 scaler = MinMaxScaler()
 nc = NearestCentroid()
 pipe = Pipeline(steps=[('scaler', scaler), ('nc', nc)])
@@ -58,7 +66,7 @@ gs = GridSearchCV(
     n_jobs=-1,
     scoring=make_scorer(f1_score),
     verbose=10,
-    cv=5,
+    cv=cv,
     refit=False
 )
 gs.fit(indicators_train_df, true_labels_train)
@@ -202,9 +210,9 @@ plot_distribution_missclassifications(
     true_labels_test,
     pred_labels_test,
     incidents_test_df,
-    'incident_characteristics1',
+    'aggression',
     'pie',
-    title='incident_characteristics1 distribution'
+    title='aggression distribution'
 )
 
 # %%
@@ -212,11 +220,11 @@ plot_distribution_missclassifications(
     true_labels_test,
     pred_labels_test,
     incidents_test_df,
-    'incident_characteristics2',
+    'road',
     'pie',
     pie_perc_threshold=2,
     figsize=(20, 5),
-    title='incident_characteristics2 distribution'
+    title='road distribution'
 )
 
 # %%
