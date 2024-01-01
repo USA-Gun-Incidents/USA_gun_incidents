@@ -20,6 +20,7 @@ from enum import Enum
 import pyproj
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
+from imblearn.over_sampling import RandomOverSampler, SMOTENC
 from sklearn.model_selection import train_test_split
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
@@ -413,7 +414,7 @@ axs[1].set_title('Cyclic encoding of days of the month')
 axs[1].legend(loc='lower center', ncols=31, bbox_to_anchor=(0.5, -0.2))
 
 sns.set_palette('tab10')
-days = np.arange(1, 8)
+days = np.arange(0, 7)
 days_names = ['Mon', 'Tue', 'Thu', 'Wed', 'Fri', 'Sat', 'Sun']
 days_xs = np.sin(2 * np.pi * np.array(days) / 7.0)
 days_ys = np.cos(2 * np.pi * np.array(days) / 7.0)
@@ -700,7 +701,7 @@ if nrows > 1:
 original_features_minus_indicators = [feature for feature in dataset_original_columns if feature not in indicators_names]
 incidents_clf = incidents_clf[original_features_minus_indicators + indicators_names + ['death']]
 incidents_nan = incidents_nan[original_features_minus_indicators + indicators_names + ['death']]
-X_train, X_test, y_train, y_test = train_test_split(
+X_train_df, X_test_df, y_train, y_test = train_test_split(
     incidents_clf.drop(columns='death'),
     incidents_clf['death'],
     test_size=1/3,
@@ -708,10 +709,10 @@ X_train, X_test, y_train, y_test = train_test_split(
     shuffle=True,
     stratify=incidents_clf['death'].values
 )
-pd.concat([X_train, incidents_nan.drop(columns='death')]).to_csv('../data/clf_indicators_train_nan.csv')
+pd.concat([X_train_df, incidents_nan.drop(columns='death')]).to_csv('../data/clf_indicators_train_nan.csv')
 pd.concat([y_train, incidents_nan['death']]).to_csv('../data/clf_y_train_nan.csv')
-X_train.to_csv('../data/clf_indicators_train.csv')
-X_test.to_csv('../data/clf_indicators_test.csv')
+X_train_df.to_csv('../data/clf_indicators_train.csv')
+X_test_df.to_csv('../data/clf_indicators_test.csv')
 y_train.to_csv('../data/clf_y_train.csv')
 y_test.to_csv('../data/clf_y_test.csv')
 
@@ -745,14 +746,14 @@ axs[3].set_title('Robust scaling');
 fig.suptitle('Distributions of the indicators', fontweight='bold');
 
 # %%
-minmax_scaler.fit(X_train[indicators_names])
-X_test_transf = minmax_scaler.transform(X_test[indicators_names])
-X_test[indicators_names] = X_test_transf
-X_test.to_csv('../data/clf_scaled_indicators_test.csv')
+minmax_scaler.fit(X_train_df[indicators_names])
+X_test_transf = minmax_scaler.transform(X_test_df[indicators_names])
+X_test_df[indicators_names] = X_test_transf
+X_test_df.to_csv('../data/clf_scaled_indicators_test.csv')
 
 # %%
 fig, axs = plt.subplots(figsize=(10, 6))
-X_test[indicators_names].boxplot(ax=axs, rot=90)
+X_test_df[indicators_names].boxplot(ax=axs, rot=90)
 
 # %% [markdown]
 # We display train and test sizes:
@@ -760,8 +761,10 @@ X_test[indicators_names].boxplot(ax=axs, rot=90)
 # %%
 train_test_infos = {}
 train_test_infos['Fatal'] = [y_train.sum(), y_test.sum()]
-train_test_infos['Non_Fatal'] = [(y_train == False).sum(), (y_test == False).sum()]
-train_test_infos['total'] = [X_train.shape[0], X_test.shape[0]]
+train_test_infos['Fatal (%)'] = [y_train.sum()/y_train.shape[0]*100, y_test.sum()/y_test.shape[0]*100]
+train_test_infos['Non-Fatal'] = [(y_train == False).sum(), (y_test == False).sum()]
+train_test_infos['Non-Fatal (%)'] = [(y_train == False).sum()/y_train.shape[0]*100, (y_test == False).sum()/y_test.shape[0]*100]
+train_test_infos['total'] = [X_train_df.shape[0], X_test_df.shape[0]]
 pd.DataFrame(train_test_infos, index=['train', 'test'])
 
 # %% [markdown]
@@ -778,6 +781,7 @@ features_db = [
     'poverty_perc', 'democrat', 'gun_law_rank', 
     'aggression', 'accidental', 'defensive', 'suicide', 'road', 'house', 'school', 'business', 'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
 ]
+
 with open('../data/clf_indicators_names_distance_based.json', 'w') as f:
     json.dump(features_db, f)
 
@@ -791,8 +795,54 @@ features_rb = [
     'poverty_perc', 'democrat', 'gun_law_rank',
     'aggression', 'accidental', 'defensive', 'suicide', 'road', 'house', 'school', 'business', 'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
 ]
+
+categorical_features_rb = [
+    'day', 'day_of_week', 'month', 'year',
+    'democrat', 'gun_law_rank',
+    'aggression', 'accidental', 'defensive', 'suicide',
+    'road', 'house', 'school', 'business',
+    'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
+]
+
 with open('../data/clf_indicators_names_rule_based.json', 'w') as f:
     json.dump(features_rb, f)
+
+# %%
+oversample = RandomOverSampler(sampling_strategy=0.4/0.6)
+X_train_over_df, y_train_over = oversample.fit_resample(X_train_df, y_train)
+
+X_train_over_df.to_csv('../data/clf_indicators_train_over.csv')
+y_train_over.to_csv('../data/clf_y_train_over.csv')
+
+train_over_infos = {}
+train_over_infos['Fatal'] = [y_train_over.sum()]
+train_over_infos['Fatal (%)'] = [(y_train_over.sum()/y_train_over.shape[0])*100]
+train_over_infos['Non_Fatal'] = [(y_train_over == 0).sum()]
+train_over_infos['Non_Fatal (%)'] = [((y_train_over == 0).sum()/y_train_over.shape[0])*100]
+train_over_infos['total'] = [y_train_over.shape[0]]
+pd.DataFrame(train_over_infos, index=['train'])
+
+# %%
+smote_oversample = SMOTENC(categorical_features=categorical_features_rb, sampling_strategy=0.4/0.6)
+X_train_smote_df, y_train_smote = smote_oversample.fit_resample(X_train_df[features_rb], y_train)
+# recompute splitted indicators
+X_train_smote_df['month_x'] = np.sin(2 * np.pi * X_train_smote_df['month'] / 12.0)
+X_train_smote_df['month_y'] = np.cos(2 * np.pi * X_train_smote_df['month'] / 12.0)
+X_train_smote_df['day_x'] = np.sin(2 * np.pi * X_train_smote_df['day'] / 31.0)
+X_train_smote_df['day_y'] = np.cos(2 * np.pi * X_train_smote_df['day'] / 31.0)
+X_train_smote_df['day_of_week_x'] = np.sin(2 * np.pi * X_train_smote_df['day_of_week'] / 7.0)
+X_train_smote_df['day_of_week_y'] = np.cos(2 * np.pi * X_train_smote_df['day_of_week'] / 7.0)
+
+X_train_smote_df.to_csv('../data/clf_indicators_train_smote.csv')
+y_train_smote.to_csv('../data/clf_y_train_smote.csv')
+
+train_smote_infos = {}
+train_smote_infos['Fatal'] = [y_train_smote.sum()]
+train_smote_infos['Fatal (%)'] = [(y_train_smote.sum()/y_train_smote.shape[0])*100]
+train_smote_infos['Non_Fatal'] = [(y_train_smote == 0).sum()]
+train_smote_infos['Non_Fatal (%)'] = [((y_train_smote == 0).sum()/y_train_smote.shape[0])*100]
+train_smote_infos['total'] = [y_train_smote.shape[0]]
+pd.DataFrame(train_smote_infos, index=['train'])
 
 # %% [markdown]
 # We define a function to compute and save the most frequent values for each feature:
@@ -818,10 +868,10 @@ def save_default_feature_values(df, path):
 # We apply that function to compute the most frequent values for each feature in fatal and non-fatal incidents:
 
 # %%
-save_default_feature_values(df=X_train[y_train==1][features_rb], path='../data/classification_results/fatal_rb_default_features.csv')
-save_default_feature_values(df=X_train[y_train==0][features_rb], path='../data/classification_results/non_fatal_rb_default_features.csv')
-save_default_feature_values(df=X_train[y_train==1][features_db], path='../data/classification_results/fatal_db_default_features.csv')
-save_default_feature_values(df=X_train[y_train==0][features_db], path='../data/classification_results/non_fatal_db_default_features.csv')
+save_default_feature_values(df=X_train_df[y_train==1][features_rb], path='../data/classification_results/fatal_rb_default_features.csv')
+save_default_feature_values(df=X_train_df[y_train==0][features_rb], path='../data/classification_results/non_fatal_rb_default_features.csv')
+save_default_feature_values(df=X_train_df[y_train==1][features_db], path='../data/classification_results/fatal_db_default_features.csv')
+save_default_feature_values(df=X_train_df[y_train==0][features_db], path='../data/classification_results/non_fatal_db_default_features.csv')
 
 # %% [markdown]
 # TODO: compilare una volta definiti

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.lines import Line2D
 from sklearn.metrics import ConfusionMatrixDisplay, RocCurveDisplay, roc_auc_score, classification_report
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.decomposition import PCA
 from mlxtend.plotting import plot_decision_regions
 from sklearn.model_selection import LearningCurveDisplay
@@ -137,8 +138,8 @@ def plot_predictions_in_features_space(
     :param path: path where to save the figure
     '''
     
-    true_labels = ['red' if x else 'blue' for x in true_labels]
-    pred_labels = ['red' if x else 'blue' for x in pred_labels]
+    true_labels = ['red' if x==1 else 'blue' for x in true_labels]
+    pred_labels = ['red' if x==1 else 'blue' for x in pred_labels]
     errors = ['gray' if x==y else 'orange' for x, y in zip(true_labels, pred_labels)]
 
     ncols = 3
@@ -208,16 +209,21 @@ def plot_PCA_decision_boundary(
     train_label,
     classifier,
     classifier_name,
-    axs
+    axs,
+    scale=False,
+    pca=True
     ):
     '''
     This function plots the decision boundary in the frist two principal components of the given classifier.
 
     :param train_set: training set
+    :param features: list of features to use
     :param train_label: training labels
     :param classifier: classifier
     :param classifier_name: name of the classifier
     :param axs: axis where to plot the decision boundary
+    :param scale: whether to scale the data before applying PCA
+    :param pca: whether to apply PCA
     '''
 
     if type(train_set) == pd.DataFrame:
@@ -226,8 +232,12 @@ def plot_PCA_decision_boundary(
         X = train_set
     y = train_label
     
-    pca = PCA(n_components = 2)
-    X = pca.fit_transform(X)
+    if scale:
+        scaler = MinMaxScaler()
+        X = scaler.fit_transform(X)
+    if pca:
+        pca = PCA(n_components = 2)
+        X = pca.fit_transform(X)
 
     classifier.fit(X, y)
 
@@ -342,13 +352,13 @@ def plot_distribution_missclassifications(
 
     if kind=='bar':
         fig, axs = plt.subplots(1, 2, figsize=figsize, sharey=True)
-        data[errors][attribute].value_counts(sort=False).plot.bar(
+        data[errors][attribute].value_counts(sort=False).sort_index().plot.bar(
             xlabel=attribute,
             ylabel='count',
             title='Missclassified incidents',
             ax=axs[0]
         )
-        data[attribute].value_counts(sort=False).plot.bar(
+        data[attribute].value_counts(sort=False).sort_index().plot.bar(
             xlabel=attribute,
             ylabel='count',
             title='All incidents',
@@ -473,5 +483,6 @@ def display_feature_importances(
         y=sorted_features_names,
         width=sorted_features_imp
     )
+    axs.set_xlabel('Feature importance')
     if title is not None:
         axs.set_title(title)

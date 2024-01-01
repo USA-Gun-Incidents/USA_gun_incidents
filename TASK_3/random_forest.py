@@ -1,23 +1,36 @@
+# %% [markdown]
+# **Data mining Project - University of Pisa, acedemic year 2023/24**
+#
+# **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
+#
+# # Random Forest Classifier
+#
+# We import the libraries and define constants and settings of the notebook:
+
 # %%
 import pandas as pd
-import json
 import numpy as np
-import pickle
 import matplotlib.pyplot as plt
 import seaborn as sns
+import json
+import pickle
 import pydotplus
 from IPython.display import Image
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import export_graphviz
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import make_scorer, f1_score
 from time import time
 from classification_utils import *
+
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 RANDOM_STATE = 42
 RESULTS_DIR = '../data/classification_results'
 clf_name = 'RandomForestClassifier'
+
+# %% [markdown]
+# We load the data:
 
 # %%
 # load the data
@@ -43,13 +56,25 @@ print(features_for_clf)
 print(f'Number of features: {len(features_for_clf)}')
 
 # %% [markdown]
+# We define a list of the categorical features:
+
+# %%
+categorical_features = [
+    'day', 'day_of_week', 'month', 'year',
+    'democrat', 'gun_law_rank',
+    'aggression', 'accidental', 'defensive', 'suicide',
+    'road', 'house', 'school', 'business',
+    'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
+]
+
+# %% [markdown]
 # Parameters explored:
 # - n_estimators: The number of trees in the forest.
 # - max_features: The number of features to consider when looking for the best split. We will try both the square root of the number of features and all the features.
 # - max_samples: The number of samples to draw from the trainin set to train each base estimator. We will try both using all the samples and using half of the samples.
 # - min_samples_split: The minimum number of samples required to split an internal node. We will try 2 (the minimum possible) and different fractions of the training set.
 # - min_samples_leaf: The minimum number of samples required to be at a leaf node. We will try 1 (the minimum possible) and different fractions of the training set.
-# 
+#
 # Fixed parameters:
 # - bootstrap: We will bootstrap samples when building trees.
 # - class_weight: Weights associated with classes. We will use 'balanced' as it performed better in the previous experiments with the Decision Tree Classifier.
@@ -64,7 +89,7 @@ print(f'Number of features: {len(features_for_clf)}')
 # %%
 param_grid = {
     # values to try
-    'n_estimators': [100, 200], # TODO: provarne di più?
+    'n_estimators': [100, 200],
     'max_features': ['sqrt', None],
     'max_samples': [0.5, None],
     'min_samples_split': [2, 0.01, 0.025, 0.05, 0.1],

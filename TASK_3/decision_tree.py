@@ -1,10 +1,18 @@
-# -*- coding: utf-8 -*-
+# %% [markdown]
+# **Data mining Project - University of Pisa, acedemic year 2023/24**
+#
+# **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
+#
+# # Decision Tree Classifier
+#
+# We import the libraries and define constants and settings of the notebook:
+
 # %%
 import pandas as pd
-import json
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import json
 import pickle
 import pydotplus
 from IPython.display import Image
@@ -12,14 +20,16 @@ from sklearn.tree import DecisionTreeClassifier, export_graphviz
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import make_scorer, f1_score
 from time import time
-from imblearn.over_sampling import RandomOverSampler
-from imblearn.over_sampling import SMOTENC
 from classification_utils import *
+
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 RANDOM_STATE = 42
 RESULTS_DIR = '../data/classification_results'
 clf_name = 'DecisionTreeClassifier'
+
+# %% [markdown]
+# We load the data:
 
 # %%
 # load the data
@@ -43,6 +53,18 @@ indicators_test_df = incidents_test_df[features_for_clf]
 # %%
 print(features_for_clf)
 print(f'Number of features: {len(features_for_clf)}')
+
+# %% [markdown]
+# We define a list of the categorical features:
+
+# %%
+categorical_features = [
+    'day', 'day_of_week', 'month', 'year',
+    'democrat', 'gun_law_rank',
+    'aggression', 'accidental', 'defensive', 'suicide',
+    'road', 'house', 'school', 'business',
+    'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
+]
 
 # %% [markdown]
 # Parameters explored:
@@ -201,30 +223,14 @@ test_scores = compute_clf_scores(
 test_scores
 
 # %%
-train_test_infos = {}
-train_test_infos['Fatal'] = [true_labels_train.sum(), true_labels_test.sum()]
-train_test_infos['Fatal (%)'] = [(true_labels_train.sum()/true_labels_train.shape[0])*100, (true_labels_test.sum()/true_labels_test.shape[0])*100]
-train_test_infos['Non_Fatal'] = [(true_labels_train == 0).sum(), (true_labels_test == 0).sum()]
-train_test_infos['Non_Fatal (%)'] = [((true_labels_train == 0).sum()/true_labels_train.shape[0])*100, ((true_labels_test == 0).sum()/true_labels_test.shape[0])*100]
-train_test_infos['total'] = [true_labels_train.shape[0], true_labels_test.shape[0]]
-pd.DataFrame(train_test_infos, index=['train', 'test'])
-
-# %%
-oversample = RandomOverSampler(sampling_strategy=0.4/0.6)
-indicators_over_train_df, true_labels_over_train = oversample.fit_resample(indicators_train_df, true_labels_train)
-
-train_over_infos = {}
-train_over_infos['Fatal'] = [true_labels_over_train.sum()]
-train_over_infos['Fatal (%)'] = [(true_labels_over_train.sum()/true_labels_over_train.shape[0])*100]
-train_over_infos['Non_Fatal'] = [(true_labels_over_train == 0).sum()]
-train_over_infos['Non_Fatal (%)'] = [((true_labels_over_train == 0).sum()/true_labels_over_train.shape[0])*100]
-train_over_infos['total'] = [true_labels_over_train.shape[0]]
-pd.DataFrame(train_over_infos, index=['train'])
+indicators_over_train_df = pd.read_csv('../data/clf_indicators_train_over.csv', index_col=0)
+indicators_over_train_df = indicators_over_train_df[features_for_clf]
+true_labels_over_train = pd.read_csv('../data/clf_y_train_over.csv', index_col=0).values.ravel()
 
 # %%
 # fit the model on all the training data
-fit_start = time()
 best_model_over = DecisionTreeClassifier(**best_model_params)
+fit_start = time()
 best_model_over.fit(indicators_over_train_df, true_labels_over_train)
 fit_over_time = time()-fit_start
 
@@ -251,28 +257,14 @@ pickle.dump(obj=best_model_over, file=file)
 file.close()
 
 # %%
-categorical_features = [
-    'day', 'day_of_week', 'month', 'year',
-    'democrat', 'gun_law_rank',
-    'aggression', 'accidental', 'defensive', 'suicide',
-    'road', 'house', 'school', 'business',
-    'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
-]
-smote_oversample = SMOTENC(categorical_features=categorical_features, sampling_strategy=0.4/0.6)
-indicators_smote_train_df, true_labels_smote_train = smote_oversample.fit_resample(indicators_train_df, true_labels_train)
-
-train_smote_infos = {}
-train_smote_infos['Fatal'] = [true_labels_smote_train.sum()]
-train_smote_infos['Fatal (%)'] = [(true_labels_smote_train.sum()/true_labels_smote_train.shape[0])*100]
-train_smote_infos['Non_Fatal'] = [(true_labels_smote_train == 0).sum()]
-train_smote_infos['Non_Fatal (%)'] = [((true_labels_smote_train == 0).sum()/true_labels_smote_train.shape[0])*100]
-train_smote_infos['total'] = [true_labels_smote_train.shape[0]]
-pd.DataFrame(train_smote_infos, index=['train'])
+indicators_smote_train_df = pd.read_csv('../data/clf_indicators_train_smote.csv', index_col=0)
+indicators_smote_train_df = indicators_smote_train_df[features_for_clf]
+true_labels_smote_train = pd.read_csv('../data/clf_y_train_smote.csv', index_col=0).values.ravel()
 
 # %%
 # fit the model on all the training data
-fit_start = time()
 best_model_smote = DecisionTreeClassifier(**best_model_params)
+fit_start = time()
 best_model_smote.fit(indicators_smote_train_df, true_labels_smote_train)
 fit_smote_time = time()-fit_start
 
@@ -369,9 +361,6 @@ test_scores_nan = compute_clf_scores(
 pd.concat([test_scores, test_scores_nan])
 
 # %%
-# TODO: da qui in giù analizza la miglior tecnica di oversampling?
-
-# %%
 dot_data = export_graphviz(
     best_model,
     out_file=None, 
@@ -383,7 +372,7 @@ graph = pydotplus.graph_from_dot_data(dot_data)
 Image(graph.create_png())
 
 # %%
-fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+fig, axs = plt.subplots(1, 1, figsize=(5, 8))
 display_feature_importances(
     feature_names=best_model.feature_names_in_,
     feature_importances=best_model.feature_importances_,
@@ -393,63 +382,6 @@ display_feature_importances(
 )
 
 # %%
-path = best_model.cost_complexity_pruning_path(indicators_train_df, true_labels_train)
-ccp_alphas, impurities = path.ccp_alphas, path.impurities
-print(f'Number of alphas: {len(ccp_alphas)}')
-
-# %%
-fig, ax = plt.subplots()
-ax.plot(ccp_alphas, impurities, marker="o", drawstyle="steps-post")
-ax.set_xlabel("effective alpha")
-ax.set_ylabel("total impurity of leaves")
-ax.set_title("Total Impurity vs effective alpha for training set");
-
-# %%
-clfs = []
-for i, ccp_alpha in enumerate(ccp_alphas[-20:]):
-    print(f'Trying ccp_alpha {i+1}/{len(ccp_alphas[-20:])}')
-    clf = DecisionTreeClassifier(random_state=0, ccp_alpha=ccp_alpha)
-    clf.fit(indicators_train_df, true_labels_train)
-    clfs.append(clf)
-
-# %%
-ccp_alphas = ccp_alphas[-20:]
-node_counts = [clf.tree_.node_count for clf in clfs]
-depth = [clf.tree_.max_depth for clf in clfs]
-fig, ax = plt.subplots(2, 1)
-ax[0].plot(ccp_alphas, node_counts, marker="o", drawstyle="steps-post")
-ax[0].set_xlabel("alpha")
-ax[0].set_ylabel("number of nodes")
-ax[0].set_title("Number of nodes vs alpha")
-ax[1].plot(ccp_alphas, depth, marker="o", drawstyle="steps-post")
-ax[1].set_xlabel("alpha")
-ax[1].set_ylabel("depth of tree")
-ax[1].set_title("Depth vs alpha")
-fig.tight_layout()
-
-# %%
-dot_data = export_graphviz(
-    clfs[2],
-    out_file=None, 
-    feature_names=list(indicators_train_df.columns),
-    filled=True,
-    rounded=True
-)
-graph = pydotplus.graph_from_dot_data(dot_data)
-Image(graph.create_png())
-
-# %%
-dot_data = export_graphviz(
-    clfs[10],
-    out_file=None, 
-    feature_names=list(indicators_train_df.columns),
-    filled=True,
-    rounded=True
-)
-graph = pydotplus.graph_from_dot_data(dot_data)
-Image(graph.create_png())
-
-# %%
 plot_confusion_matrix(
     y_true=true_labels_test,
     y_pred=pred_labels_test,
@@ -457,12 +389,19 @@ plot_confusion_matrix(
 )
 
 # %%
+plot_confusion_matrix(
+    y_true=true_labels_test,
+    y_pred=pred_labels_smote_test,
+    title=clf_name + ' SMOTE'
+)
+
+# %%
 plot_predictions_in_features_space(
     df=incidents_test_df,
-    features=['n_males_prop', 'n_child_prop', 'n_participants'], # TODO: farlo con features significativve
+    features=['n_males_prop', 'n_child_prop', 'n_teen_prop', 'n_participants', 'poverty_perc'],
     true_labels=true_labels_test,
     pred_labels=pred_labels_test,
-    figsize=(15, 15)
+    figsize=(15, 50)
 )
 
 # %%
@@ -472,11 +411,13 @@ plot_roc(y_true=true_labels_test, y_probs=[pred_probas_test[:,1]], names=[clf_na
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_PCA_decision_boundary(
   train_set=indicators_train_df,
-  features=indicators_train_df.columns, # TODO: eventualmente usare solo le numeriche
+  features=[col for col in indicators_train_df.columns if col not in categorical_features],
   train_label=true_labels_train,
   classifier=best_model,
   classifier_name=clf_name,
-  axs=axs
+  axs=axs,
+  scale=True,
+  pca=True
 )
 
 # %%

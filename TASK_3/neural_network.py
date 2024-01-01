@@ -1,8 +1,17 @@
+# %% [markdown]
+# **Data mining Project - University of Pisa, acedemic year 2023/24**
+# 
+# **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
+# 
+# # Neural Network Classifier
+# 
+# We import the libraries and define constants and settings of the notebook:
+
 # %%
 import pandas as pd
-import matplotlib.pyplot as plt
 import json
 import pickle
+import matplotlib.pyplot as plt
 import tensorflow as tf
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
@@ -12,10 +21,15 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import make_scorer, f1_score
 from time import time
 from classification_utils import *
+
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 RESULTS_DIR = '../data/classification_results'
+RANDOM_STATE = 42
 clf_name = 'NeuralNetworkClassifier'
+
+# %% [markdown]
+# We load the data:
 
 # %%
 # load the data
@@ -39,6 +53,18 @@ indicators_test_df = incidents_test_df[features_for_clf]
 # %%
 print(features_for_clf)
 print(f'Number of features: {len(features_for_clf)}')
+
+# %% [markdown]
+# We define a list of the categorical features:
+
+# %%
+categorical_features = [
+    'day_x', 'day_y', 'day_of_week_x', 'day_of_week_y', 'month_x', 'month_y', 'year',
+    'democrat', 'gun_law_rank',
+    'aggression', 'accidental', 'defensive', 'suicide',
+    'road', 'house', 'school', 'business',
+    'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
+]
 
 # %%
 # Di seguito uso un wrapper di Keras per usare scikit learn
@@ -69,6 +95,7 @@ scaler = MinMaxScaler()
 pipe = Pipeline(steps=[("scaler", scaler), ("nn", best_model)])
 
 # TODO: questi valori li ho messi a caso per testarlo
+# TODO: usare loss pesata per bilanciare le classi
 param_grid = [
     {
         'nn__model__hidden_layer_sizes': [(256, 256,)],
@@ -90,7 +117,7 @@ gs = GridSearchCV( # RandomizedSearchCV?
     n_jobs=-1,
     scoring=make_scorer(f1_score),
     verbose=10,
-    cv=StratifiedShuffleSplit(n_splits=2, test_size=1/3), # TODO: con altri classificatori usiamo stratified 5-fold, qui ci vuole troppo
+    cv=StratifiedShuffleSplit(n_splits=2, test_size=1/3, random_state=RANDOM_STATE), # TODO: con altri classificatori usiamo stratified 5-fold, qui ci vuole troppo
     refit=False
 )
 gs.fit(indicators_train_df, true_labels_train)
@@ -100,7 +127,7 @@ val_results_df = pd.DataFrame(gs.cv_results_)
 val_results_df.head()
 
 # %%
-# TODO: heatmap per studiare influenza iperparametri
+# TODO: heatmap per studiare influenza iperparametri (vedi altri notebook)
 
 # %%
 params = [col for col in val_results_df.columns if 'param_' in col and 'random' not in col]
@@ -191,7 +218,7 @@ compute_clf_scores(
 )
 
 # %%
-compute_clf_scores(
+test_scores = compute_clf_scores(
     y_true=true_labels_test,
     y_pred=pred_labels_test,
     train_time=fit_time,
@@ -201,6 +228,114 @@ compute_clf_scores(
     clf_name=clf_name,
     path=f'{RESULTS_DIR}/{clf_name}_test_scores.csv'
 )
+test_scores
+
+# %%
+indicators_over_train_df = pd.read_csv('../data/clf_indicators_train_over.csv', index_col=0)
+indicators_over_train_df = indicators_over_train_df[features_for_clf]
+indicators_train_over_scaled = minmax_scaler.fit_transform(indicators_over_train_df)
+true_labels_over_train = pd.read_csv('../data/clf_y_train_over.csv', index_col=0).values.ravel()
+
+# %%
+# fit the model on all the training data
+best_model_over = KerasClassifier(
+    get_clf,
+    metrics=['accuracy'],
+    validation_split=0.2,
+    **best_model_params
+)
+
+fit_start = time()
+best_model_over.fit(indicators_train_over_scaled, true_labels_over_train)
+fit_over_time = time()-fit_start
+
+# get the predictions on the training data
+train_score_start = time()
+pred_labels_over_train = best_model_over.predict(indicators_train_over_scaled)
+train_score_over_time = time()-train_score_start
+pred_probas_over_train = best_model_over.predict_proba(indicators_train_over_scaled)
+
+# get the predictions on the test data
+test_score_start = time()
+pred_labels_over_test = best_model_over.predict(indicators_test_df.values)
+test_score_over_time = time()-test_score_start
+pred_probas_over_test = best_model_over.predict_proba(indicators_test_df.values)
+
+# save the predictions
+pd.DataFrame(
+    {'labels': pred_labels_over_test, 'probs': pred_probas_over_test[:,1]}
+).to_csv(f'{RESULTS_DIR}/{clf_name}_oversample_preds.csv')
+
+# save the model
+file = open(f'{RESULTS_DIR}/{clf_name}_oversample.pkl', 'wb')
+pickle.dump(obj=best_model_over, file=file)
+file.close()
+
+# %%
+indicators_smote_train_df = pd.read_csv('../data/clf_indicators_train_smote.csv', index_col=0)
+indicators_smote_train_df = indicators_smote_train_df[features_for_clf]
+indicators_smote_train_scaled = minmax_scaler.fit_transform(indicators_smote_train_df)
+true_labels_smote_train = pd.read_csv('../data/clf_y_train_smote.csv', index_col=0).values.ravel()
+
+# %%
+# fit the model on all the training data
+best_model_smote = KerasClassifier(
+    get_clf,
+    metrics=['accuracy'],
+    validation_split=0.2,
+    **best_model_params
+)
+
+fit_start = time()
+best_model_smote.fit(indicators_smote_train_scaled, true_labels_smote_train)
+fit_smote_time = time()-fit_start
+
+# get the predictions on the training data
+train_score_start = time()
+pred_labels_smote_train = best_model_smote.predict(indicators_smote_train_scaled)
+train_score_smote_time = time()-train_score_start
+pred_probas_smote_train = best_model_smote.predict_proba(indicators_smote_train_scaled)
+
+# get the predictions on the test data
+test_score_start = time()
+pred_labels_smote_test = best_model_smote.predict(indicators_test_df.values)
+test_score_smote_time = time()-test_score_start
+pred_probas_smote_test = best_model_smote.predict_proba(indicators_test_df.values)
+
+# save the predictions
+pd.DataFrame(
+    {'labels': pred_labels_smote_test, 'probs': pred_probas_smote_test[:,1]}
+).to_csv(f'{RESULTS_DIR}/{clf_name}_smote_preds.csv')
+
+# save the model
+file = open(f'{RESULTS_DIR}/{clf_name}_smote.pkl', 'wb')
+pickle.dump(obj=best_model_smote, file=file)
+file.close()
+
+# %%
+test_over_scores = compute_clf_scores(
+    y_true=true_labels_test,
+    y_pred=pred_labels_over_test,
+    train_time=fit_over_time,
+    score_time=test_score_over_time,
+    params=best_model_params,
+    prob_pred=pred_probas_over_test,
+    clf_name=clf_name+' over',
+    path=f'{RESULTS_DIR}/{clf_name}_over_test_scores.csv'
+)
+
+test_smote_scores = compute_clf_scores(
+    y_true=true_labels_test,
+    y_pred=pred_labels_smote_test,
+    train_time=fit_smote_time,
+    score_time=test_score_smote_time,
+    params=best_model_params,
+    prob_pred=pred_probas_smote_test,
+    clf_name=clf_name+' SMOTE',
+    path=f'{RESULTS_DIR}/{clf_name}_smote_test_scores.csv'
+)
+
+pd.concat([test_scores, test_over_scores, test_smote_scores])
 
 # %%
 plot_confusion_matrix(
@@ -210,26 +345,35 @@ plot_confusion_matrix(
 )
 
 # %%
+plot_confusion_matrix(
+    y_true=true_labels_test,
+    y_pred=pred_labels_smote_test,
+    title=clf_name + ' SMOTE'
+)
+
+# %%
 plot_roc(y_true=true_labels_test, y_probs=[pred_probas_test[:,1]], names=[clf_name])
 
 # %%
 plot_predictions_in_features_space(
     df=incidents_test_df,
-    features=['n_males_prop', 'n_child_prop', 'n_participants'], # TODO: farlo con features significativve
+    features=['n_males_prop', 'n_child_prop', 'n_teen_prop', 'n_participants', 'poverty_perc'],
     true_labels=true_labels_test,
     pred_labels=pred_labels_test,
-    figsize=(15, 15)
+    figsize=(15, 50)
 )
 
 # %%
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_PCA_decision_boundary(
   train_set=indicators_train_df,
-  features=indicators_train_df.columns, # TODO: eventualmente usare solo le numeriche
+  features=[col for col in indicators_train_df.columns if col not in categorical_features],
   train_label=true_labels_train,
   classifier=best_model,
   classifier_name=clf_name,
-  axs=axs
+  axs=axs,
+  scale=True,
+  pca=True
 )
 
 # %%
