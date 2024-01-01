@@ -2,10 +2,11 @@
 import pandas as pd
 import json
 import pickle
+from imblearn.over_sampling import RandomOverSampler
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
-from sklearn.model_selection import GridSearchCV,  StratifiedShuffleSplit
+from sklearn.model_selection import GridSearchCV,  KFold
 from sklearn.metrics import make_scorer, f1_score
 from sklearn.inspection import permutation_importance
 from time import time
@@ -14,11 +15,12 @@ pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 RESULTS_DIR = '../data/classification_results'
 clf_name = 'SupportVectorMachineClassifier'
+SEED=42
 
 # %%
 # load the data
 incidents_train_df = pd.read_csv('../data/clf_indicators_train.csv', index_col=0)
-incidents_test_df = pd.read_csv('../data/clf_scaled_indicators_test.csv', index_col=0)
+incidents_test_df = pd.read_csv('../data/clf_indicators_test.csv', index_col=0)
 true_labels_train_df = pd.read_csv('../data/clf_y_train.csv', index_col=0)
 true_labels_train = true_labels_train_df.values.ravel()
 true_labels_test_df = pd.read_csv('../data/clf_y_test.csv', index_col=0)
@@ -39,6 +41,15 @@ print(features_for_clf)
 print(f'Number of features: {len(features_for_clf)}')
 
 # %%
+# minority oversampling
+oversampler = RandomOverSampler(sampling_strategy=0.67, random_state=SEED)
+indicators_oversampled_train_df, true_oversampled_labels_train = oversampler.fit_resample(indicators_train_df, true_labels_train)
+
+# %%
+pd.DataFrame(true_oversampled_labels_train).value_counts(normalize=True) # works
+
+# %%
+cv = KFold(n_splits=2, shuffle=True, random_state=SEED)
 scaler = MinMaxScaler()
 svc = SVC()
 pipe = Pipeline(steps=[('scaler', scaler), ('svc', svc)])
@@ -50,9 +61,11 @@ param_grid = [
     },
     {
         'svc__kernel': ['poly', 'rbf', 'sigmoid'],
-        'svc__C': [0.001, 0.01, 0.1, 1],
+        'svc__C': [0.001, 0.01, 0.1, 1, 2],
         'svc__gamma': ['scale', 'auto'],
-    } # poly degree default = 3; class_weight='balanced'? default = None
+        'svc__degree': [3, 4],
+        'svc__class_weight': ['balanced']
+    }
 ]
 
 gs = GridSearchCV(
@@ -61,10 +74,10 @@ gs = GridSearchCV(
     n_jobs=-1,
     scoring=make_scorer(f1_score),
     verbose=10,
-    cv=StratifiedShuffleSplit(n_splits=2, test_size=1/3), # TODO: con altri classificatori usiamo stratified 5-fold, qui ci vuole troppo
-    refit=False
+    cv=cv,
+    refit=False,
 )
-gs.fit(indicators_train_df, true_labels_train)
+gs.fit(indicators_oversampled_train_df, true_oversampled_labels_train)
 
 # %%
 cv_results_df = pd.DataFrame(gs.cv_results_)
@@ -279,9 +292,9 @@ plot_distribution_missclassifications(
     true_labels_test,
     pred_labels_test,
     incidents_test_df,
-    'incident_characteristics1',
+    'aggression',
     'pie',
-    title='incident_characteristics1 distribution'
+    title='aggression distribution'
 )
 
 # %%
@@ -289,11 +302,11 @@ plot_distribution_missclassifications(
     true_labels_test,
     pred_labels_test,
     incidents_test_df,
-    'incident_characteristics2',
+    'road',
     'pie',
     pie_perc_threshold=2,
     figsize=(20, 5),
-    title='incident_characteristics2 distribution'
+    title='road distribution'
 )
 
 # %%
