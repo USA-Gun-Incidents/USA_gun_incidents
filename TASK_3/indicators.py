@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Definition and study of the features to use for the classification task
 
@@ -14,7 +15,7 @@ import seaborn as sns
 import json
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-%matplotlib inline
+# %matplotlib inline
 from classification_utils import *
 from enum import Enum
 import pyproj
@@ -344,7 +345,7 @@ incidents_df['state_code'] = incidents_df['state'].astype('category').cat.codes
 
 # %%
 incidents_df['month_name'] = incidents_df['month'].apply(lambda x: pd.to_datetime(x, format='%m').month_name())
-incidents_df['day_of_week_name'] = incidents_df['date'].dt.day_name()
+incidents_df['day_of_week_name'] = incidents_df['date_original'].dt.day_name()
 
 # %% [markdown]
 # We one hot encode the categorical attributes:
@@ -365,7 +366,7 @@ incidents_df['day_of_week_name'] = incidents_df['date'].dt.day_name()
 # %%
 # TODO: fare locale a stato o distretto?
 # sottolineare i limiti, i.e. una volta deployato il modello si può usare solo dopo il 2014
-incidents_df['days_from_first_incident'] = (incidents_df['date'] - incidents_df['date'].min()).dt.days
+incidents_df['days_from_first_incident'] = (incidents_df['date_original'] - incidents_df['date_original'].min()).dt.days
 
 # %% [markdown]
 # We perform a cyclic encoding of the month, the day and the day of the week:
@@ -825,7 +826,7 @@ save_default_feature_values(df=X_train[y_train==0][features_db], path='../data/c
 
 # %% [markdown]
 # TODO: compilare una volta definiti
-# 
+#
 # # Final Indicators semantics
 # | Name | Description | Present in the original dataset |
 # | :--: | :---------: | :-----------------------------: |
