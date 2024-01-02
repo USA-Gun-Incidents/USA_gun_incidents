@@ -178,6 +178,14 @@ test_scores = compute_clf_scores(
 )
 test_scores
 
+# %% [markdown]
+# Save the predictions:
+
+# %%
+pd.DataFrame(
+    {'labels': y_pred, 'probs': gnb.predict_proba(indicators_test_df)[:,1]}
+).to_csv(f'{RESULTS_DIR}/GaussianNB_preds.csv')
+
 # %%
 plot_confusion_matrix(
     y_true=true_labels_test,
@@ -327,6 +335,14 @@ test_scores = compute_clf_scores(
 )
 test_scores
 
+# %% [markdown]
+# Save predictions:
+
+# %%
+pd.DataFrame(
+    {'labels': y_pred, 'probs': mnb.predict_proba(indicators_test_df)[:,1]}
+).to_csv(f'{RESULTS_DIR}/MultinomialNB_preds.csv')
+
 # %%
 plot_confusion_matrix(
     y_true=true_labels_test,
@@ -406,6 +422,14 @@ test_scores = compute_clf_scores(
     path=f'{RESULTS_DIR}/ComplementNB_test_scores.csv'
 )
 test_scores
+
+# %% [markdown]
+# Save predictions:
+
+# %%
+pd.DataFrame(
+    {'labels': y_pred, 'probs': cnb.predict_proba(indicators_test_df)[:,1]}
+).to_csv(f'{RESULTS_DIR}/ComplementNB_preds.csv')
 
 # %%
 plot_confusion_matrix(
@@ -575,6 +599,14 @@ test_scores = compute_clf_scores(
     path=f'{RESULTS_DIR}/BernoulliNB_test_scores.csv'
 )
 test_scores
+
+# %% [markdown]
+# Save predictions:
+
+# %%
+pd.DataFrame(
+    {'labels': y_pred, 'probs': bnb.predict_proba(indicators_test_df)[:,1]}
+).to_csv(f'{RESULTS_DIR}/BernoulliNB_preds.csv')
 
 # %%
 plot_confusion_matrix(
