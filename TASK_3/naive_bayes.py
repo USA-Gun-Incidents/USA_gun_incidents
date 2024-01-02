@@ -32,10 +32,15 @@
 # %%
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+from time import time
 from sklearn.naive_bayes import GaussianNB, MultinomialNB, ComplementNB, BernoulliNB
 from imblearn.over_sampling import RandomOverSampler
 from sklearn.preprocessing import OneHotEncoder
-from classification_utils import compute_clf_scores, plot_confusion_matrix
+from classification_utils import compute_clf_scores, plot_confusion_matrix, plot_learning_curve, plot_distribution_missclassifications
+
+RESULTS_DIR = '../data/classification_results'
+RANDOM_STATE = 42
 
 # %% [markdown]
 # We load data
@@ -111,7 +116,7 @@ true_labels_test = np.where(incidents_test_df['n_killed'][indicators_test_df.ind
 # Oversampling of the minority class:
 
 # %%
-ros = RandomOverSampler(random_state=42)
+ros = RandomOverSampler(random_state=RANDOM_STATE)
 indicators_train_df, true_labels_train = ros.fit_resample(indicators_train_df, true_labels_train)
 
 # %%
@@ -122,21 +127,54 @@ print(f'Number of label False in train set: {len(true_labels_train)-np.sum(true_
 # Classification:
 
 # %%
+# intialize the classifier and fit the model
 gnb = GaussianNB()
+fit_start = time()
 gnb.fit(indicators_train_df, true_labels_train)
-y_pred = gnb.predict(indicators_test_df)
+fit_time = time()-fit_start
 
-print("Number of mislabeled points out of a total %d points : %d" % (indicators_test_df.shape[0], (true_labels_test != y_pred).sum()))
+# get the predictions on the training data
+train_score_start = time()
+pred_labels_train = gnb.predict(indicators_train_df)
+train_score_time = time()-train_score_start
+print("Number of mislabeled points out of a total %d points on train set: %d" % (indicators_train_df.shape[0], 
+    (true_labels_train != pred_labels_train).sum()))
+
+# get the predictions on the test data
+test_score_start = time()
+y_pred = gnb.predict(indicators_test_df)
+test_score_time = time()-test_score_start
+print("Number of mislabeled points out of a total %d points on test set: %d" % (indicators_test_df.shape[0], 
+    (true_labels_test != y_pred).sum()))
+
+# %% [markdown]
+# Classification score on Train set:
+
+# %%
+compute_clf_scores(
+    y_true=true_labels_train,
+    y_pred=pred_labels_train,
+    train_time=fit_time,
+    score_time=train_score_time,
+    params=gnb.get_params(),
+    prob_pred=gnb.predict_proba(indicators_train_df),
+    clf_name='GaussianNB',
+    path=f'{RESULTS_DIR}/GaussianNB_train_scores.csv'
+)
+
+# %% [markdown]
+# Classification score on Test set:
 
 # %%
 test_scores = compute_clf_scores(
     y_true=true_labels_test,
     y_pred=y_pred,
-    params=None,
-    train_time=None,
-    score_time=None,
-    prob_pred=None,
+    train_time=train_score_start,
+    score_time=test_score_time,
+    params=gnb.get_params(),
+    prob_pred=gnb.predict_proba(indicators_test_df),
     clf_name='GaussianNB',
+    path=f'{RESULTS_DIR}/GaussianNB_test_scores.csv'
 )
 test_scores
 
@@ -145,6 +183,28 @@ plot_confusion_matrix(
     y_true=true_labels_test,
     y_pred=y_pred,
     title='GaussianNB'
+)
+
+# %%
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+plot_learning_curve(
+    classifier=gnb,
+    classifier_name='GaussianNB',
+    train_set=indicators_train_df,
+    labels=true_labels_train,
+    ax=axs,
+    train_sizes=np.linspace(0.1, 1.0, 5),
+    metric='f1'
+)
+
+# %%
+plot_distribution_missclassifications(
+    true_labels_test,
+    y_pred,
+    incidents_test_df,
+    'n_killed',
+    'bar',
+    title='n_killed distribution (Test set)'
 )
 
 # %% [markdown]
@@ -205,7 +265,7 @@ true_labels_test = np.where(incidents_test_df['n_killed'][indicators_test_df.ind
 # Oversampling of the minority class:
 
 # %%
-ros = RandomOverSampler(random_state=42)
+ros = RandomOverSampler(random_state=RANDOM_STATE)
 indicators_train_df, true_labels_train = ros.fit_resample(indicators_train_df, true_labels_train)
 
 # %%
@@ -216,21 +276,54 @@ print(f'Number of label False in train set: {len(true_labels_train)-np.sum(true_
 # Classification:
 
 # %%
+# intialize the classifier and fit the model
 mnb = MultinomialNB()
+fit_start = time()
 mnb.fit(indicators_train_df, true_labels_train)
-y_pred = mnb.predict(indicators_test_df)
+fit_time = time()-fit_start
 
-print("Number of mislabeled points out of a total %d points : %d" % (indicators_test_df.shape[0], (true_labels_test != y_pred).sum()))
+# get the predictions on the training data
+train_score_start = time()
+pred_labels_train = mnb.predict(indicators_train_df)
+train_score_time = time()-train_score_start
+print("Number of mislabeled points out of a total %d points on train set: %d" % (indicators_train_df.shape[0], 
+    (true_labels_train != pred_labels_train).sum()))
+
+# get the predictions on the test data
+test_score_start = time()
+y_pred = mnb.predict(indicators_test_df)
+test_score_time = time()-test_score_start
+print("Number of mislabeled points out of a total %d points test set: %d" % (indicators_test_df.shape[0], 
+    (true_labels_test != y_pred).sum()))
+
+# %% [markdown]
+# Classification score on Train set:
+
+# %%
+compute_clf_scores(
+    y_true=true_labels_train,
+    y_pred=pred_labels_train,
+    train_time=fit_time,
+    score_time=train_score_time,
+    params=mnb.get_params(),
+    prob_pred=mnb.predict_proba(indicators_train_df),
+    clf_name='MultinomialNB',
+    path=f'{RESULTS_DIR}/MultinomialNB_train_scores.csv'
+)
+
+# %% [markdown]
+# Classification score on Test set:
 
 # %%
 test_scores = compute_clf_scores(
     y_true=true_labels_test,
     y_pred=y_pred,
-    params=None,
-    train_time=None,
-    score_time=None,
-    prob_pred=None,
+    train_time=train_score_start,
+    score_time=test_score_time,
+    params=mnb.get_params(),
+    prob_pred=mnb.predict_proba(indicators_test_df),
     clf_name='MultinomialNB',
+    path=f'{RESULTS_DIR}/MultinomialNB_test_scores.csv'
 )
 test_scores
 
@@ -241,25 +334,76 @@ plot_confusion_matrix(
     title='MultinomialNB'
 )
 
+# %%
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+plot_learning_curve(
+    classifier=mnb,
+    classifier_name='MultinomialNB',
+    train_set=indicators_train_df,
+    labels=true_labels_train,
+    ax=axs,
+    train_sizes=np.linspace(0.1, 1.0, 5),
+    metric='f1'
+)
+
+# %%
+plot_distribution_missclassifications(
+    true_labels_test,
+    y_pred,
+    incidents_test_df,
+    'n_killed',
+    'bar',
+    title='n_killed distribution (Test set)'
+)
+
 # %% [markdown]
 # ### Complement Naive Bayes Classifier
 
 # %%
+# initialize the classifier and fit the model
 cnb = ComplementNB()
+fit_start = time()
 cnb.fit(indicators_train_df, true_labels_train)
-y_pred = cnb.predict(indicators_test_df)
+fit_time = time()-fit_start
 
-print("Number of mislabeled points out of a total %d points : %d" % (indicators_test_df.shape[0], (true_labels_test != y_pred).sum()))
+# get the predictions on the training data
+train_score_start = time()
+pred_labels_train = cnb.predict(indicators_train_df)
+train_score_time = time()-train_score_start
+print("Number of mislabeled points out of a total %d points on train set: %d" % (indicators_train_df.shape[0], 
+    (true_labels_train != pred_labels_train).sum()))
+
+# get the predictions on the test data
+test_score_start = time()
+y_pred = cnb.predict(indicators_test_df)
+test_score_time = time()-test_score_start
+print("Number of mislabeled points out of a total %d points on test set: %d" % (indicators_test_df.shape[0], (true_labels_test != y_pred).sum()))
+
+# %% [markdown]
+# Classification score on Train set:
+
+# %%
+compute_clf_scores(
+    y_true=true_labels_train,
+    y_pred=pred_labels_train,
+    train_time=fit_time,
+    score_time=train_score_time,
+    params=cnb.get_params(),
+    prob_pred=cnb.predict_proba(indicators_train_df),
+    clf_name='ComplementNB',
+    path=f'{RESULTS_DIR}/ComplementNB_train_scores.csv'
+)
 
 # %%
 test_scores = compute_clf_scores(
     y_true=true_labels_test,
     y_pred=y_pred,
-    params=None,
-    train_time=None,
-    score_time=None,
-    prob_pred=None,
+    train_time=train_score_start,
+    score_time=test_score_time,
+    params=cnb.get_params(),
+    prob_pred=cnb.predict_proba(indicators_test_df),
     clf_name='ComplementNB',
+    path=f'{RESULTS_DIR}/ComplementNB_test_scores.csv'
 )
 test_scores
 
@@ -270,8 +414,33 @@ plot_confusion_matrix(
     title='ComplementNB'
 )
 
+# %%
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+plot_learning_curve(
+    classifier=cnb,
+    classifier_name='ComplementNB',
+    train_set=indicators_train_df,
+    labels=true_labels_train,
+    ax=axs,
+    train_sizes=np.linspace(0.1, 1.0, 5),
+    metric='f1'
+)
+
+# %%
+plot_distribution_missclassifications(
+    true_labels_test,
+    y_pred,
+    incidents_test_df,
+    'n_killed',
+    'bar',
+    title='n_killed distribution (Test set)'
+)
+
 # %% [markdown]
 # ### Bernulli Naive Bayes Classifier
+
+# %% [markdown]
+# Choose features for classification:
 
 # %%
 features_for_clf = [
@@ -282,6 +451,9 @@ features_for_clf = [
 
 indicators_train_df = incidents_train_df[features_for_clf]
 indicators_test_df = incidents_test_df[features_for_clf]
+
+# %% [markdown]
+# Prepare Train set and Test set:
 
 # %%
 def one_hot_encoder(data_train, data_test):
@@ -327,15 +499,6 @@ for i in range(n_participants_train.shape[1]):
     indicators_train_df.loc[:, f'n_participants_{i}'] = n_participants_train[:, i] # train set
     indicators_test_df.loc[:, f'n_participants_{i}'] = n_participants_test[:, i] # test set
 
-"""# binarize n_adult
-n_adult_train, n_adult_test = one_hot_encoder(
-    data_train=np.array(incidents_train_df['n_adult']).reshape(-1, 1), 
-    data_test=np.array(incidents_test_df['n_adult']).reshape(-1, 1))
-for i in range(n_adult_train.shape[1]):
-    indicators_train_df.loc[:, f'n_adult_{i}'] = n_adult_train[:, i] # train set
-    indicators_test_df.loc[:, f'n_adult_{i}'] = n_adult_test[:, i] # test set"""
-
-
 # %% [markdown]
 # Prepare train set and Test set:
 
@@ -352,7 +515,7 @@ true_labels_test = np.where(incidents_test_df['n_killed'][indicators_test_df.ind
 # Oversampling of the minority class:
 
 # %%
-ros = RandomOverSampler(random_state=42)
+ros = RandomOverSampler(random_state=RANDOM_STATE)
 indicators_train_df, true_labels_train = ros.fit_resample(indicators_train_df, true_labels_train)
 
 # %%
@@ -363,21 +526,53 @@ print(f'Number of label False in train set: {len(true_labels_train)-np.sum(true_
 # Classification:
 
 # %%
+# initialize the classifier and fit the model
 bnb = BernoulliNB()
+fit_start = time()
 bnb.fit(indicators_train_df, true_labels_train)
-y_pred = bnb.predict(indicators_test_df)
+fit_time = time()-fit_start
 
-print("Number of mislabeled points out of a total %d points : %d" % (indicators_test_df.shape[0], (true_labels_test != y_pred).sum()))
+# get the predictions on the training data
+train_score_start = time()
+pred_labels_train = bnb.predict(indicators_train_df)
+train_score_time = time()-train_score_start
+print("Number of mislabeled points out of a total %d points on train set: %d" % (indicators_train_df.shape[0], 
+    (true_labels_train != pred_labels_train).sum()))
+
+# get the predictions on the test data
+test_score_start = time()
+y_pred = bnb.predict(indicators_test_df)
+test_score_time = time()-test_score_start
+print("Number of mislabeled points out of a total %d points on test set: %d" % (indicators_test_df.shape[0], (true_labels_test != y_pred).sum()))
+
+# %% [markdown]
+# Classification score on Train set:
+
+# %%
+compute_clf_scores(
+    y_true=true_labels_train,
+    y_pred=pred_labels_train,
+    train_time=fit_time,
+    score_time=train_score_time,
+    params=bnb.get_params(),
+    prob_pred=bnb.predict_proba(indicators_train_df),
+    clf_name='BernoulliNB',
+    path=f'{RESULTS_DIR}/BernoulliNB_train_scores.csv'
+)
+
+# %% [markdown]
+# Classification score on Test set:
 
 # %%
 test_scores = compute_clf_scores(
     y_true=true_labels_test,
     y_pred=y_pred,
-    params=None,
-    train_time=None,
-    score_time=None,
-    prob_pred=None,
+    train_time=train_score_start,
+    score_time=test_score_time,
+    params=bnb.get_params(),
+    prob_pred=bnb.predict_proba(indicators_test_df),
     clf_name='BernoulliNB',
+    path=f'{RESULTS_DIR}/BernoulliNB_test_scores.csv'
 )
 test_scores
 
@@ -388,84 +583,29 @@ plot_confusion_matrix(
     title='BernoulliNB'
 )
 
-# %% [markdown]
-# ### Bernulli NB using Normalized Data
-
 # %%
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-
-def standardization(train_df, test_df, columns, standardizer='Zscore'):
-    if standardizer == 'Zscore':
-        standardizer = StandardScaler()
-    if standardizer == 'MinMax':
-        standardizer = MinMaxScaler()
-    standardizer.fit(train_df[columns].values)
-    return standardizer.transform(train_df[columns].values), standardizer.transform(test_df[columns].values)
-
-# %% [markdown]
-# Standardize data using Zscore
-
-# %%
-indicators_train_df_std, indicators_test_df_std = standardization(indicators_train_df, indicators_test_df,
-    indicators_train_df.columns, standardizer='Zscore')
-
-# %%
-bnb_std = BernoulliNB()
-bnb_std.fit(indicators_train_df_std, true_labels_train)
-y_pred = bnb_std.predict(indicators_test_df_std)
-
-print("Number of mislabeled points out of a total %d points : %d" % (indicators_test_df.shape[0], (true_labels_test != y_pred).sum()))
-
-# %%
-test_scores = compute_clf_scores(
-    y_true=true_labels_test,
-    y_pred=y_pred,
-    params=None,
-    train_time=None,
-    score_time=None,
-    prob_pred=None,
-    clf_name='BernulliNB, Zscore',
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+plot_learning_curve(
+    classifier=bnb,
+    classifier_name='BernoulliNB',
+    train_set=indicators_train_df,
+    labels=true_labels_train,
+    ax=axs,
+    train_sizes=np.linspace(0.1, 1.0, 5),
+    metric='f1'
 )
-test_scores
 
 # %%
-plot_confusion_matrix(
-    y_true=true_labels_test,
-    y_pred=y_pred,
-    title='BernulliNB, Zscore'
+plot_distribution_missclassifications(
+    true_labels_test,
+    y_pred,
+    incidents_test_df,
+    'n_killed',
+    'bar',
+    title='n_killed distribution (Test set)'
 )
 
 # %% [markdown]
-# Standardize data using MinMax standardizer
-
-# %%
-indicators_train_df_minmax, indicators_test_df_minmax = standardization(indicators_train_df, indicators_test_df,
-    indicators_train_df.columns, standardizer='MinMax')
-
-# %%
-bnb_minmax = BernoulliNB()
-bnb_minmax.fit(indicators_train_df_minmax, true_labels_train)
-y_pred = bnb_minmax.predict(indicators_test_df_minmax)
-
-print("Number of mislabeled points out of a total %d points : %d" % (indicators_test_df.shape[0], (true_labels_test != y_pred).sum()))
-
-# %%
-test_scores = compute_clf_scores(
-    y_true=true_labels_test,
-    y_pred=y_pred,
-    params=None,
-    train_time=None,
-    score_time=None,
-    prob_pred=None,
-    clf_name='BernulliNB, MinMax',
-)
-test_scores
-
-# %%
-plot_confusion_matrix(
-    y_true=true_labels_test,
-    y_pred=y_pred,
-    title='BernulliNB, MinMax'
-)
+# ## Conclusion
 
 
