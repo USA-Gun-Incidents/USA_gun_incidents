@@ -262,7 +262,7 @@ plot_distance_matrices(X=X_minmax, n_samples=500, clusters=clusters_info_df.loc[
 plot_distance_matrices(X=X_minmax, n_samples=500, clusters=clusters_info_df.loc['ward']['cluster_labels'], random_state=RANDOM_STATE)
 
 # %% [markdown]
-# This kind of evaluation is not very informative for heirarchical clustering, since the clusters could not be globular and may be intertwined with other clusters.
+# This kind of evaluation is not very informative for hierarchical clustering, since the clusters could not be globular and may be intertwined with other clusters.
 # Nevertheless, both the matrices have a block diagonal structure, meaning that clusters are well separated.
 # 
 # Since with Ward's method we get the best results in terms of silhouette score and cluster size, we will use this method for the following analysis.
@@ -520,11 +520,11 @@ pd.DataFrame({
 
 # %% [markdown]
 # ## Final considerations
-# Advantages of heirarchical clustering:
+# Advantages of hierarchical clustering:
 # - Do not have to assume any particular number of clusters
 # - Suitable for data with a nested or hierarchical structure
 # 
-# Disadvantages of heirarchical clustering:
+# Disadvantages of hierarchical clustering:
 # - No global objective function is directly minimized (once a decision is made to merge two clusters, it cannot be undone at a later time)
 # - Is expensive in terms of computational and storage requirements
 # 
