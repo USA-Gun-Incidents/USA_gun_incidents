@@ -2,20 +2,20 @@
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
 #  
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
-#
+# 
 # # Hierarchical Clustering
-#
+# 
 # Hierarchical clustering methods generate a series of nested clusters arranged in a hierarchical tree, making them particularly effective for data exhibiting a nested or hierarchical structure. One notable advantage is their flexibility, as they eliminate the need to predefine a fixed number of clusters. However, their time and space efficiency may not be optimal, and they can exhibit sensitivity to noise and outliers.
-#
+# 
 # Agglomerative clustering starts with the points as individual clusters and, at each iteration, merges the closest pair of clusters. The cluster proximity could be determined using different policies, such as:
 # - **single linkage**: defines cluster proximity as the proximity between the closest two points that are in different clusters. This method is good at handling non-elliptical shapes, but is sensitive to noise and outliers.
-#
+# 
 # - **complete linkage**: defines cluster proximity as the proximity between the farthest two points that are in different clusters. This approach is less susceptible to noise and outliers, but it is biased towards globular clusters. Moreover it tends to break large clusters.
-#
+# 
 # - **average linkage**: is an intermediate approach between the single and complete link approaches, it defines cluster proximity as the distance between all the points in the clusters.
-#
+# 
 # - **ward**: defines cluster proximity as the increase in squared error when two clusters are merged. It is robust to noise and outliers but it's biased towards globular clusters.
-#
+# 
 # We import the libraries:
 
 # %%
@@ -74,7 +74,6 @@ for algorithm in algorithms:
     linkages.append(linkage_res)
     distance_thresholds.append(0.7 * max(linkage_res[:,2]))
 
-
 # %% [markdown]
 # We define a function to plot dendograms:
 
@@ -102,18 +101,18 @@ plot_dendrograms(linkages, algorithms, distance_thresholds)
 
 # %% [markdown]
 # Each proximity measure leads to very different shaped hierarchies.
-#
+# 
 # Using **single-linkage** the result we get is similar to what we could achieve adding incrementally to a starting clusters points in closest clusters.
-#
+# 
 # Using **complete-linkage** the tree is more balanced, however a cluster is significantly bigger than others (the one containing 4553 points).
-#
+# 
 # Using **average-linkage** we find, as expected, a compromise between the results obtained using single and complete linkage.
-#
+# 
 # Using **ward** we get the most balanced results, both in terms of tree structure and in terms of clusters size.
 
 # %% [markdown]
 # ## Clustering evaluation
-#
+# 
 # ### Internal indices
 
 # %% [markdown]
@@ -137,8 +136,8 @@ pd.DataFrame({'algorithm': algorithms, 'cophenetic_coef': cophenetic_coefs})
 ncuts = 10
 clusters_info = {}
 clusters_info['method'] = []
-clusters_info['merge_distance'] = []
-clusters_info['distance_diff'] = []
+clusters_info['cut_height'] = []
+clusters_info['merging_difference'] = []
 clusters_info['cluster_labels'] = []
 clusters_info['n_clusters'] = []
 clusters_info['clusters_sizes'] = []
@@ -174,8 +173,8 @@ for i, algorithm in enumerate(algorithms):
                 best_cluster_sizes = counts[counts!=0]
                 best_silhouette_score = silhouette_avg
     
-    clusters_info['merge_distance'].append(best_threshold)
-    clusters_info['distance_diff'].append(best_distance_diff)
+    clusters_info['cut_height'].append(best_threshold)
+    clusters_info['merging_difference'].append(best_distance_diff)
     clusters_info['cluster_labels'].append(best_labels)
     clusters_info['n_clusters'].append(best_n_clusters)
     clusters_info['clusters_sizes'].append(best_cluster_sizes)
@@ -194,7 +193,7 @@ clusters_info_df
 # We plot the dendograms displaying the best cut heights:
 
 # %%
-plot_dendrograms(linkages, algorithms, clusters_info_df['merge_distance'])
+plot_dendrograms(linkages, algorithms, clusters_info_df['cut_height'])
 
 # %% [markdown]
 # We display the distance between merged clusters at each iteration:
@@ -204,7 +203,7 @@ fig, axs = plt.subplots(ncols=4, figsize=(28, 8))
 for i, method in enumerate(clusters_info_df.index):
     axs[i].plot(range(0, linkages[i].shape[0]-1), linkages[i][0:-1, 2], 'o')
     axs[i].axhline(distance_thresholds[i], ls='--', color='k', label='default threshold')
-    axs[i].axhline(clusters_info_df.loc[method]['merge_distance'], ls='--', color='r', label='best cut threshold')
+    axs[i].axhline(clusters_info_df.loc[method]['cut_height'], ls='--', color='r', label='best cut threshold')
     axs[i].legend()
     axs[i].set_title(f'{method} linkage')
     axs[i].set_xlabel('Iteration')
@@ -237,7 +236,7 @@ for i, method in enumerate(clusters_info_df.index):
 
 # %% [markdown]
 # With complete linkage almost every cluster has some points with negative silhouette score. With ward linkage cluster 6, 5 and 2 don't have any points with negative silhouette score. Cluster has 0 the lowest values of silhouette score.
-#
+# 
 # We visualize the size of the clusters:
 
 # %%
@@ -263,9 +262,9 @@ plot_distance_matrices(X=X_minmax, n_samples=500, clusters=clusters_info_df.loc[
 plot_distance_matrices(X=X_minmax, n_samples=500, clusters=clusters_info_df.loc['ward']['cluster_labels'], random_state=RANDOM_STATE)
 
 # %% [markdown]
-# This kind of evaluation is not very informative for heirarchical clustering, since the clusters could not be globular and may be intertwined with other clusters.
+# This kind of evaluation is not very informative for hierarchical clustering, since the clusters could not be globular and may be intertwined with other clusters.
 # Nevertheless, both the matrices have a block diagonal structure, meaning that clusters are well separated.
-#
+# 
 # Since with Ward's method we get the best results in terms of silhouette score and cluster size, we will use this method for the following analysis.
 
 # %%
@@ -335,7 +334,7 @@ plt.legend();
 
 # %% [markdown]
 # The first 6 components contribute the most to the overall variance in the dataset.
-#
+# 
 # We visualize the clusters in the feature spaces obtained by pairing the first 6 principal components:
 
 # %%
@@ -389,7 +388,7 @@ for feature in indicators_df.columns:
 
 # %% [markdown]
 # This visualization confirms what was already observed.
-#
+# 
 # The attributes with the most different distributions are:
 # - n_teen_prop
 # - surprisal_age_groups
@@ -476,7 +475,7 @@ plot_bars_by_cluster(df=incidents_df, feature='unintentional', cluster_column='c
 
 # %% [markdown]
 # ### External indices
-#
+# 
 # We measure the extent to which the discovered clustering structure matches some categorical features of the dataset, using the following permutation invariant scores:
 # - **Adjusted rand score**: this score computes a similarity measure between two clusterings by considering all pairs of samples and counting pairs that are assigned in the same or different clusters in the predicted and true clusterings. It is 0.0 for random labeling, 1.0 when the clusterings are identical and is bounded below by -0.5 for especially discordant clusterings.
 # - **Normalized mutual information**: is a normalization of the Mutual Information (MI) score to scale the results between 0 (no mutual information) and 1 (perfect correlation). Mutual Information is a function that measures the agreement of the two assignments, ignoring permutations.
@@ -521,14 +520,14 @@ pd.DataFrame({
 
 # %% [markdown]
 # ## Final considerations
-# Advantages of heirarchical clustering:
+# Advantages of hierarchical clustering:
 # - Do not have to assume any particular number of clusters
 # - Suitable for data with a nested or hierarchical structure
-#
-# Disadvantages of heirarchical clustering:
+# 
+# Disadvantages of hierarchical clustering:
 # - No global objective function is directly minimized (once a decision is made to merge two clusters, it cannot be undone at a later time)
 # - Is expensive in terms of computational and storage requirements
-#
+# 
 # Furthermore - as outlined above - each different proximity measures has its own advantages and disadvantages (e.g. sensitivity to noise and outliers or difficulty in handling clusters of different sizes and non-globular shapes).
 
 
