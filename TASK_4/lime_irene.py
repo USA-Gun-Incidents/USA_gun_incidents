@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %%
 # TODO: spiegare che lo LIME facciamo per tutti essendo agnostic
 # (anche per quelli già explainable, magari per esse confrontare queste spiegazioni con le originali)
@@ -65,7 +66,14 @@ indicators_test_db_df = incidents_test_df[features_db]
 indicators_test_rb_df = incidents_test_df[features_rb]
 
 clf_names = [clf.value for clf in Classifiers]
-rb_clf_names = [Classifiers.DT.value, Classifiers.RF.value, Classifiers.XGB.value, Classifiers.RIPPER.value]
+rb_clf_names = [
+    Classifiers.DT.value,
+    Classifiers.RF.value,
+    Classifiers.XGB.value,
+    Classifiers.AB.value,
+    Classifiers.NBM.value,
+    Classifiers.RIPPER.value
+]
 
 
 preds = get_classifiers_predictions('../data/classification_results/')
@@ -82,7 +90,7 @@ classifiers = get_classifiers_objects('../data/classification_results/')
 # - discretize_continuous = True (continuous features are discretized into quartiles)
 # - discretizer = 'quartile'
 # - sample_around_instance = False (sample from a normal centered on the mean of the feature data)
-# 
+#
 # Also to explain instances we will use deault parameters, i.e.:
 # - num_samples = 5000, number of samples to generate
 # - distance_metric = 'euclidean', distance metric to use for weights
@@ -157,9 +165,37 @@ show_explanation(explanation)
 # ## Extreme gradient boosting
 
 # %%
+explanation = explainer_rb.explain_instance(
+    indicators_test_rb_df.iloc[attempted_suicide_pos].values,
+    classifiers[Classifiers.XGB.value].predict_proba,
+    num_features=len(features_rb),
+    num_samples=NUM_SAMPLES,
+    distance_metric=DISTANCE_METRIC,
+    model_regressor=REGRESSOR,
+)
+show_explanation(explanation)
+
+# %% [markdown]
+# ## AdaBoost
+
+# %%
+explanation = explainer_rb.explain_instance(
+    indicators_test_rb_df.iloc[attempted_suicide_pos].values,
+    classifiers[Classifiers.AB.value].predict_proba,
+    num_features=len(features_rb),
+    num_samples=NUM_SAMPLES,
+    distance_metric=DISTANCE_METRIC,
+    model_regressor=REGRESSOR,
+)
+show_explanation(explanation)
+
+# %% [markdown]
+# ## Naive Bayes for mixed data
+
+# %%
 # explanation = explainer_rb.explain_instance(
 #     indicators_test_rb_df.iloc[attempted_suicide_pos].values,
-#     classifiers[XGB].predict_proba,
+#     classifiers[Classifiers.NBM.value].predict_proba, # TODO: bisogna fare one hot encoding
 #     num_features=len(features_rb),
 #     num_samples=NUM_SAMPLES,
 #     distance_metric=DISTANCE_METRIC,
@@ -260,8 +296,174 @@ explanation = explainer_db.explain_instance(
 )
 show_explanation(explanation)
 
+# %% [markdown]
+# ## Mass Shooting
+
 # %%
-# TODO: fare lo stesso per mass shooting
+mass_shooting_pos = selected_records_to_explain_df[selected_records_to_explain_df['instance names']=='Mass shooting']['positions'].values[0]
+
+# %% [markdown]
+# ## Decision Tree
+
+# %%
+explanation = explainer_rb.explain_instance(
+    indicators_test_rb_df.iloc[mass_shooting_pos].values,
+    classifiers[Classifiers.DT.value].predict_proba,
+    num_features=len(features_rb),
+    num_samples=NUM_SAMPLES,
+    distance_metric=DISTANCE_METRIC,
+    model_regressor=REGRESSOR,
+)
+show_explanation(explanation)
+
+# %% [markdown]
+# ## Random Forest
+
+# %%
+explanation = explainer_rb.explain_instance(
+    indicators_test_rb_df.iloc[mass_shooting_pos].values,
+    classifiers[Classifiers.RF.value].predict_proba,
+    num_features=len(features_rb),
+    num_samples=NUM_SAMPLES,
+    distance_metric=DISTANCE_METRIC,
+    model_regressor=REGRESSOR,
+)
+show_explanation(explanation)
+
+# %% [markdown]
+# ## Extreme Gradient Boosting
+
+# %%
+explanation = explainer_rb.explain_instance(
+    indicators_test_rb_df.iloc[mass_shooting_pos].values,
+    classifiers[Classifiers.XGB.value].predict_proba,
+    num_features=len(features_rb),
+    num_samples=NUM_SAMPLES,
+    distance_metric=DISTANCE_METRIC,
+    model_regressor=REGRESSOR,
+)
+show_explanation(explanation)
+
+# %% [markdown]
+# ## AdaBoost
+
+# %%
+explanation = explainer_rb.explain_instance(
+    indicators_test_rb_df.iloc[mass_shooting_pos].values,
+    classifiers[Classifiers.AB.value].predict_proba,
+    num_features=len(features_rb),
+    num_samples=NUM_SAMPLES,
+    distance_metric=DISTANCE_METRIC,
+    model_regressor=REGRESSOR,
+)
+show_explanation(explanation)
+
+# %% [markdown]
+# ## Naive Bayes for mixed data
+
+# %%
+# explanation = explainer_rb.explain_instance(
+#     indicators_test_rb_df.iloc[mass_shooting_pos].values,
+#     classifiers[Classifiers.NBM.value].predict_proba, # TODO: bisogna fare one hot encoding
+#     num_features=len(features_rb),
+#     num_samples=NUM_SAMPLES,
+#     distance_metric=DISTANCE_METRIC,
+#     model_regressor=REGRESSOR,
+# )
+# show_explanation(explanation)
+
+# %% [markdown]
+# ## K Nearest Neighbors
+
+# %%
+explanation = explainer_db.explain_instance(
+    indicators_test_db_df.iloc[mass_shooting_pos].values,
+    classifiers[Classifiers.KNN.value].predict_proba,
+    num_features=len(features_db),
+    num_samples=NUM_SAMPLES,
+    distance_metric=DISTANCE_METRIC,
+    model_regressor=REGRESSOR,
+)
+show_explanation(explanation)
+
+# %%
+if classifiers[Classifiers.KNN.value].get_params()['n_neighbors'] < 3:
+    n_neighbors = 3
+else:
+    n_neighbors = classifiers[Classifiers.KNN.value].get_params()['n_neighbors']
+distances, indeces = classifiers[Classifiers.KNN.value].kneighbors(
+    X=indicators_test_db_df.iloc[mass_shooting_pos].values.reshape(-1,len(features_db)),
+    n_neighbors=n_neighbors,
+    return_distance=True
+)
+
+# %%
+neighbors_df = incidents_train_df.iloc[indeces[0]].copy()
+neighbors_df['distance'] = distances[0]
+# put distance column first
+neighbors_df = neighbors_df[['distance'] + [col for col in neighbors_df.columns if col != 'distance']]
+neighbors_df.style.background_gradient(cmap='Blues', subset='distance')
+
+# %% [markdown]
+# ## Support Vector Machine
+
+# %%
+explanation = explainer_db.explain_instance(
+    indicators_test_db_df.iloc[mass_shooting_pos].values,
+    classifiers[Classifiers.SVM.value].predict_proba,
+    num_features=len(features_db),
+    num_samples=NUM_SAMPLES,
+    distance_metric=DISTANCE_METRIC,
+    model_regressor=REGRESSOR,
+)
+show_explanation(explanation)
+
+# %%
+hyperplane_dists = classifiers[Classifiers.SVM.value].decision_function(
+    X=pd.concat([
+        indicators_test_db_df.iloc[mass_shooting_pos].to_frame().T.reset_index(),
+        indicators_train_db_df.iloc[indeces[0]].reset_index() # neighbors (could be both mortal or not)
+    ]).drop(columns=['index'])
+)
+probas = classifiers[Classifiers.SVM.value].predict_proba(
+    X=pd.concat([
+        indicators_test_db_df.iloc[mass_shooting_pos].to_frame().T.reset_index(),
+        indicators_train_db_df.iloc[indeces[0]].reset_index() # neighbors (could be both mortal or not)
+    ]).drop(columns=['index'])
+)
+dist_probs = {
+    'distance_from_hyperplane': hyperplane_dists,
+    'fatal_probability': probas[:,1]
+}
+pd.DataFrame(dist_probs)
+
+# %% [markdown]
+# ## Feed Forward Neural Network
+
+# %%
+# explanation = explainer_db.explain_instance(
+#     indicators_test_db_df.iloc[mass_shooting_pos].values,
+#     classifiers[NN].predict_proba,
+#     num_features=len(features_db),
+#     num_samples=NUM_SAMPLES,
+#     distance_metric=DISTANCE_METRIC,
+#     model_regressor=REGRESSOR,
+# )
+# show_explanation(explanation)
+
+# %% [markdown]
+# ## TabNet
+
+# %%
+explanation = explainer_db.explain_instance(
+    indicators_test_db_df.iloc[mass_shooting_pos].values,
+    classifiers[Classifiers.TN.value].predict_proba,
+    num_features=len(features_db),
+    num_samples=NUM_SAMPLES,
+    distance_metric=DISTANCE_METRIC,
+    model_regressor=REGRESSOR,
+)
+show_explanation(explanation)
 
 # %% [markdown]
 # ## Evaluation
