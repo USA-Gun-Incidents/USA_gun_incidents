@@ -14,6 +14,7 @@ from sklearn.cluster import AgglomerativeClustering
 from tslearn.piecewise import PiecewiseAggregateApproximation
 from scipy.spatial.distance import pdist
 from scipy.cluster.hierarchy import linkage, cophenet, dendrogram
+from scipy.spatial.distance import euclidean, cityblock
 from plot_utils import sankey_plot
 from matrixprofile import *
 from matrixprofile.discords import discords
@@ -152,7 +153,7 @@ incidents_killed_by_city_df = incidents_killed_by_city_df.pivot(index=['city', '
 incidents_killed_by_city_df = incidents_killed_by_city_df.fillna(0) # substitute NaN with 0
 
 # %%
-incidents_by_city_df.groupby('state')[0].count().sort_values(ascending=False)
+incidents_by_city_df.groupby('state')[0].count().sort_values(ascending=False).plot(kind='bar', figsize=(20, 5));
 
 # %%
 n_weeks_per_year = 52
@@ -230,6 +231,14 @@ plt.tight_layout();
 # %% [markdown]
 # ### Translate and Scaling Time Series
 
+# %%
+new_york_killed_ts = incidents_killed_by_city_df[(incidents_killed_by_city_df.index.get_level_values('city'
+    ) == 'City of New York')].values[0]
+los_angeles_killed_ts = incidents_killed_by_city_df[(incidents_killed_by_city_df.index.get_level_values('city'
+    ) == 'Los Angeles')].values[0]
+chicago_killed_ts = incidents_killed_by_city_df[(incidents_killed_by_city_df.index.get_level_values('city'
+    ) == 'Chicago')].values[0]
+
 # %% [markdown]
 # Offset translation:
 
@@ -255,57 +264,43 @@ plt.axvline(x=n_weeks_per_year*3-1, color='k', linestyle='--')
 plt.legend(incidents_by_city_df[incidents_by_city_df.index.get_level_values('state') == 'ALASKA'].index.get_level_values('city'), 
     loc='upper left', bbox_to_anchor=(1, 1));
 
+# %%
+fig, ax = plt.subplots(3, 1, figsize=(20, 7))
+ax[0].plot(new_york_ts, '.--', label='New York (original)')
+ax[0].plot(new_york_ts-np.nanmean(new_york_ts), '.--', label='New York')
+ax[0].plot(new_york_killed_ts-np.nanmean(new_york_killed_ts), '.--', label='New York killed')
+ax[0].legend()
+ax[1].plot(los_angeles_ts, '.--', label='Los Angeles (original)')
+ax[1].plot(los_angeles_ts-np.nanmean(los_angeles_ts), '.--', label='Los Angeles')
+ax[1].plot(los_angeles_killed_ts-np.nanmean(los_angeles_killed_ts), '.--', label='Los Angeles killed')
+ax[1].legend()
+ax[2].plot(chicago_ts, '.--', label='Chicago (original)')
+ax[2].plot(chicago_ts-np.nanmean(chicago_ts), '.--', label='Chicago')
+ax[2].plot(chicago_killed_ts-np.nanmean(chicago_killed_ts), '.--', label='Chicago killed')
+ax[2].legend()
+fig.suptitle('Average number of participants per week in New York, Los Angeles and Chicago, offset translation')
+plt.tight_layout();
+
 # %% [markdown]
 # Amplitude scale:
 
 # %%
-plt.figure(figsize=(20, 5))
-plt.plot((new_york_ts-np.nanmean(new_york_ts))/np.std(new_york_ts), '.--', label='New York')
-plt.plot((los_angeles_ts-np.nanmean(los_angeles_ts))/np.std(los_angeles_ts), '.--', label='Los Angeles')
-plt.plot((chicago_ts-np.nanmean(chicago_ts))/np.std(chicago_ts), '.--', label='Chicago')
-plt.title('Average number of participants per week in New York, Los Angeles and Chicago')
-plt.axvline(x=n_weeks_per_year-1, color='k', linestyle='--')
-plt.axvline(x=n_weeks_per_year*2-1, color='k', linestyle='--')
-plt.axvline(x=n_weeks_per_year*3-1, color='k', linestyle='--')
-plt.legend();
+fig, ax = plt.subplots(3, 1, figsize=(20, 7))
+ax[0].plot(new_york_ts, '.--', label='New York (original)')
+ax[0].plot(new_york_ts-np.nanmean(new_york_ts)/np.std(new_york_ts), '.--', label='New York')
+ax[0].plot(new_york_killed_ts-np.nanmean(new_york_killed_ts)/np.std(new_york_killed_ts), '.--', label='New York killed')
+ax[0].legend()
+ax[1].plot(los_angeles_ts, '.--', label='Los Angeles (original)')
+ax[1].plot(los_angeles_ts-np.nanmean(los_angeles_ts)/np.std(los_angeles_ts), '.--', label='Los Angeles')
+ax[1].plot(los_angeles_killed_ts-np.nanmean(los_angeles_killed_ts)/np.std(los_angeles_killed_ts), '.--', label='Los Angeles killed')
+ax[1].legend()
+ax[2].plot(chicago_ts, '.--', label='Chicago (original)')
+ax[2].plot(chicago_ts-np.nanmean(chicago_ts)/np.std(chicago_ts), '.--', label='Chicago')
+ax[2].plot(chicago_killed_ts-np.nanmean(chicago_killed_ts)/np.std(chicago_killed_ts), '.--', label='Chicago killed')
+ax[2].legend()
+fig.suptitle('Average number of participants per week in New York, Los Angeles and Chicago, amplitude normalized')
+fig.tight_layout();
 
-# %%
-new_york_killed_ts = incidents_killed_by_city_df[(incidents_killed_by_city_df.index.get_level_values('city'
-    ) == 'City of New York')].values[0]
-los_angeles_killed_ts = incidents_killed_by_city_df[(incidents_killed_by_city_df.index.get_level_values('city'
-    ) == 'Los Angeles')].values[0]
-chicago_killed_ts = incidents_killed_by_city_df[(incidents_killed_by_city_df.index.get_level_values('city'
-    ) == 'Chicago')].values[0]
-
-# %%
-plt.figure(figsize=(20, 5))
-plt.plot(new_york_ts-np.nanmean(new_york_ts)/np.std(new_york_ts), '.--', label='New York')
-plt.plot(new_york_killed_ts-np.nanmean(new_york_killed_ts)/np.std(new_york_killed_ts), '.--', label='New York killed')
-plt.title('Average number of participants per week in New York, offset translation and scaling')
-plt.axvline(x=n_weeks_per_year-1, color='k', linestyle='--')
-plt.axvline(x=n_weeks_per_year*2-1, color='k', linestyle='--')
-plt.axvline(x=n_weeks_per_year*3-1, color='k', linestyle='--')
-plt.legend();
-
-# %%
-plt.figure(figsize=(20, 5))
-plt.plot(los_angeles_ts-np.nanmean(los_angeles_ts)/np.std(los_angeles_ts), '.--', label='Los Angeles')
-plt.plot(los_angeles_killed_ts-np.nanmean(los_angeles_killed_ts)/np.std(los_angeles_killed_ts), '.--', label='Los Angeles killed')
-plt.title('Average number of participants per week in Los Angeles, offset translation and scaling')
-plt.axvline(x=n_weeks_per_year-1, color='k', linestyle='--')
-plt.axvline(x=n_weeks_per_year*2-1, color='k', linestyle='--')
-plt.axvline(x=n_weeks_per_year*3-1, color='k', linestyle='--')
-plt.legend();
-
-# %%
-plt.figure(figsize=(20, 5))
-plt.plot(chicago_ts-np.nanmean(chicago_ts)/np.std(chicago_ts), '.--', label='Chicago')
-plt.plot(chicago_killed_ts-np.nanmean(chicago_killed_ts)/np.std(chicago_killed_ts), '.--', label='Chicago killed')
-plt.title('Average number of participants per week in Chicago, offset translation and scaling')
-plt.axvline(x=n_weeks_per_year-1, color='k', linestyle='--')
-plt.axvline(x=n_weeks_per_year*2-1, color='k', linestyle='--')
-plt.axvline(x=n_weeks_per_year*3-1, color='k', linestyle='--')
-plt.legend();
 
 # %% [markdown]
 # ### Noise detection: tslearn library
@@ -316,16 +311,149 @@ X = scaler.fit_transform(incidents_by_city_df.values)
 
 # %%
 fig, ax = plt.subplots(3, 1, figsize=(20, 7))
-ax[0].plot(new_york_ts, '.--', label='New York')
-ax[0].plot(scaler.fit_transform(new_york_ts.reshape(1, -1))[0], '.--', label='New York scaled')
+ax[0].plot(new_york_ts, '.--', label='New York (original)')
+ax[0].plot(scaler.fit_transform(new_york_ts.reshape(1, -1))[0], '.--', label='New York')
+ax[0].plot(scaler.fit_transform(new_york_killed_ts.reshape(1, -1))[0], '.--', label='New York killed')
 ax[0].legend()
 ax[1].plot(los_angeles_ts, '.--', label='Los Angeles')
-ax[1].plot(scaler.fit_transform(los_angeles_ts.reshape(1, -1))[0], '.--', label='Los Angeles scaled')
+ax[1].plot(scaler.fit_transform(los_angeles_ts.reshape(1, -1))[0], '.--', label='Los Angeles')
+ax[1].plot(scaler.fit_transform(los_angeles_killed_ts.reshape(1, -1))[0], '.--', label='Los Angeles killed')
 ax[1].legend()
 ax[2].plot(chicago_ts, '.--', label='Chicago')
 ax[2].plot(scaler.fit_transform(chicago_ts.reshape(1, -1))[0], '.--', label='Chicago scaled')
+ax[2].plot(scaler.fit_transform(chicago_killed_ts.reshape(1, -1))[0], '.--', label='Chicago killed')
 ax[2].legend()
-fig.suptitle('Average number of participants per week in New York, Los Angeles and Chicago');
+fig.suptitle('Average number of participants per week in New York, Los Angeles and Chicago')
+fig.tight_layout();
+
+# %% [markdown]
+# ### Compute Distance Between Time Series
+
+# %%
+def ts_distance(ts1, ts2, city):
+    print(f'Time Series distance for {city}')
+    ts_distance_df = pd.DataFrame()
+    ts_distance_df.loc['euclidean', 'Original Time Series'] = euclidean(ts1, ts2)
+    ts_distance_df.loc['cityblock', 'Original Time Series'] = cityblock(ts1, ts2)
+    ts_distance_df.loc['euclidean', 'Offset Translation'] = euclidean(ts1-np.nanmean(ts1), ts2-np.nanmean(ts2))
+    ts_distance_df.loc['cityblock', 'Offset Translation'] = cityblock(ts1-np.nanmean(ts1), ts2-np.nanmean(ts2))
+    ts_distance_df.loc['euclidean', 'Amplitude Scaling'] = euclidean(ts1-np.nanmean(ts1)/np.std(ts1), ts2-np.nanmean(ts2)/np.std(ts2))
+    ts_distance_df.loc['cityblock', 'Amplitude Scaling'] = cityblock(ts1-np.nanmean(ts1)/np.std(ts1), ts2-np.nanmean(ts2)/np.std(ts2))
+    scaler = TimeSeriesScalerMeanVariance()
+    ts_distance_df.loc['euclidean', 'Mean Variance Scaling'] = euclidean(scaler.fit_transform(ts1.reshape(1, -1))[0].reshape(-1), 
+        scaler.fit_transform(ts2.reshape(1, -1))[0].reshape(-1))
+    ts_distance_df.loc['cityblock', 'Mean Variance Scaling'] = cityblock(scaler.fit_transform(ts1.reshape(1, -1))[0].reshape(-1), 
+        scaler.fit_transform(ts2.reshape(1, -1))[0].reshape(-1))
+    display(ts_distance_df)
+
+# %%
+ts_distance(new_york_ts, new_york_killed_ts, 'City of New York')
+ts_distance(los_angeles_ts, los_angeles_killed_ts, 'Los Angeles')
+ts_distance(chicago_ts, chicago_killed_ts, 'Chicago')
+ts_distance(incidents_by_city_df.mean(axis=0).values, incidents_killed_by_city_df.mean(axis=0).values, 'Average All Cities')
+
+# %% [markdown]
+# ## Create dataset for Cities
+
+# %%
+# create a dataframe with as index city and state
+cities_df = incidents_df.groupby(['city', 'state'])['population_state_2010'].mean() # population_state_2010
+cities_df = pd.DataFrame(cities_df)
+
+# quantile of population_state_2010
+cities_df['population_quantile'] = pd.qcut(cities_df['population_state_2010'], 4, labels=False)
+
+# n_incidents
+cities_df['n_incidents_2014'] = incidents_df[incidents_df['year']==2014].groupby(['city', 'state'])['week'].count()
+cities_df['n_incidents_2015'] = incidents_df[incidents_df['year']==2015].groupby(['city', 'state'])['week'].count()
+cities_df['n_incidents_2016'] = incidents_df[incidents_df['year']==2016].groupby(['city', 'state'])['week'].count()
+cities_df['n_incidents_2017'] = incidents_df[incidents_df['year']==2017].groupby(['city', 'state'])['week'].count()
+cities_df['n_incidents'] = incidents_df.groupby(['city', 'state'])['week'].count()
+
+# n_weeks_with_incidents
+cities_df['n_weeks_with_incidents_2014'] = incidents_df[incidents_df['year']==2014].groupby(['city', 'state'])['week'].nunique()
+cities_df['n_weeks_with_incidents_2015'] = incidents_df[incidents_df['year']==2015].groupby(['city', 'state'])['week'].nunique()
+cities_df['n_weeks_with_incidents_2016'] = incidents_df[incidents_df['year']==2016].groupby(['city', 'state'])['week'].nunique()
+cities_df['n_weeks_with_incidents_2017'] = incidents_df[incidents_df['year']==2017].groupby(['city', 'state'])['week'].nunique()
+cities_df['n_weeks_with_incidents'] = incidents_df.groupby(['city', 'state'])['week'].nunique()
+
+# n_participants
+cities_df['n_participants_2014'] = incidents_df[incidents_df['year']==2014].groupby(['city', 'state'])['n_participants'].sum()
+cities_df['n_participants_2015'] = incidents_df[incidents_df['year']==2015].groupby(['city', 'state'])['n_participants'].sum()
+cities_df['n_participants_2016'] = incidents_df[incidents_df['year']==2016].groupby(['city', 'state'])['n_participants'].sum()
+cities_df['n_participants_2017'] = incidents_df[incidents_df['year']==2017].groupby(['city', 'state'])['n_participants'].sum()
+cities_df['n_participants'] = incidents_df.groupby(['city', 'state'])['n_participants'].sum()
+
+# n_participants_avg
+cities_df['n_participants_avg_2014'] = incidents_df[incidents_df['year']==2014].groupby(['city', 'state'])['n_participants'].mean()
+cities_df['n_participants_avg_2015'] = incidents_df[incidents_df['year']==2015].groupby(['city', 'state'])['n_participants'].mean()
+cities_df['n_participants_avg_2016'] = incidents_df[incidents_df['year']==2016].groupby(['city', 'state'])['n_participants'].mean()
+cities_df['n_participants_avg_2017'] = incidents_df[incidents_df['year']==2017].groupby(['city', 'state'])['n_participants'].mean()
+cities_df['n_participants_avg'] = incidents_df.groupby(['city', 'state'])['n_participants'].mean()
+
+# n_killed
+cities_df['n_killed_2014'] = incidents_df[incidents_df['year']==2014].groupby(['city', 'state'])['n_killed'].sum()
+cities_df['n_killed_2015'] = incidents_df[incidents_df['year']==2015].groupby(['city', 'state'])['n_killed'].sum()
+cities_df['n_killed_2016'] = incidents_df[incidents_df['year']==2016].groupby(['city', 'state'])['n_killed'].sum()
+cities_df['n_killed_2017'] = incidents_df[incidents_df['year']==2017].groupby(['city', 'state'])['n_killed'].sum()
+cities_df['n_killed'] = incidents_df.groupby(['city', 'state'])['n_killed'].sum()
+
+# n_killed_avg
+cities_df['n_killed_avg_2014'] = incidents_df[incidents_df['year']==2014].groupby(['city', 'state'])['n_killed'].mean()
+cities_df['n_killed_avg_2015'] = incidents_df[incidents_df['year']==2015].groupby(['city', 'state'])['n_killed'].mean()
+cities_df['n_killed_avg_2016'] = incidents_df[incidents_df['year']==2016].groupby(['city', 'state'])['n_killed'].mean()
+cities_df['n_killed_avg_2017'] = incidents_df[incidents_df['year']==2017].groupby(['city', 'state'])['n_killed'].mean()
+cities_df['n_killed_avg'] = incidents_df.groupby(['city', 'state'])['n_killed'].mean()
+
+# %%
+cities_df.head(2)
+
+# %%
+cities_df[['population_state_2010', 'population_quantile', 'n_incidents_2014', 'n_incidents_2015', 'n_incidents_2016',
+    'n_incidents_2017', 'n_incidents']].describe()
+
+# %%
+cities_df[['n_weeks_with_incidents_2014', 'n_weeks_with_incidents_2015', 
+    'n_weeks_with_incidents_2016', 'n_weeks_with_incidents_2017', 'n_weeks_with_incidents']].describe()
+
+# %%
+cities_df[['n_participants_2014', 'n_participants_2015', 'n_participants_2016', 'n_participants_2017',
+    'n_participants', 'n_participants_avg_2014', 'n_participants_avg_2015', 'n_participants_avg_2016',
+    'n_participants_avg_2017', 'n_participants_avg']].describe()
+
+# %%
+cities_df[['n_killed_2014', 'n_killed_2015', 'n_killed_2016', 'n_killed_2017', 'n_killed',
+    'n_killed_avg_2014', 'n_killed_avg_2015', 'n_killed_avg_2016', 'n_killed_avg_2017', 'n_killed_avg']].describe()
+
+# %%
+# make a plot to compare n_incidents, n_participants, n_killed an population
+fig, ax = plt.subplots(2, 3, figsize=(20, 8))
+ax[0, 0].scatter(cities_df['n_incidents'].values, cities_df['population_state_2010'].values, 
+    c=cities_df['population_quantile'].values)
+ax[0, 0].set_xlabel('n_incidents')
+ax[0, 0].set_ylabel('Population')
+ax[0, 1].scatter(cities_df['n_participants'].values, cities_df['population_state_2010'].values, 
+    c=cities_df['population_quantile'].values)
+ax[0, 1].set_xlabel('n_participants')
+ax[0, 1].set_ylabel('Population')
+ax[0, 2].scatter(cities_df['n_killed'].values, cities_df['population_state_2010'].values, 
+    c=cities_df['population_quantile'].values)
+ax[0, 2].set_xlabel('n_killed')
+ax[0, 2].set_ylabel('Population')
+ax[1, 0].scatter(cities_df['n_incidents'].values, cities_df['n_participants'].values,
+    c=cities_df['population_quantile'].values)
+ax[1, 0].set_xlabel('n_incidents')
+ax[1, 0].set_ylabel('n_participants')
+ax[1, 1].scatter(cities_df['n_incidents'].values, cities_df['n_killed'].values,
+    c=cities_df['population_quantile'].values)
+ax[1, 1].set_xlabel('n_incidents')
+ax[1, 1].set_ylabel('n_killed')
+ax[1, 2].scatter(cities_df['n_participants'].values, cities_df['n_killed'].values,
+    c=cities_df['population_quantile'].values)
+ax[1, 2].set_xlabel('n_participants')
+ax[1, 2].set_ylabel('n_killed')
+fig.suptitle('Correlation between population and number of incidents, participants and killed')
+fig.tight_layout();
 
 # %% [markdown]
 # ## Clustering
@@ -416,47 +544,7 @@ plt.legend(incidents_by_city_df.groupby(cluster).mean().index, loc='upper left',
 # Visualize if there is a correlation between city in the same cluster and population:
 
 # %%
-incidents_df['population_state_2010'].describe()
-
-# %%
-city_list = incidents_by_city_df.index.get_level_values('city').to_list()
-quantile_list = []
-population_list = []
-
-for city in city_list:
-    population = incidents_df[incidents_df['city'] == city]['population_state_2010'].values[0]
-    population_list.append(population)
-    if population < np.quantile(incidents_df['population_state_2010'], 0.25):
-        quantile_list.append(0)
-    elif population < np.quantile(incidents_df['population_state_2010'], 0.5):
-        quantile_list.append(1)
-    elif population < np.quantile(incidents_df['population_state_2010'], 0.75):
-        quantile_list.append(2)
-    else:
-        quantile_list.append(3)
-
-# %%
-fig, ax = plt.subplots(1, 2, figsize=(20, 5))
-ax[0].scatter(
-    population_list,
-    incidents_by_city_df.mean(axis=1).values,
-    c=quantile_list
-)
-ax[0].set_xlabel('Population')
-ax[0].set_ylabel('Average number of participants per incident')
-
-ax[1].scatter(
-    population_list,
-    incidents_by_city_df.mean(axis=1).values,
-    c=quantile_list
-)
-ax[1].set_xlabel('Population')
-ax[1].set_ylabel('Average killed participants per incident')
-fig.suptitle('Correlation between population and number of participants per incident');
-
-
-# %%
-km_crosstab = pd.crosstab(km.labels_, quantile_list, rownames=['cluster'], colnames=['population_quantile'])
+km_crosstab = pd.crosstab(km.labels_, cities_df['population_quantile'], rownames=['cluster'], colnames=['population_quantile'])
 km_crosstab.plot(kind='bar', stacked=False, title='Population quantile for each cluster');
 
 # %% [markdown]
