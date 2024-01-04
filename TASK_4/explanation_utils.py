@@ -21,10 +21,12 @@ class Classifiers(Enum):
     NC = 'NearestCentroidClassifier'
     NN = 'NeuralNetworkClassifier'
     RF = 'RandomForestClassifier'
+    AB = 'AdaBoostClassifier'
+    NBM = 'NaiveBayesMixedClassifier'
     RIPPER = 'RipperClassifier'
     SVM = 'SupportVectorMachineClassifier'
     TN = 'TabNetClassifier'
-    XGB = 'XGBClassifier'
+    XGB = 'ExtremeGradientBoostingClassifier'
 
 def get_classifiers_objects(load_path, delete_feature_names=True): # TODO: verificarne il funzionamento una volta aggiunti gli altri
     def nn_model(meta, hidden_layer_sizes, dropouts, activation_functions, last_activation_function):

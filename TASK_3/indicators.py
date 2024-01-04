@@ -615,6 +615,11 @@ incidents_clf[
     (incidents_clf['suicide']==0)
 ]['death'].value_counts().plot.pie(autopct='%1.1f%%', title='Death distribution (indicidents with unknown type)')
 
+# %%
+(   incidents_clf[(incidents_clf['suicide']==1) & (incidents_clf['death']==0)].shape[0] / \
+    incidents_clf[(incidents_clf['suicide']==1) & (incidents_clf['death']==1)].shape[0]
+)*100
+
 # %% [markdown]
 # Visualize incidents in PCA space:
 
