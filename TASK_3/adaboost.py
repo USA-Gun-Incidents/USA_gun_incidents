@@ -1,22 +1,23 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
-# 
+#
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
-# 
+#
 # # Adaboost Classifier
-# 
+#
 # AdaBoost is a bosting algorithm.
-# 
+#
 # Boosting is a general method for improving the accuracy of any given learning algorith
 # Boosting refers to a general and provably effective method of producing a very accurate prediction rule by combining rough and moderately inaccurate rules of thumb in a manner similar to
 # that suggested above. 
-# 
+#
 # AdaBoost algorithm takes as input a training set belongs to some domain and label in some label set. 
 # The algorithm originally presented works for two calss classification, but it can be extended to the multiclass case. 
 # AdaBoost calls a given weak or base learning algorithm repeatedly in a series of rounds. One of the main ideas of the algorithm is to maintain a distribution or set of weights over the training set.
 # Initially, all weights are set equally, but on each round, the weights of incorrectly classified examples are increased so that the weak learner is forced to focus on the hard examples in the training set.
 # The weak learner’s job is to find a weak hypothesis h appropriate for the distribution.
-# 
+#
 # We import the libraries and define constants and settings of the notebook:
 
 # %%
@@ -26,6 +27,7 @@ import pickle
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.ensemble import AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import make_scorer, f1_score
 import pydotplus
@@ -84,14 +86,17 @@ categorical_features = [
 # %% [markdown]
 # 'SAMME.R' real boosting algorithm. estimator must support calculation of class probabilities. 
 # 'SAMME' then use the SAMME discrete boosting algorithm. 
-# 
+#
 # The SAMME.R algorithm typically converges faster than SAMME, achieving a lower test error with fewer boosting iterations.
-# 
+#
 # Both algorithms were presented in ''Multi-class AdaBoost' by Ji Zhu, Saharon Rosset, Hui Zou, Trevor Hastie.
 
 # %%
 param_grid = {
-    'estimator': [None], # defualt: DecisionTreeClassifier with max_depth=1
+    'estimator': [None, 
+        DecisionTreeClassifier(criterion='gini', 
+        splitter='best', max_depth=None, min_samples_split=0.01, class_weight='balanced')
+    ], # None=defualt: DecisionTreeClassifier with max_depth=1
     'n_estimators': [200],# 500, 1000],
     'learning_rate': [1, 0.9, 0.8],
     'algorithm': ['SAMME', 'SAMME.R'],
