@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import plotly.express as px
 import zlib
+import math
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.preprocessing import TimeSeriesScalerMeanVariance
 from sklearn.metrics import pairwise_distances
@@ -22,6 +23,10 @@ from scipy.spatial.distance import euclidean
 from plot_utils import sankey_plot
 from matrixprofile import *
 from matrixprofile.discords import discords
+from tslearn.shapelets import ShapeletModel
+from tslearn.shapelets import grabocka_params_to_shapelet_size_dict
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 
 # %%
 incidents_df = pd.read_csv(
@@ -610,6 +615,24 @@ cities_df[['n_incidents', 'n_participants', 'n_killed', 'population_state_2010']
 # 
 # Following the clustering process, we analyze the results and extract motifs and anomalies from the time series data, aiming for a comprehensive understanding and exploration of the udata.
 
+# %%
+def plot_timeseries_per_cluster(labels):
+    n_clusters = len(np.unique(labels))
+    fig, ax = plt.subplots(math.ceil(n_clusters/2), 2, figsize=(20, 20))
+    print(np.shape(ax))
+    colors = plt.rcParams["axes.prop_cycle"]()
+
+    max_num_samples_per_cluster = 5
+    for c in range(n_clusters):
+        ax_c = ax[c//2, c%2]
+        ax_c.set_title(f'Cluster {c}', fontsize=8)
+        ax_c.set_axisbelow(True)
+        for i, idx in enumerate(np.where(labels == c)[0]):
+            if i >= max_num_samples_per_cluster:
+                break
+            ax_c.plot(X[idx], '.--', color=next(colors)['color'])
+    fig.tight_layout();
+
 # %% [markdown]
 # ### Shape-based clustering: k-means
 
@@ -1093,27 +1116,6 @@ km_crosstab = pd.crosstab(km.labels_, cities_df['population_quantile'], rownames
 km_crosstab.plot(kind='bar', stacked=False, title='Population quantile for each cluster');
 
 # %%
-import math
-
-# %%
-def plot_timeseries_per_cluster(labels):
-    n_clusters = len(np.unique(labels))
-    fig, ax = plt.subplots(math.ceil(n_clusters/2), 2, figsize=(20, 20))
-    print(np.shape(ax))
-    colors = plt.rcParams["axes.prop_cycle"]()
-
-    max_num_samples_per_cluster = 5
-    for c in range(n_clusters):
-        ax_c = ax[c//2, c%2]
-        ax_c.set_title(f'Cluster {c}', fontsize=8)
-        ax_c.set_axisbelow(True)
-        for i, idx in enumerate(np.where(labels == c)[0]):
-            if i >= max_num_samples_per_cluster:
-                break
-            ax_c.plot(X[idx], '.--', color=next(colors)['color'])
-    fig.tight_layout();
-
-# %%
 plot_timeseries_per_cluster(km.labels_)
 
 # %%
@@ -1269,12 +1271,6 @@ plt.title('Anomalies in New York time series');
 # %% [markdown]
 # ## Shaplet discovery
 
-# %%
-from tslearn.shapelets import ShapeletModel
-from tslearn.shapelets import grabocka_params_to_shapelet_size_dict
-from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
-
 # %% [markdown]
 # Create binary var is_killed:
 
@@ -1307,11 +1303,8 @@ print('n_classes', n_classes)
 print('shapelet_sizes', shapelet_sizes)
 
 # %%
-shp_clf = ShapeletModel(n_shapelets_per_size=shapelet_sizes,
-                        optimizer="sgd",
-                        weight_regularizer=.01,
-                        max_iter=200,
-                        verbose=1)
+shp_clf = ShapeletModel(n_shapelets_per_size=shapelet_sizes, optimizer="sgd",
+    weight_regularizer=.01, max_iter=200, verbose=1)
 
 # %%
 shp_clf.fit(X_train, y_train)
