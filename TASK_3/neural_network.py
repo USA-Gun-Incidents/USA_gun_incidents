@@ -1,14 +1,16 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
-# 
+#
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
-# 
+#
 # # Neural Network Classifier
-# 
+#
 # We import the libraries and define constants and settings of the notebook:
 
 # %%
 import pandas as pd
+import numpy as np
 import json
 import pickle
 import matplotlib.pyplot as plt
@@ -47,6 +49,13 @@ features_for_clf = json.loads(open('../data/clf_indicators_names_distance_based.
 indicators_train_df = incidents_train_df[features_for_clf]
 indicators_test_df = incidents_test_df[features_for_clf]
 
+# counting positives and negatives element in the dataseet
+pos = (true_labels_train_df['death']==1).sum()
+neg = (true_labels_train_df['death']==0).sum()
+
+# %%
+pos, neg
+
 # %% [markdown]
 # We display the features names we will use:
 
@@ -71,55 +80,76 @@ categorical_features = [
 # fino a poco tempo fa era parte di tensorflow, poi hanno smesso di mantenerlo e infine l'hanno rimosso dalle nuove versioni :(
 # https://adriangb.com/scikeras/stable/notebooks/Basic_Usage.html#7.2-Performing-a-grid-search
 
-def get_clf(meta, hidden_layer_sizes, dropouts, activation_functions, last_activation_function):
+METRICS = [
+      tf.keras.metrics.BinaryCrossentropy(name='cross entropy'),  # same as model's loss
+      tf.keras.metrics.MeanSquaredError(name='Brier score'),
+      tf.keras.metrics.TruePositives(name='tp'),
+      tf.keras.metrics.FalsePositives(name='fp'),
+      tf.keras.metrics.TrueNegatives(name='tn'),
+      tf.keras.metrics.FalseNegatives(name='fn'), 
+      tf.keras.metrics.BinaryAccuracy(name='accuracy'),
+      tf.keras.metrics.Precision(name='precision'),
+      tf.keras.metrics.Recall(name='recall'),
+      tf.keras.metrics.AUC(name='auc'),
+      tf.keras.metrics.AUC(name='prc', curve='PR'), # precision-recall curve
+]
+INITIAL_BIAS = np.log([pos/neg])
+
+def get_clf(meta, hidden_layer_sizes, dropout, final_activation_fun, output_bias=INITIAL_BIAS):
+
+    output_bias = tf.keras.initializers.Constant(output_bias)
     n_features_in_ = meta["n_features_in_"]
+    #n_classes_ = meta["n_classes_"]
+
     model = tf.keras.models.Sequential()
     model.add(tf.keras.layers.Input(shape=(n_features_in_,)))
-    for hidden_layer_size, activation_function, dropout in zip(hidden_layer_sizes, activation_functions, dropouts):
-        model.add(tf.keras.layers.Dense(hidden_layer_size, activation=activation_function))
+    for hidden_layer_size in hidden_layer_sizes:
+        model.add(tf.keras.layers.Dense(hidden_layer_size, activation="relu"))
         model.add(tf.keras.layers.Dropout(dropout))
-    model.add(tf.keras.layers.Dense(1, activation=last_activation_function))
+    model.add(tf.keras.layers.Dense(1, activation=final_activation_fun, bias_initializer=output_bias))
     return model
 
-best_model = KerasClassifier(
-    get_clf,
-    metrics=['accuracy'],
-    validation_split=0.2, # FIXME: sul validation usiamo i dati scalati (ma forse è okay, lo usiamo solo per vedere la curva o fare eventualmente early stopping)
-    model__hidden_layer_sizes=None,
-    model__activation_functions=None,
-    model__dropouts=None,
-    model__last_activation_function=None
+early_stopping = tf.keras.callbacks.EarlyStopping(
+    monitor='val_prc', 
+    verbose=1,
+    patience=8,
+    mode='max',
+    restore_best_weights=True)
+
+clf = KerasClassifier(
+    model=get_clf,
+    
+    loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+    metrics=METRICS,
+
+    validation_split=0.2,
+    optimizer=tf.keras.optimizers.Adam(5e-5), # batch size is high --> learning rate
+
+    callbacks=[early_stopping],
+    verbose=False,
 )
+
+params = {
+    'nn__model__hidden_layer_sizes': [(256, 256, 256, ), (128, 512, 128)],
+    'nn__model__dropout': [0.25, 0.5, 0.325],
+    'nn__model__output_bias':[0, INITIAL_BIAS],
+    'nn__model__final_activation_fun':['sigmoid'],# tryed tanh, but sigmoid is better
+    'nn__batch_size': [2048],
+    'nn__epochs': [100]
+}
+
 
 scaler = MinMaxScaler()
-pipe = Pipeline(steps=[("scaler", scaler), ("nn", best_model)])
+pipe = Pipeline(steps=[("scaler", scaler), ("nn", clf)])
 
-# TODO: questi valori li ho messi a caso per testarlo
-# TODO: usare loss pesata per bilanciare le classi
-param_grid = [
-    {
-        'nn__model__hidden_layer_sizes': [(256, 256,)],
-        'nn__model__activation_functions': [('sigmoid', 'sigmoid',)],
-        'nn__model__last_activation_function': ['sigmoid'],
-        'nn__model__dropouts': [(0.1, 0.1,)],
-        'nn__optimizer': ['adamax'],
-        'nn__optimizer__learning_rate': [0.001], # default of adamax
-        #'nn__optimizer__decay': [1e-5],
-        'nn__loss': ['mean_squared_error'],
-        'nn__batch_size': [256],
-        'nn__epochs': [10]
-    },
-] # lista di dizionari (e.g. con 3 layer) per evitare combinazioni non valide
+gs = GridSearchCV(pipe, 
+                  params, 
+                  scoring=make_scorer(f1_score), 
+                  n_jobs=-1,
+                  verbose=True,
+                  cv=StratifiedShuffleSplit(n_splits=3, test_size=1/3, random_state=RANDOM_STATE), # TODO: con altri classificatori usiamo stratified 5-fold, qui ci vuole troppo
+                  refit=False)
 
-gs = GridSearchCV( # RandomizedSearchCV?
-    estimator=pipe,
-    param_grid=param_grid,
-    n_jobs=-1,
-    scoring=make_scorer(f1_score),
-    verbose=10,
-    cv=StratifiedShuffleSplit(n_splits=2, test_size=1/3, random_state=RANDOM_STATE), # TODO: con altri classificatori usiamo stratified 5-fold, qui ci vuole troppo
-    refit=False
-)
 gs.fit(indicators_train_df, true_labels_train)
 
 # %%
@@ -141,9 +171,16 @@ best_model_params = val_results_df.iloc[best_index]['params']
 # remove from the params the prefix 'nn__'
 best_model_params = {k.replace('nn__', ''): v for k, v in best_model_params.items()}
 best_model = KerasClassifier(
-    get_clf,
-    metrics=['accuracy'],
+    model=get_clf,
+    
+    loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+    metrics=METRICS,
+
     validation_split=0.2,
+    optimizer=tf.keras.optimizers.Adam(1e-3), 
+
+    callbacks=[early_stopping],
+    verbose=False,
     **best_model_params
 )
 print(best_model_params)
@@ -200,7 +237,9 @@ def plot_learning_curve(history, metric_name):
     plt.show()
 
 # %%
-plot_learning_curve(best_model.history_, 'accuracy')
+metric_names = ['cross entropy', 'Brier score', 'tp', 'fp', 'tn', 'fn', 'accuracy', 'precision', 'recall', 'auc', 'prc']
+for metric in metric_names:
+    plot_learning_curve(best_model.history_, metric)
 
 # %%
 plot_learning_curve(best_model.history_, 'loss')
@@ -239,9 +278,16 @@ true_labels_over_train = pd.read_csv('../data/clf_y_train_over.csv', index_col=0
 # %%
 # fit the model on all the training data
 best_model_over = KerasClassifier(
-    get_clf,
-    metrics=['accuracy'],
+    model=get_clf,
+    
+    loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+    metrics=METRICS,
+
     validation_split=0.2,
+    optimizer=tf.keras.optimizers.Adam(1e-3), 
+
+    callbacks=[early_stopping],
+    verbose=False,
     **best_model_params
 )
 
@@ -280,9 +326,16 @@ true_labels_smote_train = pd.read_csv('../data/clf_y_train_smote.csv', index_col
 # %%
 # fit the model on all the training data
 best_model_smote = KerasClassifier(
-    get_clf,
-    metrics=['accuracy'],
+    model=get_clf,
+    
+    loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+    metrics=METRICS,
+
     validation_split=0.2,
+    optimizer=tf.keras.optimizers.Adam(1e-3), 
+
+    callbacks=[early_stopping],
+    verbose=False,
     **best_model_params
 )
 
@@ -355,16 +408,16 @@ plot_confusion_matrix(
 plot_roc(y_true=true_labels_test, y_probs=[pred_probas_test[:,1]], names=[clf_name])
 
 # %%
-plot_predictions_in_features_space(
+'''plot_predictions_in_features_space(
     df=incidents_test_df,
     features=['n_males_prop', 'n_child_prop', 'n_teen_prop', 'n_participants', 'poverty_perc'],
     true_labels=true_labels_test,
     pred_labels=pred_labels_test,
     figsize=(15, 50)
-)
+)'''
 
 # %%
-fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+'''fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_PCA_decision_boundary(
   train_set=indicators_train_df,
   features=[col for col in indicators_train_df.columns if col not in categorical_features],
@@ -374,7 +427,7 @@ plot_PCA_decision_boundary(
   axs=axs,
   scale=True,
   pca=True
-)
+)'''
 
 # %%
 plot_distribution_missclassifications(
@@ -430,3 +483,89 @@ plot_distribution_missclassifications(
 )
 
 
+
+# %%
+INITIAL_BIAS = np.log([pos/neg])
+clf = KerasClassifier(
+    model=get_clf,
+    
+    loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+    metrics=METRICS,
+
+    validation_split=0.2,
+    optimizer=tf.keras.optimizers.Adam(1e-3), 
+
+    callbacks=[early_stopping],
+    verbose=False
+)
+
+params = {
+    'nn__model__hidden_layer_sizes': [(256, 256, 256, ), (128, 512, 128)],
+    'nn__model__dropout': [0.25, 0.5, 0.325],
+    'nn__model__output_bias':[0, INITIAL_BIAS],
+    'nn__model__final_activation_fun':['sigmoid'],# tryed tanh, but sigmoid is better
+    'nn__batch_size': [2048],
+    'nn__epochs': [100]
+}
+
+scaler = MinMaxScaler()
+pipe = Pipeline(steps=[("scaler", scaler), ("nn", clf)])
+
+gs_over = GridSearchCV(pipe, 
+                  params, 
+                  scoring=make_scorer(f1_score), 
+                  n_jobs=-1,
+                  verbose=True,
+                  cv=StratifiedShuffleSplit(n_splits=2, test_size=1/3, random_state=RANDOM_STATE), # TODO: con altri classificatori usiamo stratified 5-fold, qui ci vuole troppo
+                  refit=False)
+
+gs_over.fit(indicators_over_train_df, true_labels_over_train)
+val_results_df = pd.DataFrame(gs.cv_results_)
+val_results_df.head()
+
+# %%
+# fit the model on all the training data
+best_model_over = KerasClassifier(
+    model=get_clf,
+    
+    loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+    metrics=METRICS,
+
+    validation_split=0.2,
+    optimizer=tf.keras.optimizers.Adam(1e-3), 
+
+    callbacks=[early_stopping],
+    verbose=False,
+    **best_model_params
+)
+
+fit_start = time()
+best_model_over.fit(indicators_train_over_scaled, true_labels_over_train)
+fit_over_time = time()-fit_start
+
+# get the predictions on the training data
+train_score_start = time()
+pred_labels_over_train = best_model_over.predict(indicators_train_over_scaled)
+train_score_over_time = time()-train_score_start
+pred_probas_over_train = best_model_over.predict_proba(indicators_train_over_scaled)
+
+# get the predictions on the test data
+test_score_start = time()
+pred_labels_over_test = best_model_over.predict(indicators_test_df.values)
+test_score_over_time = time()-test_score_start
+pred_probas_over_test = best_model_over.predict_proba(indicators_test_df.values)
+
+# save the predictions
+pd.DataFrame(
+    {'labels': pred_labels_over_test, 'probs': pred_probas_over_test[:,1]}
+).to_csv(f'{RESULTS_DIR}/{clf_name}_oversample_preds.csv')
+
+# save the model
+file = open(f'{RESULTS_DIR}/{clf_name}_oversample.pkl', 'wb')
+pickle.dump(obj=best_model_over, file=file)
+file.close()
+
+# %%
+metric_names = ['cross entropy', 'Brier score', 'tp', 'fp', 'tn', 'fn', 'accuracy', 'precision', 'recall', 'auc', 'prc']
+for metric in metric_names:
+    plot_learning_curve(best_model.history_, metric)
