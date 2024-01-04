@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
-# 
+#
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
-# 
+#
 # # Neural Network Classifier
-# 
+#
 # We import the libraries and define constants and settings of the notebook:
 
 # %%
@@ -52,12 +53,6 @@ indicators_test_df = incidents_test_df[features_for_clf]
 # counting positives and negatives element in the dataseet
 pos = (true_labels_train_df['death']==1).sum()
 neg = (true_labels_train_df['death']==0).sum()
-
-# %% [markdown]
-# we immediately notice that the two classes to be predicted are unbalanced, we will see later how we tried to overcome this problem
-
-# %%
-pos, neg
 
 # %% [markdown]
 # We display the features names we will use:
@@ -124,23 +119,20 @@ early_stopping = tf.keras.callbacks.EarlyStopping(
 
 clf = KerasClassifier(
     model=get_clf,
-    optimizer=tf.keras.optimizers.Adam(4e-1),
     loss=tf.keras.losses.BinaryCrossentropy(from_logits=False), # because there is a sigmoid layer
-
     metrics=METRICS,
     callbacks=[early_stopping],
-    validation_split=0.2,
-    
-    batch_size=None,
-    epochs=None,
-    verbose=True
+    validation_split=0.2
 )
 
 params = {
-    'nn__model__hidden_layer_sizes': [(256, 256, 256, ), (128, 512, 128, ), (128, 128, )],
-    'nn__model__dropout': [0.25, 0.5, 0.325],
+    'nn__model__hidden_layer_sizes': [(256, 256, 256, )],# (128, 512, 128, ), (128, 128, )],
+    'nn__model__dropout': [0.25],# 0.5, 0.325],
     'nn__model__output_bias':[0, INITIAL_BIAS],
     'nn__model__final_activation_fun':['sigmoid'],
+
+    'nn__optimizer': ['adamax'],
+    'nn__optimizer__learning_rate': [0.001],
 
     'nn__epochs':[50],
     'nn__batch_size':[2048]
@@ -160,7 +152,7 @@ pipe = Pipeline(steps=[("scaler", scaler), ("nn", clf)])
 
 gs = GridSearchCV(pipe, 
                   params, 
-                  scoring='accuracy',#make_scorer(f1_score), 
+                  scoring=make_scorer(f1_score), 
                   n_jobs=-1,
                   verbose=True,
                   cv=StratifiedShuffleSplit(n_splits=2, test_size=1/3, random_state=RANDOM_STATE),
@@ -170,14 +162,14 @@ gs.fit(indicators_train_df, true_labels_train)
 
 # %% [markdown]
 # several metrics were used to evaluate the training and outcome of the models considered, and since this is a binary classifier, we chose to use "binary crossentropy" as the loss.
-# 
+#
 # all neural networks tested are constructed as a series of layers that follow one another and are divided into:
 # - input layer shared by all tested models
 # - a series of hidden layers and dropout layers, which alternate. After several tests we noticed that 6 total layers is the best compromise between execution time and accuracy of the final classifier
 # - an output layer that can be initialized with a bias, the first method by which we tried to overcome the problem of unbalanced classes and to try to reduce the training time
-# 
+#
 # In addition to dropout, to adjust complexity, we used the early stopping technique. The optimizer used is Adam for all models tested with a learning step set
-# 
+#
 # In the grid search we tried 2 different activation functions for the output unit, differently in the hidden layers the activation function is always ReLU
 
 # %% [markdown]
