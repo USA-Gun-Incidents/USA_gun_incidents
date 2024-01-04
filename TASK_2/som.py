@@ -192,6 +192,24 @@ for ax in axs[nrows-1, i%ncols+1:]:
     ax.remove()
 f.suptitle("Most frequent value for each feature in each cluster", fontweight='bold');
 
+# %%
+ncols = 2
+nplots = 4
+nrows = int(nplots/ncols)
+if nplots % ncols != 0:
+    nrows += 1
+f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10,8)) # TODO: cambia
+for i, feature in enumerate(['n_injured_prop', 'n_arrested_prop', 'n_unharmed_prop', 'n_killed_prop']):
+    avg_feature_per_cluster = agg_feature_by_cluster(network, indicators_df, feature=feature, agg_fun='mean')
+    avg_feature_mtx = np.array(avg_feature_per_cluster).reshape(network._rows, network._cols)
+    sns.heatmap(avg_feature_mtx, ax=axs[int(i/ncols)][i%ncols], annot=True)
+    axs[int(i/ncols)][i%ncols].set_title(feature)
+    axs[int(i/ncols)][i%ncols].set_xticks([])
+    axs[int(i/ncols)][i%ncols].set_yticks([])
+for ax in axs[nrows-1, i%ncols+1:]:
+    ax.remove()
+f.suptitle("Average value of the features per cluster", fontweight='bold');
+
 # %% [markdown]
 # The distribution of the variables is in line with the one observations made regarding the numerical features.
 #

@@ -101,11 +101,11 @@ fig.show()
 
 # %% [markdown]
 # Every year, the [Giffords Law Center to Prevent Gun Violence](https://giffords.org/lawcenter/resources/scorecard/) assesses the gun regulations of all 50 states in the United States, assigning each state a letter grade reflective of the strength of its gun laws. The grades are determined by the efficacy and robustness of the state's firearm regulations, with the center asserting that states with stringent gun laws have fewer gun deaths.
-# 
+#
 # We manually collected the data from the 2013 pdf report in the file 'giffords_scorecard_2013.csv'. In the following we will download the data from 2014 to 2018 (the years in which the incident data is available) and merge it into one dataframe.
-# 
+#
 # Giffords Law Center to Prevent Gun Violence does not grade the District of Columbia. Based on a research of the gun laws in the District of Columbia (see e.g. [here](https://giffords.org/lawcenter/gun-laws/washington-dc/)) we will give it an A.
-# 
+#
 # We will map the letter grades to numerical values representing the rank of the state's gun laws. We will use the following mapping:
 
 # %%
@@ -299,7 +299,7 @@ fig.show()
 
 # %% [markdown]
 # No clear correlation can be seen.
-# 
+#
 # We also compute the pearson correlation coefficient for each year:
 
 # %%

@@ -51,20 +51,27 @@ knn = KNeighborsClassifier()
 pipe = Pipeline(steps=[('scaler', scaler), ('knn', knn)])
 
 param_grid = [
+    #{
+    #    'knn__n_neighbors': [3, 5, 7, 9, 11, 13, 21, 31, 51], # odd values to avoid ties
+    #    'knn__weights': ['uniform', 'distance'],
+    #    'knn__algorithm': ['brute'], # gli altri cambiano in base al train (rischiamo di usare euristiche su certi fold e brute force su altri)
+    #    'knn__metric': ['minkowski'],
+    #    'knn__p': [1, 2]
+    #},
     {
-        'knn__n_neighbors': [3, 5, 7, 9, 11, 13, 21, 31, 51], # odd values to avoid ties
+        'knn__n_neighbors': [1, 2, 3, 5, 7, 9, 11], # odd values to avoid ties
         'knn__weights': ['uniform', 'distance'],
         'knn__algorithm': ['brute'], # gli altri cambiano in base al train (rischiamo di usare euristiche su certi fold e brute force su altri)
         'knn__metric': ['minkowski'],
         'knn__p': [1, 2]
     },
-    {
-        'knn__n_neighbors': [1],
-        'knn__weights': ['uniform'], # to reduce the number of combinations
-        'knn__algorithm': ['brute'],
-        'knn__metric': ['minkowski'],
-        'knn__p': [1, 2]
-    }
+    #{
+    #    'knn__n_neighbors': [1],
+    #    'knn__weights': ['uniform', 'distance'], # to reduce the number of combinations
+    #    'knn__algorithm': ['brute'],
+    #    'knn__metric': ['minkowski'],
+    #    'knn__p': [1, 2]
+    #}
 ]
 
 gs = GridSearchCV(
@@ -76,7 +83,7 @@ gs = GridSearchCV(
     cv=cv,
     refit=False
 )
-gs.fit(indicators_train_df, true_labels_train)
+gs.fit(indicators_oversampled_train_df, true_oversampled_labels_train)
 
 # %%
 cv_results_df = pd.DataFrame(gs.cv_results_)
@@ -108,10 +115,11 @@ best_model = KNeighborsClassifier(**best_model_params)
 # scale all the data
 minmax_scaler = MinMaxScaler()
 indicators_train_scaled = minmax_scaler.fit_transform(indicators_train_df)
+indicators_oversampled_train_scaled = minmax_scaler.fit_transform(indicators_oversampled_train_df)
 
 # fit the model on all the training data
 fit_start = time()
-best_model.fit(indicators_train_scaled, true_labels_train)
+best_model.fit(indicators_oversampled_train_df, true_oversampled_labels_train)
 fit_time = time()-fit_start
 
 # get the predictions on the training data
