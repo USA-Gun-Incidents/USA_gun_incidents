@@ -11,6 +11,8 @@
 
 # %%
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 from clustering_utils import *
 import sys, os
 sys.path.append(os.path.abspath('..'))
@@ -72,7 +74,7 @@ internal_scores_df
 # %%
 silhouette_df = internal_scores_df['silhouette_score'].to_frame()
 DBSCAN_silhouette = pd.read_csv(PATH+'DBSCAN_internal_scores.csv', index_col=0)['silhouette_score'].values[0]
-hierarchical_silhouette = pd.read_csv(PATH+'hierarchical_internal_scores.csv', index_col=0).T['silhouette_score'].values[0]
+hierarchical_silhouette = pd.read_csv(PATH+'hierarchical_internal_scores.csv', index_col=0)['silhouette_score'].values[0]
 pd.concat([silhouette_df, pd.DataFrame({'silhouette_score': [DBSCAN_silhouette, hierarchical_silhouette]}, index=['DBSCAN', 'Hierarchical'])])
 
 # %% [markdown]
@@ -103,9 +105,12 @@ for name, external_score_file in zip(clustering_name, external_scores_files):
     features_order = scores_curr_df.index.to_list()
 
 # %%
-fig, axs = plt.subplots(1, 4, figsize=(20, 5))
+features_order
+
+# %%
+fig, axs = plt.subplots(2, 2, figsize=(32, 14))
 for i, key in enumerate(scores_per_metric):
-    pd.DataFrame(np.array(scores_per_metric[key]), index=algs_order, columns=features_order).plot.bar(rot=0, title=key, ax=axs[i])
+    pd.DataFrame(np.array(scores_per_metric[key]), index=algs_order, columns=features_order).plot.bar(rot=0, title=key, ax=axs[int(i/2)][i%2])
 
 # %%
 fig, axs = plt.subplots(2, 2, figsize=(30, 10))

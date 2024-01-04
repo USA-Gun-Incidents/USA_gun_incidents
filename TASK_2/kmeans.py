@@ -1,12 +1,13 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
 #  
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
-# 
+#
 # # K-Means clustering
-# 
-# K-means clustering is a simple and efficient partitional clustering algorithm. It starts from k initial centroids (where k is a user-specified parameter) and operates by iteratively assigning each data point to the cluster whose centroid is closest according to a specific distance metric (typically the euclidean distance). Centroids are updated at the end of each iteration based on the newly formed clusters.
-# 
+#
+# K-means clustering is a simple and efficient partitional clustering algorithm. It starts from k initial centroids (where k is a user-specified parameter) and operates by iteratively assigning each data point to the cluster whose centroid is closest according to a specific distance metric (e.g. the euclidean distance). Centroids are updated at the end of each iteration based on the newly formed clusters.
+#
 # In this notebook, we will use the K-means algorithm to cluster the incidents dataset using the indicators previously extracted.
 
 # %% [markdown]
@@ -34,7 +35,7 @@ from yellowbrick.cluster import KElbowVisualizer, InterclusterDistance
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
 from clustering_utils import *
-%matplotlib inline
+# %matplotlib inline
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 
@@ -78,7 +79,7 @@ axs[2].set_xticklabels(features_to_cluster, rotation=90);
 axs[2].set_title('Standard scaling');
 
 # %% [markdown]
-# Variables have different scales and variances. There are both advantages and disadvantages in using Min-Max scaling or Standard scaling. Min-Max scaling leaves variances unequal, but it preserves the shape of the original distribution. Standard scaling makes the variances equal, but it does not preserve the shape of the original distribution. Since K-means tends to produce globular clusters, leaving variances unequal is like giving different weights to features based on their variance. At the same time, using Standard scaling the feature n_participants, that is in a completly different range from the other features, is likely to negatively affect the clustering results. We decide to use Min-Max scaling because we want to keep the feature n_participants and becuase the features with higher interquartile range (e.g. n_killed_prop, n_injured_prop, n_unharmed_prop, n_arrested_prop), that could be weighted more in the clustering, are actually the ones describing the main characteristics of the incidents.
+# Variables have different scales and variances. There are both advantages and disadvantages in using Min-Max scaling or Standard scaling. Min-Max scaling leaves variances unequal, but it preserves the shape of the original distribution. Standard scaling makes the variances equal, but it does not preserve the shape of the original distribution. Since K-means tends to produce globular clusters, leaving variances unequal is like giving different weights to features based on their variance. At the same time, using Standard scaling the feature n_participants, that is in a completely different range from the other features, is likely to negatively affect the clustering results. We decide to use Min-Max scaling because we want to keep the feature n_participants and becuase the features with higher interquartile range (e.g. n_killed_prop, n_injured_prop, n_unharmed_prop, n_arrested_prop), that could be weighted more in the clustering, are actually the ones describing the main characteristics of the incidents.
 
 # %%
 X = X_minmax
@@ -204,7 +205,7 @@ print(f'Number of clusters found by xmeans using MDL score and setting the maxim
 
 # %% [markdown]
 # X-means terminates with k equal to the maximum number of clusters allowed (30 in our case). This means that the score always improved when splitting the clusters. No value of k is optimal according to these criteria.
-# 
+#
 # To choose the best value of k among the ones identified by the elbow method, we will compute other metrics to evaluate the quality of the clustering. The following function fits the k-means algorithm with a given set of parameters and computes the following metrics:
 # - SSE
 # - BSS (i.e. between-cluster sum of squares; the higher the better)
@@ -253,8 +254,8 @@ results_df.drop(columns=['model'])
 # - Davies-Bouldin score is best for k=4
 # - Calinski-Harabasz score is best for k=4
 # - Silhouette score is best for k=4
-# 
-# 
+#
+#
 # We could have also used hierarchical clustering to identify the best value of k. However, because of the high computational cost of hierarchical clustering, we should have used a subset of the data. Furthermore, since the methods we used so far are concordant in identifying k=4 as the best value of k, we decided to conclude the analysis here and use k=4 for the final clustering.
 
 # %%
@@ -291,7 +292,7 @@ plt.title(f'Centroids of {k}-means clusters');
 
 # %% [markdown]
 # We observe that some feature do not vary much between the clusters (i.e. location_imp, surprisal_address_type, age_range, avg_age, surprisal_min_age, n_child_prop, n_males_prop, suprisal_n_males, surprisal_day).
-# 
+#
 # Regarding the centroids, we observe that:
 # - The centroid of cluster 0 has an higher proportion of injured people and teens; the values of surprisal_characteristics and the proportion of arrested people, instead, are lower.
 # - The centroid of cluster 1 has an higher proportion of arrested people.
@@ -375,7 +376,7 @@ plot_bars_by_cluster(df=incidents_df, feature='shots', cluster_column='cluster')
 
 # %% [markdown]
 # In cluster 0 and cluster 2 - those with highest values of n_injured_prop and n_killed_prop - the majority of incidents were shooting incidents (as expected).
-# 
+#
 # In cluster 1 - characterized by the highest value of n_arrestes_prop - the proportion of incidents that did not involved firearms is higher than in the whole dataset
 
 # %%
@@ -516,7 +517,7 @@ plt.legend();
 
 # %% [markdown]
 # The first 6 components contribute the most to the overall variance in the dataset.
-# 
+#
 # We visualize the clusters in the feature spaces obtained by pairing the first 6 principal components:
 
 # %%
@@ -568,7 +569,7 @@ for feature in features_to_cluster:
 
 # %% [markdown]
 # ## Evaluation of the clustering results
-# 
+#
 # ### Internal indices
 
 # %% [markdown]
@@ -588,7 +589,7 @@ plot_scores_per_point(
 
 # %% [markdown]
 # Few points have a negative silhouette score. The majority of points with a negative silhouette score belong to cluster 3. Also, the majority of points of cluster 3 have a silhouette score below the average.
-# 
+#
 # Now we color in black points with a negative silhouette score in the principal component feature space:
 
 # %%
@@ -625,7 +626,7 @@ scatter_pca_features_by_score(
 
 # %% [markdown]
 # In the feature space of the first two principal components, points from cluster 1 are not well separated by their sihlouette score.
-# 
+#
 # We plot now the first and third principal components:
 
 # %%
@@ -642,7 +643,7 @@ scatter_pca_features_by_score(
 
 # %% [markdown]
 # In this feature space none of the clusters are well separated by their sihlouette score.
-# 
+#
 # We finally plot the first and third principal components:
 
 # %%
@@ -679,7 +680,7 @@ plt.title('SSE per feature');
 
 # %% [markdown]
 # The features that contribute the most to the SSE are n_males_prop and n_teen_prop. The feature that contributes less is n_participants.
-# 
+#
 # We now compute the SSE for each point and display the 5 points with highest SSE.
 
 # %%
@@ -744,7 +745,7 @@ plt.suptitle('Cohesion and separation measures for each cluster', fontweight='bo
 
 # %% [markdown]
 # Cluster 0 is the less cohesive but it is the most separated. Cluster 1 is both cohesive and well separated. Cluster 3 is the lowest separated (this was also evident from the silhouette score).
-# 
+#
 # To evaluate the separation we also display an embedding of the cluster centers in 2 dimensions, using the implementation of [Yellowbrick](https://www.scikit-yb.org/en/latest/index.html):
 
 # %%
@@ -763,9 +764,9 @@ dm, idm = plot_distance_matrices(X=X, n_samples=5000, clusters=clusters, random_
 
 # %% [markdown]
 # The pearson correlation coefficient between the two matrix is 0.62. Indeed, the matrix has a sharp block diagonal structure, meaning that clusters are well separated.
-# 
+#
 # ### External indices
-# 
+#
 # We measure the extent to which the discovered clustering structure matches some categorical features of the dataset, using the following permutation invariant scores:
 # - **Adjusted rand score**: this score computes a similarity measure between two clusterings by considering all pairs of samples and counting pairs that are assigned in the same or different clusters in the predicted and true clusterings. It is 0.0 for random labeling, 1.0 when the clusterings are identical and is bounded below by -0.5 for especially discordant clusterings.
 # - **Normalized mutual information**: is a normalization of the Mutual Information (MI) score to scale the results between 0 (no mutual information) and 1 (perfect correlation). Mutual Information is a function that measures the agreement of the two assignments, ignoring permutations.
@@ -797,11 +798,11 @@ external_scores_df.to_csv(f'../data/clustering_labels/{k}-Means_external_scores.
 
 # %% [markdown]
 # ## Final considerations
-# 
+#
 # Advantages of K-means:
 # - Is computationally efficient and can be used on large datasets (as the one we used); if using the euclidean distance it converges quickly
 # - Is restricted to data for which there is a notion of centroid
-# 
+#
 # Disadvantages:
 # - To run the algorithm the number of clusters must be known a priori
 # - It finds clusters with globular shapes, therefore does not work with clusters of differing sizes or densities
