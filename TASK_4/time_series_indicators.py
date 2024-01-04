@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Time Series Analysis
 
@@ -10,7 +11,6 @@ from tslearn.clustering import TimeSeriesKMeans
 # %%
 incidents_df = pd.read_csv(
     '../data/incidents_cleaned.csv',
-    index_col=0,
     parse_dates=['date', 'date_original'],
     date_parser=lambda x: pd.to_datetime(x, format='%Y-%m-%d')
 )
@@ -265,7 +265,7 @@ plt.legend();
 
 # %% [markdown]
 # Time series: mean number of participants per incident per week in each city
-# 
+#
 # 0 if we have no incidents in the week or NaN values (i.e. incidents where we don not know the nember of participants)
 
 # %%
@@ -561,7 +561,7 @@ plt.title('Number of cities per cluster');
 
 # %% [markdown]
 # Piecewise Aggregate Approximation (PAA) is a technique used in time series analysis to reduce the dimensionality of a time series while preserving its essential characteristics.
-# 
+#
 # PAA approximates a time-series $X$ of length $n$ into vector $\hat{X}=(\hat{x}_1,…,\hat{x}_M)$
 #  of any arbitrary length  $M\leq n$
 #  
