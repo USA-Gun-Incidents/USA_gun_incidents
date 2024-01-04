@@ -121,10 +121,11 @@ best_model = SVC(**best_model_params)
 # scale all the data
 minmax_scaler = MinMaxScaler()
 indicators_train_scaled = minmax_scaler.fit_transform(indicators_train_df)
+indicators_oversampled_train_scaled = minmax_scaler.fit_transform(indicators_oversampled_train_df)
 
 # fit the model on all the training data
 fit_start = time()
-best_model.fit(indicators_train_scaled, true_labels_train)
+best_model.fit(indicators_oversampled_train_scaled, true_oversampled_labels_train)
 fit_time = time()-fit_start
 
 # get the predictions on the training data
@@ -153,6 +154,42 @@ file.close()
 best_model_cv_results = pd.DataFrame(cv_results_df.iloc[best_index]).T
 best_model_cv_results.index = [clf_name]
 best_model_cv_results.to_csv(f'{RESULTS_DIR}/{clf_name}_train_cv_scores.csv')
+
+# %%
+best_model = SVC(C=2, kernel='poly', degree=4, gamma='scale', class_weight='balanced')
+
+# scale all the data
+minmax_scaler = MinMaxScaler()
+indicators_train_scaled = minmax_scaler.fit_transform(indicators_train_df)
+indicators_oversampled_train_scaled = minmax_scaler.fit_transform(indicators_oversampled_train_df)
+
+# fit the model on all the training data
+fit_start = time()
+best_model.fit(indicators_oversampled_train_scaled, true_oversampled_labels_train)
+fit_time = time()-fit_start
+
+# get the predictions on the training data
+train_score_start = time()
+pred_labels_train = best_model.predict(indicators_train_scaled)
+train_score_time = time()-train_score_start
+pred_probas_train = best_model.predict_proba(indicators_train_scaled)
+
+# get the predictions on the test data
+test_score_start = time()
+pred_labels_test = best_model.predict(indicators_test_df.values)
+test_score_time = time()-test_score_start
+pred_probas_test = best_model.predict_proba(indicators_test_df.values)
+
+# save the predictions
+pd.DataFrame(
+    {'labels': pred_labels_test, 'probs': pred_probas_test[:,1]}
+).to_csv(f'{RESULTS_DIR}/{clf_name}_preds.csv')
+
+# save the model
+file = open(f'{RESULTS_DIR}/{clf_name}.pkl', 'wb')
+pickle.dump(obj=best_model, file=file)
+file.close()
+
 
 # %%
 compute_clf_scores(
@@ -254,9 +291,9 @@ display_feature_importances(
 # %%
 # train SVC with rbf kernel
 svc =  SVC(kernel='rbf', gamma='scale', C=0.1)
-svc.fit(indicators_train_scaled, true_labels_train)
+svc.fit(indicators_oversampled_train_df, true_oversampled_labels_train)
 # get features importances
-perm_importance = permutation_importance(svc, indicators_train_scaled, true_labels_train, random_state = 42)
+perm_importance = permutation_importance(svc, indicators_oversampled_train_df, true_oversampled_labels_train, random_state = 42)
 # plot features importances
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 display_feature_importances(
