@@ -10,8 +10,6 @@
 # Import library and dataset
 
 # %%
-import os
-import sys
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -23,11 +21,9 @@ from sklearn import metrics
 from sklearn.metrics import silhouette_samples, silhouette_score, davies_bouldin_score, calinski_harabasz_score
 from scipy.spatial.distance import pdist, squareform
 from plot_utils import plot_scattermap_plotly
-from clustering_utils import plot_dbscan, plot_scores_per_point, plot_bars_by_cluster, compute_bss_per_cluster
-from clustering_utils import plot_hists_by_cluster_dbscan
-from clustering_utils import plot_distance_matrices, write_clusters_to_csv, compute_permutation_invariant_external_metrics
-sys.path.append(os.path.abspath('..'))
-from plot_utils import sankey_plot
+from clustering_utils import plot_dbscan, plot_bars_by_cluster, compute_bss_per_cluster
+from clustering_utils import plot_hists_by_cluster_dbscan, sankey_plot
+from clustering_utils import plot_distance_matrices, compute_permutation_invariant_external_metrics
 
 # %%
 incidents_df = pd.read_csv(
@@ -172,9 +168,8 @@ def standardization(df, columns, standardizer='Zscore'):
         standardizer = StandardScaler()
     if standardizer == 'MinMax':
         standardizer = MinMaxScaler()
-    scaler = StandardScaler()
-    scaler.fit(df[columns].values)
-    return scaler.transform(df[columns].values)
+    standardizer.fit(df[columns].values)
+    return standardizer.transform(df[columns].values)
 
 # %% [markdown]
 # ### Find best EPS
@@ -232,7 +227,7 @@ def dbscan(X, eps=0.1, min_samples=10):
 # ### Prepare Data and Parameters selection
 
 # %% [markdown]
-# We prepare the data by selecting only the entries in the dataset corresponding to the Illinois state and where all the values corresponding to the selected attributes, on which the clustering algorithm operates, are not NaN. Since the data have different range values for the various attributes, we decided to standardize using the 'MinMax' scaler, which, from some preliminary trials, has proven to be the most effective.
+# We prepare the data by selecting only the entries in the dataset corresponding to the Illinois state and where all the values corresponding to the selected attributes, on which the clustering algorithm operates, are not NaN. Since the data have different range values for the various attributes, we decided to standardize using the 'StandardScaler' scaler, which, from some preliminary trials, has proven to be the most effective.
 # 
 # We also save all the attribute values for the entries we use in the dataframe *illinois_df*.
 
@@ -399,7 +394,7 @@ illinois_df['females'] = illinois_df['n_females'] > 0
 external_scores_df = compute_permutation_invariant_external_metrics(
     illinois_df,
     'cluster',
-    ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested','males', 'females']
+    ['shots', 'aggression', 'suicide', 'injuries', 'death', 'drugs', 'illegal_holding', 'unharmed', 'arrested','males', 'females'] #TODO spostare alla fine
 )
 
 external_scores_df

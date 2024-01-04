@@ -264,6 +264,28 @@ for attribute in ['age_range','avg_age',]:
 # %% [markdown]
 # With the exception of latitude and longitude projections, which are naturally different for each state, we can observe that the distribution of data for the state of Illinois is very similar to that of the entire dataset for all features.
 
+# %%
+from scipy.special import kl_div
+
+# compute the KL divergence between the distribution of a given attribute for a given state and the distribution of the same attribute for the whole dataset
+def kl_divergence(df, attribute, state):
+    p = df[attribute].values
+    q = df[df['state']==state][attribute].values
+    # remove NaN values
+    p = p[~np.isnan(p)]
+    q = q[~np.isnan(q)]
+    # interpolate p to the size of q
+    p = np.interp(np.linspace(0, len(p), len(q)), np.arange(len(p)), p)
+    kl_divergence = kl_div(p, q)
+    return np.nanmean(kl_divergence)
+
+for attribute in ind_names_discrete_list:
+    print('KL divergence for attribute {} and state ILLINOIS: {}'.format(
+    attribute, kl_divergence(df=incidents_df, attribute=attribute, state='ILLINOIS')))
+for attribute in ind_names_continuous_list:
+    print('KL divergence for attribute {} and state ILLINOIS: {}'.format(
+    attribute, kl_divergence(df=incidents_df, attribute=attribute, state='ILLINOIS')))
+
 # %% [markdown]
 # Below, the mean, standard deviation, minimum, maximum, and quantiles for the selected features have been printed for both the Illinois-specific data and the entire dataset.
 #
