@@ -32,7 +32,7 @@ RANDOM_STATE = 42
 clf_name = 'NeuralNetworkClassifier'
 
 # %% [markdown]
-# We load the data:
+# We load the data and we count how many examples we have per class in the training data
 
 # %%
 # load the data
@@ -54,6 +54,9 @@ indicators_test_df = incidents_test_df[features_for_clf]
 pos = (true_labels_train_df['death']==1).sum()
 neg = (true_labels_train_df['death']==0).sum()
 
+# %%
+pos, neg
+
 # %% [markdown]
 # We display the features names we will use:
 
@@ -62,19 +65,7 @@ print(features_for_clf)
 print(f'Number of features: {len(features_for_clf)}')
 
 # %% [markdown]
-# We define a list of the categorical features:
-
-# %%
-categorical_features = [
-    'day_x', 'day_y', 'day_of_week_x', 'day_of_week_y', 'month_x', 'month_y', 'year',
-    'democrat', 'gun_law_rank',
-    'aggression', 'accidental', 'defensive', 'suicide',
-    'road', 'house', 'school', 'business',
-    'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
-]
-
-# %% [markdown]
-# we constructed, from the categorical features, new features for use in classifiers that are based on distance, as coordinates from the day
+# here we can see all the features that the classifier will work on, these are all numerical features, some taken from categorical features divided into coordinates of points on a circle
 
 # %% [markdown]
 # below through the use of two different libraries, keras and scikit learn, we create a neural network and exploit a grid search for the best hiperparameters
@@ -113,8 +104,7 @@ def get_clf(meta, hidden_layer_sizes, dropout, final_activation_fun, output_bias
 
 early_stopping = tf.keras.callbacks.EarlyStopping(
     monitor='loss',
-    patience=10,
-    start_from_epoch=10,
+    patience=6,
     restore_best_weights=True)
 
 clf = KerasClassifier(
@@ -126,25 +116,28 @@ clf = KerasClassifier(
 )
 
 params = {
-    'nn__model__hidden_layer_sizes': [(256, 256, 256, )],# (128, 512, 128, ), (128, 128, )],
-    'nn__model__dropout': [0.25],# 0.5, 0.325],
+    'nn__model__hidden_layer_sizes': [(256, 256, 256, ), (128, 512, 128, ), (128, 128, )],
+    'nn__model__dropout': [0.25, 0.5, 0.325],
     'nn__model__output_bias':[0, INITIAL_BIAS],
     'nn__model__final_activation_fun':['sigmoid'],
 
     'nn__optimizer': ['adamax'],
-    'nn__optimizer__learning_rate': [0.001],
+    'nn__optimizer__learning_rate': [0.001, 0.01, 0.0005],
 
-    'nn__epochs':[50],
-    'nn__batch_size':[2048]
+    'nn__epochs':[125],
+    'nn__batch_size':[1024, 2048]
 }
 params_2 = {
-    'nn__model__hidden_layer_sizes': [(256, 256, 256, )],
-    'nn__model__dropout': [0.5, 0.1],
+    'nn__model__hidden_layer_sizes': [(128, 512, 128, )],
+    'nn__model__dropout': [0.25],
     'nn__model__output_bias':[0],
     'nn__model__final_activation_fun':['sigmoid'],
 
-    'nn__epochs':[50],
-    'nn__batch_size':[1024]
+    'nn__optimizer': ['adamax'],
+    'nn__optimizer__learning_rate': [0.001, 0.01],
+
+    'nn__epochs':[250],
+    'nn__batch_size':[2048]
 }
 
 scaler = MinMaxScaler()
@@ -156,7 +149,7 @@ gs = GridSearchCV(pipe,
                   n_jobs=-1,
                   verbose=True,
                   cv=StratifiedShuffleSplit(n_splits=2, test_size=1/3, random_state=RANDOM_STATE),
-                  refit=True)
+                  refit=False)
 
 gs.fit(indicators_train_df, true_labels_train)
 
@@ -168,9 +161,9 @@ gs.fit(indicators_train_df, true_labels_train)
 # - a series of hidden layers and dropout layers, which alternate. After several tests we noticed that 6 total layers is the best compromise between execution time and accuracy of the final classifier
 # - an output layer that can be initialized with a bias, the first method by which we tried to overcome the problem of unbalanced classes and to try to reduce the training time
 #
-# In addition to dropout, to adjust complexity, we used the early stopping technique. The optimizer used is Adam for all models tested with a learning step set
+# In addition to dropout, to adjust complexity, we used the early stopping technique based on loss. The optimizer used is Adam for all models tested.
 #
-# In the grid search we tried 2 different activation functions for the output unit, differently in the hidden layers the activation function is always ReLU
+# first we compared different activation functions for the output layer, but sigmoid was the best. Next, with grid search, we optimized other hiperparameters such as neural network structure, learning rate, output unit bias and dropout layer rate
 
 # %% [markdown]
 # below we can observe the calculated results
@@ -198,16 +191,18 @@ best_model_params = val_results_df.iloc[best_index]['params']
 best_model_params = {k.replace('nn__', ''): v for k, v in best_model_params.items()}
 best_model = KerasClassifier(
     model=get_clf,
-    optimizer=tf.keras.optimizers.Adam(4e-1),
     loss=tf.keras.losses.BinaryCrossentropy(from_logits=False), # because there is a sigmoid layer
-
     metrics=METRICS,
     callbacks=[early_stopping],
     validation_split=0.2,
 
+    verbose=True,
     **best_model_params
 )
 print(best_model_params)
+
+# %% [markdown]
+# Here we train the chosen classifier again to test its effectiveness. We also perform the predictions on the test set
 
 # %%
 # scale all the data
@@ -244,8 +239,14 @@ best_model_val_results = pd.DataFrame(val_results_df.iloc[best_index]).T
 best_model_val_results.index = [clf_name]
 best_model_val_results.to_csv(f'{RESULTS_DIR}/{clf_name}_train_cv_scores.csv')
 
+# %% [markdown]
+# the description of the final trained model
+
 # %%
 best_model.model_.summary()
+
+# %% [markdown]
+# we create a function to be able to display the learning curves for all the metrics defined above
 
 # %%
 def plot_learning_curve(history, metric_name):
@@ -260,13 +261,22 @@ def plot_learning_curve(history, metric_name):
     plt.legend()
     plt.show()
 
+# %% [markdown]
+# From the graphs below we can observe the training trend. We note that all 125 maximum iterations were performed and that early stopping did not affect the final training. 
+#
+# In the loss graph we observe a fairly standard curve, we note that the model did not overfit, although from previous tests this could happen if the epoch parameter used was greater than 150. 
+#
+# The graphs of true positives, true negatve,false positives, and false negatives turn out to be interesting, as we note that during training we have an increase in both true and false negaetives (the class most present in the dataset) and instead a more appropriate behavior for positives, which increase or decrease as expected
+#
+# finally despite the accuracy suggests a principle of overfitting, which is also confirmed by the precision, the first graph is more reliable because it is more uniform while in the second we notice a large variability between successive epochs regarding the validation value.
+
 # %%
-metric_names = ['cross entropy', 'Brier score', 'tp', 'fp', 'tn', 'fn', 'accuracy', 'precision', 'recall', 'auc', 'prc']
+metric_names = ['cross entropy', 'Brier score', 'tp', 'fp', 'tn', 'fn', 'accuracy', 'precision', 'recall']
 for metric in metric_names:
     plot_learning_curve(best_model.history_, metric)
 
-# %%
-plot_learning_curve(best_model.history_, 'loss')
+# %% [markdown]
+# below we evaluate the final result on validation set and especially on test set
 
 # %%
 compute_clf_scores(
@@ -293,25 +303,28 @@ test_scores = compute_clf_scores(
 )
 test_scores
 
+# %% [markdown]
+# A second srategy we used to overcome the class imbalance problem was to create 2 new training sets, from the original, in which in the first one the least common class was oversampled because it was more influential in the training, in the second... 
+
 # %%
 indicators_over_train_df = pd.read_csv('../data/clf_indicators_train_over.csv', index_col=0)
 indicators_over_train_df = indicators_over_train_df[features_for_clf]
 indicators_train_over_scaled = minmax_scaler.fit_transform(indicators_over_train_df)
 true_labels_over_train = pd.read_csv('../data/clf_y_train_over.csv', index_col=0).values.ravel()
 
+# %% [markdown]
+# Below, using the best model found in the initial grid search, we train 2 different classifiers on these 2 new training sets
+
 # %%
 # fit the model on all the training data
 best_model_over = KerasClassifier(
     model=get_clf,
-    
-    loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+    loss=tf.keras.losses.BinaryCrossentropy(from_logits=False), # because there is a sigmoid layer
     metrics=METRICS,
-
-    validation_split=0.25,
-    optimizer=tf.keras.optimizers.Adam(5e-5), # batch size is high --> learning rate
-
     callbacks=[early_stopping],
-    verbose=False,
+    validation_split=0.2,
+
+    verbose=True,
     **best_model_params
 )
 
@@ -351,15 +364,12 @@ true_labels_smote_train = pd.read_csv('../data/clf_y_train_smote.csv', index_col
 # fit the model on all the training data
 best_model_smote = KerasClassifier(
     model=get_clf,
-    
-    loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+    loss=tf.keras.losses.BinaryCrossentropy(from_logits=False), # because there is a sigmoid layer
     metrics=METRICS,
-
-    validation_split=0.25,
-    optimizer=tf.keras.optimizers.Adam(5e-5), # batch size is high --> learning rate
-
     callbacks=[early_stopping],
-    verbose=False,
+    validation_split=0.2,
+
+    verbose=True,
     **best_model_params
 )
 
@@ -389,6 +399,9 @@ file = open(f'{RESULTS_DIR}/{clf_name}_smote.pkl', 'wb')
 pickle.dump(obj=best_model_smote, file=file)
 file.close()
 
+# %% [markdown]
+# Below we look at the results of the 3 classifiers created
+
 # %%
 test_over_scores = compute_clf_scores(
     y_true=true_labels_test,
@@ -414,6 +427,12 @@ test_smote_scores = compute_clf_scores(
 
 pd.concat([test_scores, test_over_scores, test_smote_scores])
 
+# %% [markdown]
+# through the two new training sets, the result achieved turns out to be ever so slightly better than the first, but as effective as the strategy was, the improvement is not too significant.
+
+# %% [markdown]
+# here we visualize the confusion matrix, on the test set, identical for all three classifiers
+
 # %%
 plot_confusion_matrix(
     y_true=true_labels_test,
@@ -435,8 +454,17 @@ plot_confusion_matrix(
     title=clf_name + ' OVER'
 )
 
+# %% [markdown]
+# As theorized at the beginning, as much as the classifier achieves good performance predicting non-fatal examples, but for fatal examples it does not achieve positive performance because the number of false negatives exceeds the number of true negatives
+
+# %% [markdown]
+# from the ROC curves we note that still, as unhealthy as the results are not excellent, the classifier is better than a random prediction and achieves an AUC of 0.79
+
 # %%
-plot_roc(y_true=true_labels_test, y_probs=[pred_probas_test[:,1]], names=[clf_name])
+plot_roc(y_true=true_labels_test, y_probs=[pred_probas_over_test[:,1]], names=[clf_name])
+
+# %% [markdown]
+# From the following graphs we note that it is not possible to define specific situations in which a missprediction is performed, since they are uniformly distributed with respect to the various fetures used for prediction
 
 # %%
 plot_predictions_in_features_space(
@@ -447,18 +475,8 @@ plot_predictions_in_features_space(
     figsize=(15, 50)
 )
 
-# %%
-'''fig, axs = plt.subplots(1, 1, figsize=(10, 5))
-plot_PCA_decision_boundary(
-  train_set=indicators_train_df,
-  features=[col for col in indicators_train_df.columns if col not in categorical_features],
-  train_label=true_labels_train,
-  classifier=best_model,
-  classifier_name=clf_name,
-  axs=axs,
-  scale=True,
-  pca=True
-)'''
+# %% [markdown]
+# Once again we note how the classifier performs better in non-fatal accident cases, regardless of how many deaths were caused by the fatal accident
 
 # %%
 plot_distribution_missclassifications(
@@ -469,6 +487,9 @@ plot_distribution_missclassifications(
     'bar',
     title='n_killed distribution'
 )
+
+# %% [markdown]
+# Instead, below we visualize how, in general, suicides are predicted effectively by the classifier, and we can note this from the difference in the proportion of suicides and non-suicides to total incidents and those incidents that are not correctly classified
 
 # %%
 plot_distribution_missclassifications(
@@ -490,6 +511,9 @@ plot_distribution_missclassifications(
     title='incident_characteristics1 distribution'
 )
 
+# %% [markdown]
+# Finally, we note other graphs, in line with the previous one, showing the distribution of the various accident types of total accidents, compared to misclassified accidents
+
 # %%
 plot_distribution_missclassifications(
     true_labels_test,
@@ -501,131 +525,3 @@ plot_distribution_missclassifications(
     figsize=(20, 5),
     title='incident_characteristics2 distribution'
 )
-
-# %%
-plot_distribution_missclassifications(
-    true_labels_test,
-    pred_labels_test,
-    incidents_test_df,
-    'location_imp',
-    'hist',
-    bins=5,
-    title='location_imp distribution'
-)
-
-# %%
-INITIAL_BIAS = np.log([pos/neg])
-clf = KerasClassifier(
-    model=get_clf,
-    
-    loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-    metrics=METRICS,
-
-    validation_split=0.2,
-    optimizer=tf.keras.optimizers.Adam(5e-5), # batch size is high --> learning rate
-
-    callbacks=[early_stopping],
-    verbose=False
-)
-
-params = {
-    'nn__model__hidden_layer_sizes': [(256, 256, 256, ), (128, 512, 128)],
-    'nn__model__dropout': [0.25, 0.5, 0.325],
-    'nn__model__output_bias':[0, INITIAL_BIAS],
-    'nn__model__final_activation_fun':['sigmoid'],# tryed tanh, but sigmoid is better
-    'nn__batch_size': [2048],
-    'nn__epochs': [100]
-}
-
-scaler = MinMaxScaler()
-pipe = Pipeline(steps=[("scaler", scaler), ("nn", clf)])
-
-gs_over = GridSearchCV(pipe, 
-                  params, 
-                  scoring=make_scorer(f1_score), 
-                  n_jobs=-1,
-                  verbose=False,
-                  cv=StratifiedShuffleSplit(n_splits=2, test_size=1/3, random_state=RANDOM_STATE), # TODO: con altri classificatori usiamo stratified 5-fold, qui ci vuole troppo
-                  refit=False)
-
-gs_over.fit(indicators_over_train_df, true_labels_over_train)
-val_results_df = pd.DataFrame(gs.cv_results_)
-val_results_df.head()
-
-# %%
-val_results_df = pd.DataFrame(gs_over.cv_results_)
-val_results_df.head()
-
-params = [col for col in val_results_df.columns if 'param_' in col and 'random' not in col]
-val_results_df.sort_values(
-    by='mean_test_score',
-    ascending=False)[params+['std_test_score', 'mean_test_score']].head(20).style.background_gradient(subset=['std_test_score', 'mean_test_score'], cmap='Blues')
-
-# %%
-# fit the model on all the training data
-best_model_over = KerasClassifier(
-    model=get_clf,
-    
-    loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-    metrics=METRICS,
-
-    validation_split=0.2,
-    optimizer=tf.keras.optimizers.Adam(5e-5), # batch size is high --> learning rate
-
-    callbacks=[early_stopping],
-    verbose=False,
-    **best_model_params
-)
-
-fit_start = time()
-best_model_over.fit(indicators_train_over_scaled, true_labels_over_train)
-fit_over_time = time()-fit_start
-
-# get the predictions on the training data
-train_score_start = time()
-pred_labels_over_train = best_model_over.predict(indicators_train_over_scaled)
-train_score_over_time = time()-train_score_start
-pred_probas_over_train = best_model_over.predict_proba(indicators_train_over_scaled)
-
-# get the predictions on the test data
-test_score_start = time()
-pred_labels_over_test = best_model_over.predict(indicators_test_df.values)
-test_score_over_time = time()-test_score_start
-pred_probas_over_test = best_model_over.predict_proba(indicators_test_df.values)
-
-# save the predictions
-pd.DataFrame(
-    {'labels': pred_labels_over_test, 'probs': pred_probas_over_test[:,1]}
-).to_csv(f'{RESULTS_DIR}/{clf_name}_oversample_2_preds.csv')
-
-# save the model
-file = open(f'{RESULTS_DIR}/{clf_name}_oversample_2.pkl', 'wb')
-pickle.dump(obj=best_model_over, file=file)
-file.close()
-
-# %%
-metric_names = ['cross entropy', 'Brier score', 'tp', 'fp', 'tn', 'fn', 'accuracy', 'precision', 'recall', 'auc', 'prc']
-for metric in metric_names:
-    plot_learning_curve(best_model_over.history_, metric)
-
-# %%
-test_scores = compute_clf_scores(
-    y_true=true_labels_test,
-    y_pred=pred_labels_test,
-    train_time=fit_time,
-    score_time=test_score_time,
-    params=best_model_params,
-    prob_pred=pred_probas_test,
-    clf_name=clf_name,
-    path=f'{RESULTS_DIR}/{clf_name}_test_scores.csv'
-)
-test_scores
-
-# %%
-plot_confusion_matrix(
-    y_true=true_labels_test,
-    y_pred=pred_labels_over_test,
-    title=clf_name + ' OVER'
-)
-
-
