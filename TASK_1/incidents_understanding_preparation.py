@@ -356,6 +356,15 @@ incidents_df.groupby('month').size().plot(
 plt.xticks(range(12), calendar.month_name[1:13], rotation=45);
 plt.savefig("../html/incidents_per_month.svg")
 
+# %%
+# display the months with a number of incidents below the 25th percentile
+months = incidents_df.groupby('month').size()
+months[months<months.quantile(0.25)].index
+
+# %%
+# display the months with a number of incidents above the 75th percentile
+months[months>months.quantile(0.75)].index
+
 # %% [markdown]
 # We visualize the number of incidents per day of the week:
 
@@ -369,6 +378,16 @@ fig = incidents_df.groupby('day_of_week').size().plot(
 )
 plt.xticks(range(7), calendar.day_name[0:7], rotation=45);
 plt.savefig("../html/incidents_per_week_day.svg")
+
+# %%
+# display the days of the week with a number of incidents below the 25th percentile
+week_days = incidents_df.groupby('day_of_week').size()
+week_days[week_days<week_days.quantile(0.25)].index
+
+# %%
+# display the days of the week with a number of incidents above the 75th percentile
+week_days[week_days>week_days.quantile(0.75)].index
+
 
 # %% [markdown]
 # We display the number of incidents per day over the years:
