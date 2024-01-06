@@ -8,7 +8,6 @@ __pycache__
 **/data/incidents_cleaned.csv
 **/data/incidents_cleaned.csv/_MACOSX
 **/data/incidents_indicators.csv
-
 data/clf_indicators_test_nan.csv
 data/clf_indicators_test.csv
 data/clf_indicators_train_nan.csv
