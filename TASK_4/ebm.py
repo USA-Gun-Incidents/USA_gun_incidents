@@ -109,7 +109,6 @@ file = open(f'{RESULTS_DIR}/{clf_name}.pkl', 'wb')
 pickle.dump(obj=ebm, file=file)
 file.close()
 
-
 # %% [markdown]
 # We display traning and test scores:
 
@@ -246,12 +245,12 @@ ebm_local = ebm.explain_local(
 show(ebm_local)
 
 # %%
-attempted_suicide_pos = selected_records_to_explain_df[selected_records_to_explain_df['instance names']=='Attempted Suicide']['positions'][0]
+mass_shooting_pos = selected_records_to_explain_df[selected_records_to_explain_df['instance names']=='Mass shooting']['positions']
 
 # %%
 ebm_local = ebm.explain_local(
-    indicators_test_df.iloc[attempted_suicide_pos].to_frame().T,
-    true_labels_test[attempted_suicide_pos].reshape(1, -1)
+    indicators_test_df.iloc[mass_shooting_pos],
+    true_labels_test[mass_shooting_pos].reshape(1, -1)
 )
 show(ebm_local)
 
