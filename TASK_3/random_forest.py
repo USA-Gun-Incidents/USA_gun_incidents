@@ -214,6 +214,11 @@ file = open(f'{RESULTS_DIR}/{clf_name}.pkl', 'wb')
 pickle.dump(obj=best_model, file=file)
 file.close()
 
+# save the cv results
+best_model_cv_results = pd.DataFrame(cv_results_df.iloc[best_index]).T
+best_model_cv_results.index = [clf_name]
+best_model_cv_results.to_csv(f'{RESULTS_DIR}/{clf_name}_train_cv_scores.csv')
+
 # %% [markdown]
 # We display traning and test scores:
 
