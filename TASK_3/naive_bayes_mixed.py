@@ -295,22 +295,6 @@ plot_predictions_in_features_space(
 plot_roc(y_true=true_labels_test, y_probs=[pred_probas_test[:,1]], names=[clf_name])
 
 # %% [markdown]
-# We plot the decision boundaries:
-
-# %%
-fig, axs = plt.subplots(1, 1, figsize=(10, 5))
-plot_PCA_decision_boundary(
-  train_set=indicators_train_df,
-  features=[col for col in indicators_train_df.columns if col not in categorical_features],
-  train_label=true_labels_train,
-  classifier=nb,
-  classifier_name=clf_name,
-  axs=axs,
-  scale=True,
-  pca=True
-)
-
-# %% [markdown]
 # We plot the learning curve:
 
 # %%
