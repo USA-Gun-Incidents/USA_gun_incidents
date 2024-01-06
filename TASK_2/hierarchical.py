@@ -2,20 +2,20 @@
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
 #  
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
-# 
+#
 # # Hierarchical Clustering
-# 
+#
 # Hierarchical clustering methods generate a series of nested clusters arranged in a hierarchical tree, making them particularly effective for data exhibiting a nested or hierarchical structure. One notable advantage is their flexibility, as they eliminate the need to predefine a fixed number of clusters. However, their time and space efficiency may not be optimal, and they can exhibit sensitivity to noise and outliers.
-# 
+#
 # Agglomerative clustering starts with the points as individual clusters and, at each iteration, merges the closest pair of clusters. The cluster proximity could be determined using different policies, such as:
 # - **single linkage**: defines cluster proximity as the proximity between the closest two points that are in different clusters. This method is good at handling non-elliptical shapes, but is sensitive to noise and outliers.
-# 
+#
 # - **complete linkage**: defines cluster proximity as the proximity between the farthest two points that are in different clusters. This approach is less susceptible to noise and outliers, but it is biased towards globular clusters. Moreover it tends to break large clusters.
-# 
+#
 # - **average linkage**: is an intermediate approach between the single and complete link approaches, it defines cluster proximity as the distance between all the points in the clusters.
-# 
+#
 # - **ward**: defines cluster proximity as the increase in squared error when two clusters are merged. It is robust to noise and outliers but it's biased towards globular clusters.
-# 
+#
 # We import the libraries:
 
 # %%
@@ -101,18 +101,18 @@ plot_dendrograms(linkages, algorithms, distance_thresholds)
 
 # %% [markdown]
 # Each proximity measure leads to very different shaped hierarchies.
-# 
+#
 # Using **single-linkage** the result we get is similar to what we could achieve adding incrementally to a starting clusters points in closest clusters.
-# 
+#
 # Using **complete-linkage** the tree is more balanced, however a cluster is significantly bigger than others (the one containing 4553 points).
-# 
+#
 # Using **average-linkage** we find, as expected, a compromise between the results obtained using single and complete linkage.
-# 
+#
 # Using **ward** we get the most balanced results, both in terms of tree structure and in terms of clusters size.
 
 # %% [markdown]
 # ## Clustering evaluation
-# 
+#
 # ### Internal indices
 
 # %% [markdown]
@@ -236,7 +236,7 @@ for i, method in enumerate(clusters_info_df.index):
 
 # %% [markdown]
 # With complete linkage almost every cluster has some points with negative silhouette score. With ward linkage cluster 6, 5 and 2 don't have any points with negative silhouette score. Cluster has 0 the lowest values of silhouette score.
-# 
+#
 # We visualize the size of the clusters:
 
 # %%
@@ -255,6 +255,109 @@ fig.suptitle("Cluster sizes", fontweight='bold');
 # With Ward's method clusters are more balanced.
 
 # %% [markdown]
+# Since we have some methods with very unbalanced cluster classification, we try an alternative to determine the cut threshold. Here we look at the difference of the merging distances of two clusters, and we set the threshold there, so that we can may get a balanced cluster configuration.
+
+# %%
+thresholds_balanced = []
+silhouette_scores_balanced = []
+
+balanced_clusters_info = {}
+balanced_clusters_info['method'] = []
+balanced_clusters_info['cut_height'] = []
+balanced_clusters_info['merging_difference'] = []
+balanced_clusters_info['cluster_labels'] = []
+balanced_clusters_info['n_clusters'] = []
+balanced_clusters_info['clusters_sizes'] = []
+balanced_clusters_info['silhouette_score'] = []
+silhouette_scores = []
+
+for i, algorithm in enumerate(algorithms):
+    # we set the threshold where we have maximum distance between two merges
+    merge_dist = linkages[i][:,2]
+    merge_dist_diff = np.array([merge_dist[j + 1] - merge_dist[j] for j in range(len(merge_dist) - 1)])
+    sorted_merge_dist_diff_it = np.argsort(-merge_dist_diff)
+    thresholds_balanced.append(merge_dist[[sorted_merge_dist_diff_it[0]]])
+
+    clusters = np.array(cut_tree(linkages[i], height=merge_dist[sorted_merge_dist_diff_it[0]])).reshape(-1)
+    n_clusters = np.unique(clusters).shape[0]
+    silhouette_avg = silhouette_score(X_minmax, clusters) # compute silhouette for this cut
+    silhouette_scores_balanced.append(silhouette_avg)
+
+
+    balanced_clusters_info['method'].append(algorithm)
+    balanced_clusters_info['cut_height'].append(merge_dist[sorted_merge_dist_diff_it[0]])
+    balanced_clusters_info['merging_difference'].append(merge_dist_diff[sorted_merge_dist_diff_it[0]])
+    balanced_clusters_info['cluster_labels'].append(clusters)
+    balanced_clusters_info['n_clusters'].append(n_clusters)
+    counts = np.bincount(clusters)
+    balanced_clusters_info['clusters_sizes'].append(counts[counts!=0])
+    balanced_clusters_info['silhouette_score'].append(silhouette_avg)
+
+balanced_clusters_info_df = pd.DataFrame(balanced_clusters_info)
+
+# %% [markdown]
+# We plot again the dendrograms with the new chosen cut, the new distribution of the clusters and some info on the results we get.
+
+# %%
+plot_dendrograms(linkages, algorithms, balanced_clusters_info_df['cut_height'])
+
+# %%
+fig, axs = plt.subplots(2, 2, figsize=(20,15))
+x_axs = 0
+y_axs = 0
+for i, method in enumerate(clusters_info_df.index):
+    if i != 0 and i%2 == 0:
+        x_axs += 1
+        y_axs = 0
+    plot_clusters_size(balanced_clusters_info_df.loc[i]['cluster_labels'], ax=axs[x_axs][y_axs], title=f'{method} linkage')
+    y_axs += 1
+fig.suptitle("Balanced cluster sizes", fontweight='bold');
+
+# %%
+balanced_clusters_info_df
+
+# %% [markdown]
+# As we can see from the cluster distribution, the situation didn't change a lot; moreover, as obvious, the silhouette scores get worse. The only method wich still gives a little balanced result is **ward**, but this is given by the fact that the cut height didn't change too much. <br>
+# We see that **single** and **average** methods have a similar situation where one main cluster contains all the points of the dataset, so we want to choose ourselves a threshold that could give a more uniform distribution of clusters. We do this by looking at the dendrograms and at the merging behavior of the algorithms.
+# But since we already know **single-linkage** will anyway accumulate points in a single cluster, we do this analisys only for average.
+
+# %%
+merge_dist = linkages[2][:,2]
+merge_dist_diff = np.array([merge_dist[j + 1] - merge_dist[j] for j in range(len(merge_dist) - 1)])
+
+clusters = np.array(cut_tree(linkages[2], height=merge_dist[len(merge_dist) - 10])).reshape(-1)
+n_clusters = np.unique(clusters).shape[0]
+silhouette_avg = silhouette_score(X_minmax, clusters) # compute silhouette for this cut
+silhouette_scores_balanced.append(silhouette_avg)
+
+
+balanced_clusters_info_df.at[2, 'cut_height'] = merge_dist[len(merge_dist) - 10]
+balanced_clusters_info_df.at[2, 'merging_difference'] = merge_dist_diff[len(merge_dist_diff) - 10]
+balanced_clusters_info_df.at[2, 'cluster_labels'] = clusters
+balanced_clusters_info_df.at[2, 'n_clusters'] = n_clusters
+counts = np.bincount(clusters)
+balanced_clusters_info_df.at[2, 'clusters_sizes'] = counts[counts!=0]
+balanced_clusters_info_df.at[2, 'silhouette_score'] = silhouette_avg
+
+# %% [markdown]
+# We display the same plots and results ad done before.
+
+# %%
+plot_dendrograms(linkages, algorithms, balanced_clusters_info_df['cut_height'])
+
+# %%
+fig, ax = plt.subplots(1, 1, figsize=(10,5))
+plot_clusters_size(balanced_clusters_info_df.loc[2]['cluster_labels'], ax=ax, title='average linkage')
+fig.suptitle("Balanced cluster sizes", fontweight='bold');
+
+# %%
+balanced_clusters_info_df
+
+# %% [markdown]
+# The situation became a little bit better since now we still have a dominant cluster, but it's not formed by almost all the points anymore. By increasing the number of clusters, the previous main one divide itself in one big cluster and some other one which are still small, but not composed by a negligible number of points. <br>
+# Moreover we can see that with this cut we increased the silhouette score.
+
+# %% [markdown]
 # We visualize the distance matrix sorted by cluster computed on a stratified subsample of 500 points for complete and Ward linkage:
 
 # %%
@@ -264,7 +367,7 @@ plot_distance_matrices(X=X_minmax, n_samples=500, clusters=clusters_info_df.loc[
 # %% [markdown]
 # This kind of evaluation is not very informative for hierarchical clustering, since the clusters could not be globular and may be intertwined with other clusters.
 # Nevertheless, both the matrices have a block diagonal structure, meaning that clusters are well separated.
-# 
+#
 # Since with Ward's method we get the best results in terms of silhouette score and cluster size, we will use this method for the following analysis.
 
 # %%
@@ -334,7 +437,7 @@ plt.legend();
 
 # %% [markdown]
 # The first 6 components contribute the most to the overall variance in the dataset.
-# 
+#
 # We visualize the clusters in the feature spaces obtained by pairing the first 6 principal components:
 
 # %%
@@ -388,7 +491,7 @@ for feature in indicators_df.columns:
 
 # %% [markdown]
 # This visualization confirms what was already observed.
-# 
+#
 # The attributes with the most different distributions are:
 # - n_teen_prop
 # - surprisal_age_groups
@@ -475,7 +578,7 @@ plot_bars_by_cluster(df=incidents_df, feature='unintentional', cluster_column='c
 
 # %% [markdown]
 # ### External indices
-# 
+#
 # We measure the extent to which the discovered clustering structure matches some categorical features of the dataset, using the following permutation invariant scores:
 # - **Adjusted rand score**: this score computes a similarity measure between two clusterings by considering all pairs of samples and counting pairs that are assigned in the same or different clusters in the predicted and true clusterings. It is 0.0 for random labeling, 1.0 when the clusterings are identical and is bounded below by -0.5 for especially discordant clusterings.
 # - **Normalized mutual information**: is a normalization of the Mutual Information (MI) score to scale the results between 0 (no mutual information) and 1 (perfect correlation). Mutual Information is a function that measures the agreement of the two assignments, ignoring permutations.
@@ -523,11 +626,11 @@ pd.DataFrame({
 # Advantages of hierarchical clustering:
 # - Do not have to assume any particular number of clusters
 # - Suitable for data with a nested or hierarchical structure
-# 
+#
 # Disadvantages of hierarchical clustering:
 # - No global objective function is directly minimized (once a decision is made to merge two clusters, it cannot be undone at a later time)
 # - Is expensive in terms of computational and storage requirements
-# 
+#
 # Furthermore - as outlined above - each different proximity measures has its own advantages and disadvantages (e.g. sensitivity to noise and outliers or difficulty in handling clusters of different sizes and non-globular shapes).
 
 
