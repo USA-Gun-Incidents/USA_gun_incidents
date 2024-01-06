@@ -17,6 +17,20 @@ DATA_DIR = '../data/classification_results/'
 preds = get_classifiers_predictions(DATA_DIR)
 
 # %%
+incidents_train_df = pd.read_csv('../data/clf_indicators_train.csv', index_col=0)
+true_labels_train_df = pd.read_csv('../data/clf_y_train.csv', index_col=0)
+
+# %%
+(
+    incidents_train_df[(incidents_train_df['suicide']==1) & (true_labels_train_df['death']==0)].shape[0] + 
+    incidents_test_df[(incidents_test_df['suicide']==1) & (true_labels_test_df['death']==0)].shape[0]
+    ) / \
+(
+    incidents_train_df[(incidents_train_df['suicide']==1) & (true_labels_train_df['death']==1)].shape[0] + 
+    incidents_test_df[(incidents_test_df['suicide']==1) & (true_labels_test_df['death']==1)].shape[0]
+)*100
+
+# %%
 selected_records_to_explain = {}
 selected_records_to_explain['positions'] = []
 selected_records_to_explain['instance names'] = []

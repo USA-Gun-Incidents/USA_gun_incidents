@@ -13,6 +13,7 @@ import json
 import pickle
 import wittgenstein as lw
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.metrics import make_scorer, f1_score
 from time import time
 from classification_utils import *
@@ -20,6 +21,7 @@ from classification_utils import *
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
 RESULTS_DIR = '../data/classification_results'
+RANDOM_STATE = 42
 clf_name = 'RipperClassifier'
 
 # %% [markdown]
@@ -60,29 +62,35 @@ categorical_features = [
     'illegal_holding', 'drug_alcohol', 'officers', 'organized', 'social_reasons', 'abduction'
 ]
 
+# %% [markdown]
+# We perform a grid search:
+
 # %%
 ripper = lw.RIPPER()
-param_grid = { # TODO: explore
-    'prune_size':[0.5],
-    'k': [1]
-    #'prune_size': [0.5, 0.6], # the fraction of rules to prune
-    #'k': [1, 3, 5] # the number of optimization runs, maybe 1,2,4?, "prune_size": [0.33, 0.5, 0.8], "k": [1, 2]}?
+param_grid = {
+    'prune_size':[0.33, 0.5, 0.8], # the fraction of rules to prune
+    'k': [1, 2]  # the number of optimization runs
 }
-# considers replacing each rule with a completely new grown-and-pruned replacement, as well as a grown-and-pruned revision of the original
 gs = GridSearchCV(
     estimator=ripper,
     param_grid=param_grid,
     n_jobs=-1,
     scoring=make_scorer(f1_score),
     verbose=10,
-    cv=5, # TODO: Statified?
+    cv=StratifiedShuffleSplit(n_splits=2, test_size=1/3, random_state=RANDOM_STATE),
     refit=True
 )
 gs.fit(indicators_train_df, true_labels_train)
 
+# %% [markdown]
+# We display the grid search results:
+
 # %%
 cv_results_df = pd.DataFrame(gs.cv_results_)
 cv_results_df.head()
+
+# %% [markdown]
+# We choose the best model:
 
 # %%
 best_index = gs.best_index_
@@ -90,8 +98,14 @@ ripper = gs.best_estimator_
 best_model_params = gs.best_params_
 fit_time = gs.refit_time_
 
+# %% [markdown]
+# We display the extracted rules:
+
 # %%
 ripper.out_model()
+
+# %% [markdown]
+# We refit the best model on the whole training set:
 
 # %%
 # get the predictions on the training data
@@ -125,6 +139,9 @@ best_model_cv_results = pd.DataFrame(cv_results_df.iloc[best_index]).T
 best_model_cv_results.index = [clf_name]
 best_model_cv_results.to_csv(f'{RESULTS_DIR}/{clf_name}_train_cv_scores.csv')
 
+# %% [markdown]
+# We display traning and test scores:
+
 # %%
 compute_clf_scores(
     y_true=true_labels_train,
@@ -150,10 +167,16 @@ test_scores = compute_clf_scores(
 )
 test_scores
 
+# %% [markdown]
+# We load the dataset randomly oversampled:
+
 # %%
 indicators_over_train_df = pd.read_csv('../data/clf_indicators_train_over.csv', index_col=0)
 indicators_over_train_df = indicators_over_train_df[features_for_clf]
 true_labels_over_train = pd.read_csv('../data/clf_y_train_over.csv', index_col=0).values.ravel()
+
+# %% [markdown]
+# We fit and test the best model on the oversampled dataset:
 
 # %%
 # fit the model on all the training data
@@ -184,10 +207,16 @@ file = open(f'{RESULTS_DIR}/{clf_name}_oversample.pkl', 'wb')
 pickle.dump(obj=best_model_over, file=file)
 file.close()
 
+# %% [markdown]
+# We load the dataset oversampled with SMOTE:
+
 # %%
 indicators_smote_train_df = pd.read_csv('../data/clf_indicators_train_smote.csv', index_col=0)
 indicators_smote_train_df = indicators_smote_train_df[features_for_clf]
 true_labels_smote_train = pd.read_csv('../data/clf_y_train_smote.csv', index_col=0).values.ravel()
+
+# %% [markdown]
+# We train and test the best model on the SMOTE dataset:
 
 # %%
 # fit the model on all the training data
@@ -218,6 +247,9 @@ file = open(f'{RESULTS_DIR}/{clf_name}_smote.pkl', 'wb')
 pickle.dump(obj=best_model_smote, file=file)
 file.close()
 
+# %% [markdown]
+# We compare the performance of the best model on the three datasets:
+
 # %%
 test_over_scores = compute_clf_scores(
     y_true=true_labels_test,
@@ -243,6 +275,9 @@ test_smote_scores = compute_clf_scores(
 
 pd.concat([test_scores, test_over_scores, test_smote_scores])
 
+# %% [markdown]
+# We display confusion matrices:
+
 # %%
 plot_confusion_matrix(
     y_true=true_labels_test,
@@ -257,6 +292,9 @@ plot_confusion_matrix(
     title=clf_name + ' SMOTE'
 )
 
+# %% [markdown]
+# We plot incidents (actual class and predicted class) in different feature spaces:
+
 # %%
 plot_predictions_in_features_space(
     df=incidents_test_df,
@@ -266,8 +304,14 @@ plot_predictions_in_features_space(
     figsize=(15, 50)
 )
 
+# %% [markdown]
+# We plot the ROC curve:
+
 # %%
 plot_roc(y_true=true_labels_test, y_probs=[pred_probas_test[:,1]], names=[clf_name])
+
+# %% [markdown]
+# We plot the distribution of the features for misclassified incidents:
 
 # %%
 plot_distribution_missclassifications(

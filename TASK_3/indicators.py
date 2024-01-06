@@ -110,17 +110,17 @@ sns.violinplot(data=incidents_df[['age_range']])
 
 # %%
 class TagForClassification(Enum):
-    aggression = 1 # anche intimidatorio (e.g. rapina, difensivo può essere intimidatorio ma è in risposta ad atto aggressivo)
+    aggression = 1
     accidental = 2
     defensive = 3
-    suicide = 4 # 235 tentati vs 3386 riusciti
+    suicide = 4
 
     road = 5
     house = 6
     school = 7
     business = 8
 
-    illegal_holding = 9 # se l'arma viene usata in luogo pubblico forse è sempre illegal holding (a meno che non sia la polizia, defensive è a casa)
+    illegal_holding = 9
     drug_alcohol = 10
     officers = 11
 
@@ -141,12 +141,12 @@ tags_map = {
     'Attempted Murder/Suicide (one variable unsuccessful)': [TagForClassification.aggression.name, TagForClassification.suicide.name],
     'BB/Pellet/Replica gun': [],
     'Bar/club incident - in or around establishment': [TagForClassification.drug_alcohol.name, TagForClassification.business.name],
-    'Brandishing/flourishing/open carry/lost/found': [TagForClassification.illegal_holding.name], # TODO: aggressive?
+    'Brandishing/flourishing/open carry/lost/found': [TagForClassification.illegal_holding.name],
     'Car-jacking': [TagForClassification.aggression.name, TagForClassification.road.name],
     'Child Involved Incident': [],
-    'Child picked up & fired gun': [], # TODO: illegal holding?
-    'Child with gun - no shots fired': [], # TODO: illegal holding?
-    'Cleaning gun': [TagForClassification.accidental.name], # TODO: cos'era? 
+    'Child picked up & fired gun': [],
+    'Child with gun - no shots fired': [],
+    'Cleaning gun': [TagForClassification.accidental.name],
     'Concealed Carry License - Perpetrator': [],
     'Concealed Carry License - Victim': [],
     'Criminal act with stolen gun': [TagForClassification.illegal_holding.name, TagForClassification.aggression.name],
@@ -158,14 +158,14 @@ tags_map = {
     'Domestic Violence': [TagForClassification.house.name, TagForClassification.aggression.name],
     'Drive-by (car to street, car to car)': [TagForClassification.aggression.name, TagForClassification.road.name],
     'Drug involvement': [TagForClassification.drug_alcohol.name],
-    'Gang involvement': [TagForClassification.organized.name], # TODO: aggressive non si sa, potrebbe essere arresto di una gang nel luogo dove si nascondeva
+    'Gang involvement': [TagForClassification.organized.name],
     'Ghost gun': [],
     'Gun at school, no death/injury - elementary/secondary school': [TagForClassification.school.name, TagForClassification.aggression.name],
     'Gun at school, no death/injury - university/college': [TagForClassification.school.name, TagForClassification.aggression.name],
     'Gun buy back action': [],
     'Gun range/gun shop/gun show shooting': [],
-    'Gun shop robbery or burglary': [TagForClassification.illegal_holding.name, TagForClassification.business.name], # TODO: aggression?
-    'Gun(s) stolen from owner': [TagForClassification.illegal_holding.name], # TODO: aggression? defensive?
+    'Gun shop robbery or burglary': [TagForClassification.illegal_holding.name, TagForClassification.business.name],
+    'Gun(s) stolen from owner': [TagForClassification.illegal_holding.name],
     'Guns stolen from law enforcement': [TagForClassification.illegal_holding.name, TagForClassification.officers.name],
     'Hate crime': [TagForClassification.social_reasons.name, TagForClassification.aggression.name],
     'Home Invasion': [TagForClassification.house.name, TagForClassification.aggression.name],
@@ -190,7 +190,7 @@ tags_map = {
     'Officer Involved Shooting - Accidental discharge - no injury required': [TagForClassification.officers.name, TagForClassification.accidental.name],
     'Officer Involved Shooting - Officer killed': [TagForClassification.aggression.name, TagForClassification.officers.name],
     'Officer Involved Shooting - Officer shot': [TagForClassification.officers.name, TagForClassification.aggression.name],
-    'Officer Involved Shooting - Shots fired, no injury': [TagForClassification.officers.name], # TODO: non si sa se aggression o defensive
+    'Officer Involved Shooting - Shots fired, no injury': [TagForClassification.officers.name],
     'Officer Involved Shooting - subject/suspect/perpetrator killed': [TagForClassification.officers.name, TagForClassification.defensive.name],
     'Officer Involved Shooting - subject/suspect/perpetrator shot': [TagForClassification.officers.name, TagForClassification.defensive.name],
     'Officer Involved Shooting - subject/suspect/perpetrator suicide at standoff': [TagForClassification.officers.name, TagForClassification.suicide.name],
@@ -199,7 +199,7 @@ tags_map = {
     'Pistol-whipping': [TagForClassification.aggression.name],
     'Police Targeted': [TagForClassification.officers.name, TagForClassification.aggression.name],
     'Political Violence': [TagForClassification.aggression.name, TagForClassification.social_reasons.name],
-    'Possession (gun(s) found during commission of other crimes)': [], # TODO: illegal holding?
+    'Possession (gun(s) found during commission of other crimes)': [],
     'Possession of gun by felon or prohibited person': [TagForClassification.illegal_holding.name],
     'Road rage': [TagForClassification.road.name, TagForClassification.aggression.name],
     'School Incident': [TagForClassification.school.name, TagForClassification.aggression.name],
@@ -243,7 +243,7 @@ incidents_df = add_tags(incidents_df)
 # We search for inconsistencies:
 
 # %%
-incidents_df[(incidents_df['aggression']==1) & (incidents_df['defensive']==1)] # defense in response to aggression
+incidents_df[(incidents_df['aggression']==1) & (incidents_df['defensive']==1)] # such incidents involve a defensive act, in response to an aggression
 
 # %%
 incidents_df[(incidents_df['aggression']==1) & (incidents_df['accidental']==1)]
@@ -252,7 +252,7 @@ incidents_df[(incidents_df['aggression']==1) & (incidents_df['accidental']==1)]
 incidents_df[
     (incidents_df['aggression']==0) & 
     ((incidents_df['organized']==1))
-] # gang arrested in other circumstances
+]
 
 # %%
 incidents_df[
@@ -349,24 +349,9 @@ incidents_df['month_name'] = incidents_df['month'].apply(lambda x: pd.to_datetim
 incidents_df['day_of_week_name'] = incidents_df['date_original'].dt.day_name()
 
 # %% [markdown]
-# We one hot encode the categorical attributes:
-
-# %%
-# TODO: togliere
-# for attribute in ['state', 'day', 'month_name', 'day_of_week_name']:
-#     incidents_tmp = incidents_df[attribute]
-#     prefix = ''
-#     if attribute == 'day':
-#         prefix = 'day_'
-#     incidents_df = pd.get_dummies(incidents_df, columns=[attribute], prefix=prefix, prefix_sep='')
-#     incidents_df[attribute] = incidents_tmp
-
-# %% [markdown]
 # We compute the number of dayes from the first incident:
 
 # %%
-# TODO: fare locale a stato o distretto?
-# sottolineare i limiti, i.e. una volta deployato il modello si può usare solo dopo il 2014
 incidents_df['days_from_first_incident'] = (incidents_df['date_original'] - incidents_df['date_original'].min()).dt.days
 
 # %% [markdown]
@@ -473,7 +458,7 @@ indicators_names = [
     'month',
     'month_x',
     'month_y',
-    'year', # democrat is only available for year <= 2018, nan years will be discarded
+    'year',
     'days_from_first_incident',
     # socio-economic data
     'poverty_perc',
@@ -512,30 +497,6 @@ sns.heatmap(spearman_corr_matrix, annot=True, ax=ax, mask=np.triu(spearman_corr_
 # - road, house and aggression (when the tag aggression could be inferred also the place where the incident happened was known)
 
 # %% [markdown]
-# We scatter the incidents on different feature spaces:
-
-# %%
-# scatter_by_label(
-#     incidents_df,
-#     ['location_imp',
-#     'age_range',
-#     'avg_age',
-#     'n_child_prop',
-#     'n_teen_prop',
-#     'n_males_prop',
-#     'n_participants',
-#     'month',
-#     'day_of_week',
-#     'poverty_perc'],
-#     'death',
-#     ncols=3,
-#     figsize=(35, 50)
-# )
-
-# %% [markdown]
-# Mortal and non-mortal incidents are not linearly separable in the plotted feature spaces.
-
-# %% [markdown]
 # We check for duplicated rows:
 
 # %%
@@ -564,7 +525,7 @@ incidents_df[indicators_names].describe()
 
 # %%
 incidents_clf = incidents_df.dropna(subset=indicators_names).copy()
-incidents_clf.drop_duplicates(subset=indicators_names, inplace=True) # TODO: hanno stessa x, y, data, caratteristiche...
+incidents_clf.drop_duplicates(subset=indicators_names, inplace=True) # same x, y, data, characteristics, etc. cannot be different incidents
 incidents_nan = incidents_df[incidents_df[indicators_names].isna().any(axis=1)]
 
 # %% [markdown]
@@ -626,7 +587,6 @@ incidents_clf[
 # %%
 pca = PCA()
 std_scaler = MinMaxScaler()
-# TODO: scegliere quali visualizzare
 numeric_indicators = ['location_imp', 'x', 'y', 'age_range', 'avg_age', 'n_child_prop', 'n_teen_prop', 'n_males_prop', 'n_participants', 'poverty_perc']
 X_minmax = std_scaler.fit_transform(incidents_clf[numeric_indicators].values)
 X_pca = pca.fit_transform(X_minmax)
@@ -751,6 +711,9 @@ axs[3].set_xticklabels(indicators_names, rotation=90);
 axs[3].set_title('Robust scaling');
 fig.suptitle('Distributions of the indicators', fontweight='bold');
 
+# %% [markdown]
+# We apply Min-Max scaling:
+
 # %%
 minmax_scaler.fit(X_train_df[indicators_names])
 X_test_transf = minmax_scaler.transform(X_test_df[indicators_names])
@@ -813,6 +776,9 @@ categorical_features_rb = [
 with open('../data/clf_indicators_names_rule_based.json', 'w') as f:
     json.dump(features_rb, f)
 
+# %% [markdown]
+# We perform Random over-sampling:
+
 # %%
 oversample = RandomOverSampler(sampling_strategy=0.4/0.6)
 X_train_over_df, y_train_over = oversample.fit_resample(X_train_df, y_train)
@@ -827,6 +793,9 @@ train_over_infos['Non_Fatal'] = [(y_train_over == 0).sum()]
 train_over_infos['Non_Fatal (%)'] = [((y_train_over == 0).sum()/y_train_over.shape[0])*100]
 train_over_infos['total'] = [y_train_over.shape[0]]
 pd.DataFrame(train_over_infos, index=['train'])
+
+# %% [markdown]
+# We perform oversampling using SMOTE, taking into account categorical attributes:
 
 # %%
 smote_oversample = SMOTENC(categorical_features=categorical_features_rb, sampling_strategy=0.4/0.6)
@@ -861,7 +830,6 @@ def save_default_feature_values(df, path):
         default_day_of_week_x, default_day_of_week_y = df.groupby(["day_of_week_x", "day_of_week_y"]).size().sort_values(ascending=False).index[0]
         default['day_of_week_x'] = default_day_of_week_x
         default['day_of_week_y'] = default_day_of_week_y
-        # TODO: volendo si può raggruppare per day_x, day_y, day_of_week_x, day_of_week_y (giorno dell'anno più frequente)
         default_day_x, default_day_y = df.groupby(["day_x", "day_y"]).size().sort_values(ascending=False).index[0]
         default['day_x'] = default_day_x
         default['day_y'] = default_day_y

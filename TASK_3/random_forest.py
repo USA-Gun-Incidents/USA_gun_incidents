@@ -1,10 +1,10 @@
 # %% [markdown]
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
-#
+# 
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
-#
+# 
 # # Random Forest Classifier
-#
+# 
 # We import the libraries and define constants and settings of the notebook:
 
 # %%
@@ -74,7 +74,7 @@ categorical_features = [
 # - max_samples: The number of samples to draw from the trainin set to train each base estimator. We will try both using all the samples and using half of the samples.
 # - min_samples_split: The minimum number of samples required to split an internal node. We will try 2 (the minimum possible) and different fractions of the training set.
 # - min_samples_leaf: The minimum number of samples required to be at a leaf node. We will try 1 (the minimum possible) and different fractions of the training set.
-#
+# 
 # Fixed parameters:
 # - bootstrap: We will bootstrap samples when building trees.
 # - class_weight: Weights associated with classes. We will use 'balanced' as it performed better in the previous experiments with the Decision Tree Classifier.
@@ -118,9 +118,15 @@ gs = GridSearchCV(
 )
 gs.fit(indicators_train_df, true_labels_train)
 
+# %% [markdown]
+# We display the grid search results:
+
 # %%
 cv_results_df = pd.DataFrame(gs.cv_results_)
 cv_results_df.head()
+
+# %% [markdown]
+# We visualize the interaction of hyperparameters through a heatmap:
 
 # %%
 fig, axs = plt.subplots(2, 2, figsize=(10, 8))
@@ -164,11 +170,17 @@ sns.heatmap(pvt_200_all, cmap='Blues', ax=axs[1][1], vmin=min_score, vmax=max_sc
 axs[1][1].set_title('n_estimators = 200, max_samples = None');
 fig.tight_layout()
 
+# %% [markdown]
+# We disaply the performance of the top 10 models:
+
 # %%
 params = ['param_n_estimators', 'param_max_features', 'param_max_samples', 'param_min_samples_split', 'param_min_samples_leaf']
 cv_results_df.sort_values(
     by='mean_test_score',
     ascending=False)[params+['mean_test_score']].head(20).style.background_gradient(subset='mean_test_score', cmap='Blues')
+
+# %% [markdown]
+# We refit the best model on the whole training set:
 
 # %%
 best_index = gs.best_index_
@@ -201,6 +213,9 @@ pd.DataFrame(
 file = open(f'{RESULTS_DIR}/{clf_name}.pkl', 'wb')
 pickle.dump(obj=best_model, file=file)
 file.close()
+
+# %% [markdown]
+# We display traning and test scores:
 
 # %%
 compute_clf_scores(
@@ -254,6 +269,9 @@ dot_data = export_graphviz(
 graph = pydotplus.graph_from_dot_data(dot_data)
 Image(graph.create_png())
 
+# %% [markdown]
+# We display the feature importances:
+
 # %%
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 display_feature_importances(
@@ -263,6 +281,9 @@ display_feature_importances(
     title=clf_name,
     path=f'{RESULTS_DIR}/{clf_name}_feature_importances.csv'
 )
+
+# %% [markdown]
+# We display confusion matrices:
 
 # %%
 plot_confusion_matrix(
@@ -280,8 +301,14 @@ plot_predictions_in_features_space(
     figsize=(15, 15)
 )
 
+# %% [markdown]
+# We plot the ROC curve:
+
 # %%
 plot_roc(y_true=true_labels_test, y_probs=[pred_probas_test[:,1]], names=[clf_name])
+
+# %% [markdown]
+# We plot the decision boundaries:
 
 # %%
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
@@ -294,6 +321,9 @@ plot_PCA_decision_boundary(
   axs=axs
 )
 
+# %% [markdown]
+# We plot the learning curve:
+
 # %%
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_learning_curve(
@@ -305,6 +335,9 @@ plot_learning_curve(
     train_sizes=np.linspace(0.1, 1.0, 5),
     metric='f1'
 )
+
+# %% [markdown]
+# We plot the performance of the best model varying the complexity parameters:
 
 # %%
 param_of_interest = 'min_samples_split'
@@ -337,6 +370,9 @@ plot_scores_varying_params(
     axs,
     title=clf_name
 )
+
+# %% [markdown]
+# We plot the distribution of the features for misclassified incidents:
 
 # %%
 plot_distribution_missclassifications(
