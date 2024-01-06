@@ -53,11 +53,16 @@ tabnet = TabNetClassifier()
 fit_start = time()
 tabnet.fit(
   train_set, train_labels,
+
   eval_set=[(train_set, train_labels), (val_set, val_labels)],
   eval_name=['train', 'val'],
   eval_metric=['balanced_accuracy', 'logloss'],
-  max_epochs=2, # TODO: cambiare
-  augmentations=None, # TODO: aug = ClassificationSMOTE(p=0.2); ma lo facciamo dopo?
+
+  max_epochs=50,
+  augmentations= ClassificationSMOTE(p=0.2),
+
+  weights=1,
+
 )
 fit_time = time()-fit_start
 
