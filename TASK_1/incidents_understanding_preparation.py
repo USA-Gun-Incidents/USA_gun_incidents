@@ -356,6 +356,15 @@ incidents_df.groupby('month').size().plot(
 plt.xticks(range(12), calendar.month_name[1:13], rotation=45);
 plt.savefig("../html/incidents_per_month.svg")
 
+# %%
+# display the months with a number of incidents below the 25th percentile
+months = incidents_df.groupby('month').size()
+months[months<months.quantile(0.25)].index
+
+# %%
+# display the months with a number of incidents above the 75th percentile
+months[months>months.quantile(0.75)].index
+
 # %% [markdown]
 # We visualize the number of incidents per day of the week:
 
@@ -369,6 +378,16 @@ fig = incidents_df.groupby('day_of_week').size().plot(
 )
 plt.xticks(range(7), calendar.day_name[0:7], rotation=45);
 plt.savefig("../html/incidents_per_week_day.svg")
+
+# %%
+# display the days of the week with a number of incidents below the 25th percentile
+week_days = incidents_df.groupby('day_of_week').size()
+week_days[week_days<week_days.quantile(0.25)].index
+
+# %%
+# display the days of the week with a number of incidents above the 75th percentile
+week_days[week_days>week_days.quantile(0.75)].index
+
 
 # %% [markdown]
 # We display the number of incidents per day over the years:
@@ -1989,14 +2008,17 @@ incidents_per_state.plot(
 # %%
 incidents_df[incidents_df['state']=='DISTRICT OF COLUMBIA']['incident_characteristics1'].value_counts().plot(kind='barh', figsize=(20, 10))
 
+# %%
+incidents_df[(incidents_df['state']=='DISTRICT OF COLUMBIA')&(incidents_df['year']<2014)].shape
+
 # %% [markdown]
 # We visualize the number of incidents happened in each state every month:
 
 # %%
 incidents_df['year'] = incidents_df['year'].astype('UInt64')
-incidents_per_month_per_state = incidents_df.groupby(['state', 'month_name', 'year']).size()
+incidents_per_month_per_state = incidents_df.groupby(['state', 'month', 'year']).size()
 incidents_per_month_per_state = incidents_per_month_per_state.to_frame(name='incidents').reset_index()
-incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month_name', 'state'], ignore_index=True)
+incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month', 'state'], ignore_index=True)
 incidents_per_month_per_state['incidents_per_100k_inhabitants'] = incidents_per_month_per_state.apply(
     lambda row: (row['incidents'] / usa_population_df[usa_population_df['state']==row['state']]['population_state_2010'].iloc[0])*100000,
     axis=1
@@ -2005,7 +2027,7 @@ fig, ax = plt.subplots(figsize=(20, 10))
 sns.heatmap(
     incidents_per_month_per_state[incidents_per_month_per_state.year<=2020].pivot(
         index='state',
-        columns=['year', 'month_name'],
+        columns=['year', 'month'],
         values='incidents_per_100k_inhabitants'
     ).fillna(0),
     cmap='coolwarm',
@@ -2014,7 +2036,7 @@ sns.heatmap(
     yticklabels=True,
     linewidths=.5
 )
-ax.set_xlabel('Month-Year')
+ax.set_xlabel('Year-Month')
 ax.set_ylabel('State')
 ax.set_title('Number of incidents per 100k inhabitants')
 
@@ -2022,9 +2044,9 @@ plt.xticks(rotation=90)
 plt.tight_layout()
 
 # %%
-incidents_per_month_per_state = incidents_df[incidents_df['incident_characteristics1']!='Non-Shooting Incident'].groupby(['state', 'month_name', 'year']).size()
+incidents_per_month_per_state = incidents_df[incidents_df['incident_characteristics1']!='Non-Shooting Incident'].groupby(['state', 'month', 'year']).size()
 incidents_per_month_per_state = incidents_per_month_per_state.to_frame(name='incidents').reset_index()
-incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month_name', 'state'], ignore_index=True)
+incidents_per_month_per_state = incidents_per_month_per_state.sort_values(by=['year', 'month', 'state'], ignore_index=True)
 incidents_per_month_per_state['incidents_per_100k_inhabitants'] = incidents_per_month_per_state.apply(
     lambda row: (row['incidents'] / usa_population_df[usa_population_df['state']==row['state']]['population_state_2010'].iloc[0])*100000,
     axis=1
@@ -2033,7 +2055,7 @@ fig, ax = plt.subplots(figsize=(20, 10))
 sns.heatmap(
     incidents_per_month_per_state[incidents_per_month_per_state.year<=2020].pivot(
         index='state',
-        columns=['year', 'month_name'],
+        columns=['year', 'month'],
         values='incidents_per_100k_inhabitants'
     ).fillna(0),
     cmap='coolwarm',
@@ -2042,7 +2064,7 @@ sns.heatmap(
     yticklabels=True,
     linewidths=.5
 )
-ax.set_xlabel('Month-Year')
+ax.set_xlabel('Year-Month')
 ax.set_ylabel('State')
 ax.set_title('Number of incidents per 100k inhabitants (excluding non-shooting incidents)')
 
@@ -2057,7 +2079,7 @@ fig, ax = plt.subplots(figsize=(20, 10))
 sns.heatmap(
     incidents_per_month_per_state[(incidents_per_month_per_state.year<=2020) & (incidents_per_month_per_state['state']!='DISTRICT OF COLUMBIA')].pivot(
         index='state',
-        columns=['year', 'month_name'],
+        columns=['year', 'month'],
         values='incidents_per_100k_inhabitants'
     ).fillna(0),
     cmap='coolwarm',
@@ -2066,7 +2088,7 @@ sns.heatmap(
     yticklabels=True,
     linewidths=.5
 )
-ax.set_xlabel('Month-Year')
+ax.set_xlabel('Year-Month')
 ax.set_ylabel('State')
 ax.set_title('Number of incidents per 100k inhabitants')
 
