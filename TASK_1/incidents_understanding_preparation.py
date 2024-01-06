@@ -1430,7 +1430,7 @@ age_df[age_df['participant_age1'].notna() & age_df['participant_age_group1'].isn
 from TASK_1.data_preparation_utils import check_age_gender_data_consistency
 
 if LOAD_DATA_FROM_CHECKPOINT: # load data
-    age_temporary_df = load_checkpoint('checkpoint_tmp')#, date_cols=['date', 'date_original']) #TODO: rimette uniforme ad altri
+    age_temporary_df = load_checkpoint('checkpoint_tmp')#, date_cols=['date', 'date_original'])
 else: # compute data
     age_temporary_df = age_df.apply(lambda row: check_age_gender_data_consistency(row), axis=1)
     save_checkpoint(age_temporary_df, 'checkpoint_tmp') # save data

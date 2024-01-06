@@ -663,7 +663,6 @@ def plot_dbscan(X, db, columns, axis_labels, figsize=(10, 10)):
     plt.show()
 
 def plot_hists_by_cluster_dbscan(df, db, column, figsize=(15, 8)):
-    # plot hist for poverty_perc for each cluster
     n_clusters = len(np.unique(db.labels_))
     fig, ax = plt.subplots(int(np.ceil(n_clusters)/2), 2, figsize=figsize, sharex=True, sharey=True)
     for i in range(6):
