@@ -61,6 +61,16 @@ cv_train_scores[['std_test_score', 'mean_test_score']].style.background_gradient
 
 # %%
 train_scores.style.background_gradient(cmap='Blues', axis=0)
+# train_scores[[
+#     'precision-Non-Fatal',
+#     'recall-Non-Fatal',
+#     'precision-Fatal',
+#     'recall-Fatal',
+#     'f1-score-macro avg',
+#     'accuracy',
+#     'auroc',
+#     'params'
+#     ]].style.background_gradient(cmap='Blues', axis=0).to_latex('./train.tex')
 
 # %% [markdown]
 # Test scores comparison:
@@ -75,6 +85,12 @@ test_scores.style.background_gradient(cmap='Blues', axis=0)
 cv_train_scores.plot.bar(figsize=(10, 5), y='mean_test_score', yerr='std_test_score')
 plt.xlabel('Classifier');
 plt.ylabel('F1');
+
+# %%
+cv_train_scores['std_test_score'].describe()
+
+# %%
+cv_train_scores['std_test_score']
 
 # %% [markdown]
 # Training time comparison:
@@ -108,9 +124,15 @@ plt.ylabel(metric)
 # AUROC comparison:
 
 # %%
+fig, axs = plt.subplots(1, 2, figsize=(20, 5)) # FIXME: fix
+
 y_probs = [test_preds[clf]['probs'] for clf in clf_names if clf not in ['NearestCentroidClassifier', 'RipperClassifier']]
 clf_names_prob = [clf for clf in clf_names if clf not in ['NearestCentroidClassifier', 'RipperClassifier']] # FIXME: togliere RIPPER
-plot_roc(test_true_labels['death'], y_probs, clf_names_prob)
+
+plot_roc(test_true_labels['death'], y_probs, clf_names_prob, axs[0])
+for i in range(len(clf_names_prob)):
+    CalibrationDisplay.from_predictions(test_true_labels['death'], y_probs[i], name=clf_names_prob[i], ax=axs[1])
+axs[1].set_title('Calibration curves')
 
 # %% [markdown]
 # Confusion matrix comparison:
@@ -152,15 +174,6 @@ sankey_plot(
     labels_titles=clf_names_abbr+['True labels'],
     title='Classication comparison'
 )
-
-# %% [markdown]
-# Confidence comparison:
-
-# %%
-fig, axs = plt.subplots(1, 1, figsize=(10, 5)) # FIXME: fix
-for i in range(len(clf_names_prob)):
-    CalibrationDisplay.from_predictions(test_true_labels['death'], y_probs[i], name=clf_names_prob[i], ax=axs)
-fig.suptitle('Calibration curves')
 
 # %% [markdown]
 # Rules comparison:
