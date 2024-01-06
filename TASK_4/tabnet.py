@@ -1,7 +1,17 @@
-# -*- coding: utf-8 -*-
+# %% [markdown]
+# **Data mining Project - University of Pisa, acedemic year 2023/24**
+# 
+# **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
+# 
+# # TabNet
+# 
+# We import the libraries and define constants and settings of the notebook:
+
 # %%
 import pandas as pd
+import numpy as np
 import json
+import matplotlib.pyplot as plt
 from pytorch_tabnet.tab_model import TabNetClassifier
 from sklearn.preprocessing import MinMaxScaler
 from pytorch_tabnet.augmentations import ClassificationSMOTE
@@ -13,7 +23,9 @@ from time import time
 from explanation_utils import *
 RESULTS_DIR = '../data/classification_results'
 clf_name = 'TabNetClassifier'
-# paper: https://arxiv.org/pdf/1908.07442.pdf
+
+# %% [markdown]
+# We load the data:
 
 # %%
 # load the data
@@ -33,40 +45,28 @@ indicators_train_df = incidents_train_df[features_for_clf]
 indicators_test_df = incidents_test_df[features_for_clf]
 
 # scale the data
-# FIXME: se poi facciamo grid search bisogna fare come in nn.py
 scaler = MinMaxScaler()
 indicators_train_scaled = scaler.fit_transform(indicators_train_df)
-
 # split the data into train and validation sets
-train_set, val_set, train_labels, val_labels = train_test_split( # FIXME: qui di nuovo il validation è scalato
+train_set, val_set, train_labels, val_labels = train_test_split(
     indicators_train_scaled,
     true_labels_train,
     test_size=0.2
 )
 
 # %%
-# TODO: embedding di feature cateoriche come fanno qui?
-# https://github.com/dreamquark-ai/tabnet/blob/develop/census_example.ipynb
-
-# %%
 tabnet = TabNetClassifier()
 fit_start = time()
 tabnet.fit(
   train_set, train_labels,
-
   eval_set=[(train_set, train_labels), (val_set, val_labels)],
   eval_name=['train', 'val'],
   eval_metric=['balanced_accuracy', 'logloss'],
-
   max_epochs=50,
   augmentations= ClassificationSMOTE(p=0.2),
-
   weights=1,
-
 )
 fit_time = time()-fit_start
-
-# TODO: provare altr parametri? (in fondo al readme https://github.com/dreamquark-ai/tabnet)
 
 # %%
 plt.plot(tabnet.history['loss'], label='Train')
@@ -106,10 +106,6 @@ pd.DataFrame(
 # save the model
 tabnet.save_model(f'{RESULTS_DIR}/{clf_name}.pkl')
 
-# TODO:
-# save the cv results
-# heatmaps params
-
 # %%
 compute_clf_scores(
     y_true=true_labels_train,
@@ -147,21 +143,10 @@ plot_roc(y_true=true_labels_test, y_probs=[pred_probas_test[:,1]], names=[clf_na
 # %%
 plot_predictions_in_features_space(
     df=incidents_test_df,
-    features=['n_males_prop', 'n_child_prop', 'n_participants'], # TODO: farlo con features significativve
+    features=['n_males_prop', 'n_child_prop', 'n_participants'],
     true_labels=true_labels_test,
     pred_labels=pred_labels_test,
     figsize=(15, 15)
-)
-
-# %%
-fig, axs = plt.subplots(1, 1, figsize=(10, 5))
-plot_PCA_decision_boundary(
-  train_set=indicators_train_df,
-  features=indicators_train_df.columns, # TODO: eventualmente usare solo le numeriche
-  train_label=true_labels_train,
-  classifier=tabnet,
-  classifier_name=clf_name,
-  axs=axs
 )
 
 # %%
@@ -227,7 +212,7 @@ display_feature_importances(
 
 # %% [markdown]
 # # Local interpretation
-#
+# 
 # ## Attempted Suicide
 
 # %%
@@ -236,13 +221,6 @@ attempted_suicide_pos = selected_records_to_explain_df[selected_records_to_expla
 
 # %%
 explanation, mask = tabnet.explain(indicators_test_df.iloc[attempted_suicide_pos].values.reshape(1,-1), normalize=False)
-
-# %%
-# TODO: devo usare la maschera o la explaination per ottenere le feature importances???
-# M_explain (matrix)- Importance per sample, per columns.
-# masks (matrix) - Sparse matrix showing attention masks used by network
-
-# nel tutorial usano mask
 
 # %%
 fig, axs = plt.subplots(1, 3, figsize=(16, 6), sharex=True)
@@ -274,8 +252,47 @@ sorted_features_imp = [explanation[0][j] for j in sorted_idx]
 plt.barh(y=sorted_features_names, width=sorted_features_imp)
 axs.set_xlabel('feature importance (explanation)')
 
+# %% [markdown]
+# ## Mass shooting
+
 # %%
-# TODO: mass shooting
+mass_shooting_pos = selected_records_to_explain_df[selected_records_to_explain_df['instance names']=='Mass shooting']['positions']
+
+# %%
+explanation, mask = tabnet.explain(indicators_test_df.iloc[mass_shooting_pos].values.reshape(1,-1), normalize=False)
+
+# %%
+fig, axs = plt.subplots(1, 3, figsize=(16, 6), sharex=True)
+mask_sum = np.zeros_like(mask[0][0])
+for i in range(3):
+    mask_sum += mask[i][0]
+    sorted_idx = np.argsort(mask[i][0])
+    sorted_features_names = [features_for_clf[j] for j in sorted_idx]
+    sorted_features_imp = [mask[i][0][j] for j in sorted_idx]
+    axs[i].barh(y=sorted_features_names, width=sorted_features_imp)
+    axs[i].set_title(f"mask {i}")
+    for tick in axs[i].get_xticklabels():
+        tick.set_rotation(90);
+    axs[i].set_ylabel('feature importance')
+fig.tight_layout()
+
+# %%
+fig, axs = plt.subplots(1, figsize=(7, 6))
+sorted_idx = np.argsort(mask_sum)
+sorted_features_names = [features_for_clf[j] for j in sorted_idx]
+sorted_features_imp = [mask_sum[j] for j in sorted_idx]
+plt.barh(y=sorted_features_names, width=sorted_features_imp)
+axs.set_xlabel('feature importance (mask 1 + mask 2 + mask 3)')
+
+# %%
+sorted_idx = np.argsort(explanation[0])
+sorted_features_names = [features_for_clf[j] for j in sorted_idx]
+sorted_features_imp = [explanation[0][j] for j in sorted_idx]
+plt.barh(y=sorted_features_names, width=sorted_features_imp)
+axs.set_xlabel('feature importance (explanation)')
+
+# %% [markdown]
+# # Evaluation of explanations
 
 # %%
 non_fatal_default = pd.read_csv(RESULTS_DIR+'/non_fatal_db_default_features.csv').to_numpy()[0]
@@ -320,6 +337,4 @@ metrics_random_records_df = pd.DataFrame(metrics_random_records, index=[clf_name
 metrics_random_records_df.to_csv('../data/explanation_results/tabnet_metrics_random_records.csv')
 metrics_random_records_df
 
-# %%
-# TODO:
-# riporta nel notebook di comparison anche questi score a confronto con EBM
+
