@@ -392,7 +392,9 @@ def sankey_plot(
         labels,
         labels_titles=None,
         title=None,
-        color_palette=sns.color_palette()
+        color_palette=sns.color_palette(),
+        width=None,
+        height=None
     ):
     '''
     This function plots a Sankey diagram of the sets of labels passed as arguments.
@@ -472,7 +474,9 @@ def sankey_plot(
         xaxis={'showgrid': False, 'zeroline': False, 'visible': False},
         yaxis={'showgrid': False, 'zeroline': False, 'visible': False},
         plot_bgcolor='rgba(0,0,0,0)',
-        font_size=10
+        font_size=10,
+        width=width,
+        height=height
     )
 
     file_name = f'../html/sankey'

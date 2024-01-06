@@ -187,7 +187,7 @@ def plot_predictions_in_features_space(
     if path:
         plt.savefig(path)
 
-def plot_roc(y_true, y_probs, names):
+def plot_roc(y_true, y_probs, names, ax=None):
     '''
     This function plots the ROC curves for the given y_trues and y_probs.
 
@@ -195,13 +195,14 @@ def plot_roc(y_true, y_probs, names):
     :param y_probs: list of predicted probabilities
     :param names: list of names for the ROC curves
     '''
-    _, ax = plt.subplots()
+    if ax is None:
+        _, ax = plt.subplots()
     plot_chance_level = False
     for i, (y_prob, name) in enumerate(zip(y_probs, names)):
         if i==len(names)-1:
             plot_chance_level = True
         RocCurveDisplay.from_predictions(y_true=y_true, y_pred=y_prob, ax=ax, name=name, plot_chance_level=plot_chance_level)
-    _ = ax.set_title("ROC curve")
+    _ = ax.set_title("ROC curves")
 
 def plot_PCA_decision_boundary(
     train_set,
