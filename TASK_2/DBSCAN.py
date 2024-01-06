@@ -227,7 +227,7 @@ def dbscan(X, eps=0.1, min_samples=10):
 # ### Prepare Data and Parameters selection
 
 # %% [markdown]
-# We prepare the data by selecting only the entries in the dataset corresponding to the Illinois state and where all the values corresponding to the selected attributes, on which the clustering algorithm operates, are not NaN. Since the data have different range values for the various attributes, we decided to standardize using the 'StandardScaler' scaler, which, from some preliminary trials, has proven to be the most effective.
+# We prepare the data by selecting only the entries in the dataset corresponding to the Illinois state and where all the values corresponding to the selected attributes, on which the clustering algorithm operates, are not NaN. Since the data have different range values for the various attributes, we decided to standardize using the 'MinMax' scaler, which, from some preliminary trials, has proven to be the most effective.
 # 
 # We also save all the attribute values for the entries we use in the dataframe *illinois_df*.
 
