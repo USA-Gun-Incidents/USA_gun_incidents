@@ -103,9 +103,15 @@ gs = GridSearchCV(
 )
 gs.fit(indicators_train_df, true_labels_train)
 
+# %% [markdown]
+# We display the grid search results:
+
 # %%
 cv_results_df = pd.DataFrame(gs.cv_results_)
 cv_results_df.head()
+
+# %% [markdown]
+# We visualize the interaction of hyperparameters through a heatmap:
 
 # %%
 fig, axs = plt.subplots(1, 2, figsize=(15, 5))
@@ -128,11 +134,17 @@ axs[0].set_title('param_scale_pos_weight = 1');
 sns.heatmap(pvt_balanced, cmap='Blues', ax=axs[1], vmin=min_score, vmax=max_score)
 axs[1].set_title('param_scale_pos_weight = num_neg_inst / num_pos_inst');
 
+# %% [markdown]
+# We disaply the performance of the top 10 models:
+
 # %%
 params = [col for col in cv_results_df.columns if 'param_' in col and 'random' not in col]
 cv_results_df.sort_values(
     by='mean_test_score',
     ascending=False)[params+['std_test_score', 'mean_test_score']].head(20).style.background_gradient(subset=['std_test_score', 'mean_test_score'], cmap='Blues')
+
+# %% [markdown]
+# We refit the best model on the whole training set:
 
 # %%
 best_index = gs.best_index_
@@ -171,6 +183,9 @@ best_model_cv_results = pd.DataFrame(cv_results_df.iloc[best_index]).T
 best_model_cv_results.index = [clf_name]
 best_model_cv_results.to_csv(f'{RESULTS_DIR}/{clf_name}_train_cv_scores.csv')
 
+# %% [markdown]
+# We display traning and test scores:
+
 # %%
 compute_clf_scores(
     y_true=true_labels_train,
@@ -196,10 +211,16 @@ test_scores = compute_clf_scores(
 )
 test_scores
 
+# %% [markdown]
+# We load the dataset randomly oversampled:
+
 # %%
 indicators_over_train_df = pd.read_csv('../data/clf_indicators_train_over.csv', index_col=0)
 indicators_over_train_df = indicators_over_train_df[features_for_clf]
 true_labels_over_train = pd.read_csv('../data/clf_y_train_over.csv', index_col=0).values.ravel()
+
+# %% [markdown]
+# We fit and test the best model on the oversampled dataset:
 
 # %%
 # fit the model on all the training data
@@ -230,10 +251,16 @@ file = open(f'{RESULTS_DIR}/{clf_name}_oversample.pkl', 'wb')
 pickle.dump(obj=best_model_over, file=file)
 file.close()
 
+# %% [markdown]
+# We load the dataset oversampled with SMOTE:
+
 # %%
 indicators_smote_train_df = pd.read_csv('../data/clf_indicators_train_smote.csv', index_col=0)
 indicators_smote_train_df = indicators_smote_train_df[features_for_clf]
 true_labels_smote_train = pd.read_csv('../data/clf_y_train_smote.csv', index_col=0).values.ravel()
+
+# %% [markdown]
+# We train and test the best model on the SMOTE dataset:
 
 # %%
 # fit the model on all the training data
@@ -264,6 +291,9 @@ file = open(f'{RESULTS_DIR}/{clf_name}_smote.pkl', 'wb')
 pickle.dump(obj=best_model_smote, file=file)
 file.close()
 
+# %% [markdown]
+# We compare the performance of the best model on the three datasets:
+
 # %%
 test_over_scores = compute_clf_scores(
     y_true=true_labels_test,
@@ -289,13 +319,22 @@ test_smote_scores = compute_clf_scores(
 
 pd.concat([test_scores, test_over_scores, test_smote_scores])
 
+# %% [markdown]
+# We display a tree:
+
 # %%
 fig, axs = plt.subplots(figsize=(20, 50))
 plot_tree(best_model, num_trees=0, ax=axs)
 
+# %% [markdown]
+# We display another tree:
+
 # %%
 fig, axs = plt.subplots(figsize=(20, 40))
 plot_tree(best_model, num_trees=1, ax=axs)
+
+# %% [markdown]
+# We display the feature importances:
 
 # %%
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
@@ -306,6 +345,9 @@ display_feature_importances(
     title=clf_name,
     path=f'{RESULTS_DIR}/{clf_name}_feature_importances.csv'
 )
+
+# %% [markdown]
+# We display confusion matrices:
 
 # %%
 plot_confusion_matrix(
@@ -321,6 +363,9 @@ plot_confusion_matrix(
     title=clf_name + ' SMOTE'
 )
 
+# %% [markdown]
+# We plot incidents (actual class and predicted class) in different feature spaces:
+
 # %%
 plot_predictions_in_features_space(
     df=incidents_test_df,
@@ -330,8 +375,14 @@ plot_predictions_in_features_space(
     figsize=(15, 50)
 )
 
+# %% [markdown]
+# We plot the ROC curve:
+
 # %%
 plot_roc(y_true=true_labels_test, y_probs=[pred_probas_test[:,1]], names=[clf_name])
+
+# %% [markdown]
+# We plot the decision boundaries:
 
 # %%
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
@@ -346,6 +397,9 @@ plot_PCA_decision_boundary(
   pca=True
 )
 
+# %% [markdown]
+# We plot the learning curve:
+
 # %%
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_learning_curve(
@@ -357,6 +411,9 @@ plot_learning_curve(
     train_sizes=np.linspace(0.1, 1.0, 5),
     metric='f1'
 )
+
+# %% [markdown]
+# We plot the performance of the best model varying the complexity parameters:
 
 # %%
 param_of_interest = 'min_child_weight'
@@ -371,6 +428,9 @@ plot_scores_varying_params(
     axs,
     title=clf_name
 )
+
+# %% [markdown]
+# We plot the distribution of the features for misclassified incidents:
 
 # %%
 plot_distribution_missclassifications(
