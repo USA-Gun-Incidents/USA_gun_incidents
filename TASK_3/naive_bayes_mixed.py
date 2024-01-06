@@ -1,12 +1,12 @@
 # %% [markdown]
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
-# 
+#
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
-# 
+#
 # # Naive Bayes Classifier for mixed data
-# 
+#
 # Implementation available [here](https://github.com/remykarem/mixed-naive-bayes).
-# 
+#
 # We import the libraries and define constants and settings of the notebook:
 
 # %%
@@ -78,6 +78,9 @@ indicators_test_df = pd.concat([indicators_test_df, indicators_test_cat_df], axi
 
 categorical_features_pos = np.arange(len(indicators_train_df.columns) - len(categorical_features), len(indicators_train_df.columns))
 
+# %% [markdown]
+# We fit and test the model:
+
 # %%
 nb = MixedNB(categorical_features=categorical_features_pos)
 
@@ -108,6 +111,9 @@ file = open(f'{RESULTS_DIR}/{clf_name}.pkl', 'wb')
 pickle.dump(obj=nb, file=file)
 file.close()
 
+# %% [markdown]
+# We display traning and test scores:
+
 # %%
 compute_clf_scores(
     y_true=true_labels_train,
@@ -133,6 +139,9 @@ test_scores = compute_clf_scores(
 )
 test_scores
 
+# %% [markdown]
+# We load and prepare randomly oversampled data:
+
 # %%
 indicators_over_train_df = pd.read_csv('../data/clf_indicators_train_over.csv', index_col=0)
 indicators_over_train_df = indicators_over_train_df[features_for_clf]
@@ -143,6 +152,9 @@ indicators_over_train_cat_df = indicators_over_train_df[categorical_features]
 indicators_over_train_df = indicators_over_train_df.drop(columns=categorical_features)
 indicators_over_train_cat_df = indicators_over_train_cat_df.apply(LabelEncoder().fit_transform)
 indicators_over_train_df = pd.concat([indicators_over_train_df, indicators_over_train_cat_df], axis=1)
+
+# %% [markdown]
+# We fit and test the best model on the oversampled dataset:
 
 # %%
 # fit the model on all the training data
@@ -173,6 +185,9 @@ file = open(f'{RESULTS_DIR}/{clf_name}_oversample.pkl', 'wb')
 pickle.dump(obj=nb_over, file=file)
 file.close()
 
+# %% [markdown]
+# We load and prepare SMOTE oversampled data:
+
 # %%
 indicators_smote_train_df = pd.read_csv('../data/clf_indicators_train_smote.csv', index_col=0)
 indicators_smote_train_df = indicators_smote_train_df[features_for_clf]
@@ -183,6 +198,9 @@ indicators_smote_train_cat_df = indicators_smote_train_df[categorical_features]
 indicators_smote_train_df = indicators_smote_train_df.drop(columns=categorical_features)
 indicators_smote_train_cat_df = indicators_smote_train_cat_df.apply(LabelEncoder().fit_transform)
 indicators_smote_train_df = pd.concat([indicators_smote_train_df, indicators_smote_train_cat_df], axis=1)
+
+# %% [markdown]
+# We fit and test the best model on the SMOTE oversampled dataset:
 
 # %%
 # fit the model on all the training data
@@ -213,6 +231,9 @@ file = open(f'{RESULTS_DIR}/{clf_name}_smote.pkl', 'wb')
 pickle.dump(obj=nb_smote, file=file)
 file.close()
 
+# %% [markdown]
+# We compare the performance of the best model on the three datasets:
+
 # %%
 test_over_scores = compute_clf_scores(
     y_true=true_labels_test,
@@ -238,6 +259,9 @@ test_smote_scores = compute_clf_scores(
 
 pd.concat([test_scores, test_over_scores, test_smote_scores])
 
+# %% [markdown]
+# We display confusion matrices:
+
 # %%
 plot_confusion_matrix(
     y_true=true_labels_test,
@@ -252,6 +276,9 @@ plot_confusion_matrix(
     title=clf_name + ' SMOTE'
 )
 
+# %% [markdown]
+# We plot incidents (actual class and predicted class) in different feature spaces:
+
 # %%
 plot_predictions_in_features_space(
     df=incidents_test_df,
@@ -261,8 +288,14 @@ plot_predictions_in_features_space(
     figsize=(15, 50)
 )
 
+# %% [markdown]
+# We plot the ROC curve:
+
 # %%
 plot_roc(y_true=true_labels_test, y_probs=[pred_probas_test[:,1]], names=[clf_name])
+
+# %% [markdown]
+# We plot the decision boundaries:
 
 # %%
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
@@ -277,6 +310,9 @@ plot_PCA_decision_boundary(
   pca=True
 )
 
+# %% [markdown]
+# We plot the learning curve:
+
 # %%
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_learning_curve(
@@ -288,6 +324,9 @@ plot_learning_curve(
     train_sizes=np.linspace(0.1, 1.0, 5),
     metric='f1'
 )
+
+# %% [markdown]
+# We plot the distribution of the features for misclassified incidents:
 
 # %%
 plot_distribution_missclassifications(
