@@ -1,0 +1,2 @@
+,mean_fit_time,std_fit_time,mean_score_time,std_score_time,param_k,param_prune_size,params,split0_test_score,split1_test_score,mean_test_score,std_test_score,rank_test_score
+RipperClassifier,270.23151898384094,95.59593605995178,0.30998051166534424,0.011304497718811035,2,0.5,"{'k': 2, 'prune_size': 0.5}",0.394025714065748,0.3984616544755297,0.39624368427063883,0.002217970204890868,1
