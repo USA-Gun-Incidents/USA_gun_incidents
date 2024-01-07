@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %% [markdown]
 # # Definition and study of the features to use for the classification task
 
@@ -15,7 +14,7 @@ import seaborn as sns
 import json
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-# %matplotlib inline
+%matplotlib inline
 from classification_utils import *
 from enum import Enum
 import pyproj
@@ -848,20 +847,25 @@ save_freq_feature_values(df=X_train_df[y_train==1][features_db], path='../data/c
 save_freq_feature_values(df=X_train_df[y_train==0][features_db], path='../data/classification_results/non_fatal_db_default_features.csv')
 
 # %%
-default_db = X_train_df[features_db].median()
-default_db['day_of_week_x'] = 0
-default_db['day_of_week_y'] = 0
-default_db['day_x'] = 0
-default_db['day_y'] = 0
-default_db['month_x'] = 0
-default_db['month_y'] = 0
-default_db.to_frame().T.to_csv('../data/classification_results/db_default_features.csv', index=False)
 default_rb = X_train_df[features_rb].median()
 default_rb.to_frame().T.to_csv('../data/classification_results/rb_default_features.csv', index=False)
 
+default_db = X_train_df[features_db].median()
+
+default_db['day_x'] = np.sin(2 * np.pi * default_rb['day'] / 31.0)
+default_db['day_y'] = np.cos(2 * np.pi * default_rb['day'] / 31.0)
+
+default_db['day_of_week_x'] = np.sin(2 * np.pi * default_rb['day_of_week'] / 31.0)
+default_db['day_of_week_y'] = np.cos(2 * np.pi * default_rb['day_of_week'] / 31.0)
+
+default_db['month_x'] = np.sin(2 * np.pi * default_rb['month'] / 31.0)
+default_db['month_y'] = np.cos(2 * np.pi * default_rb['month'] / 31.0)
+
+default_db.to_frame().T.to_csv('../data/classification_results/db_default_features.csv', index=False)
+
 # %% [markdown]
 # TODO: compilare una volta definiti
-#
+# 
 # # Final Indicators semantics
 # | Name | Description | Present in the original dataset |
 # | :--: | :---------: | :-----------------------------: |
