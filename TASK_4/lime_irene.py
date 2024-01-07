@@ -11,7 +11,7 @@ import lime
 import lime.lime_tabular
 from IPython.display import HTML, Image
 import pydotplus
-from sklearn.tree import export_graphviz
+from sklearn.tree import export_graphviz    
 from explanation_utils import *
 
 # %%
@@ -70,9 +70,9 @@ rb_clf_names = [
     Classifiers.DT.value,
     Classifiers.RF.value,
     Classifiers.XGB.value,
-    Classifiers.AB.value,
-    Classifiers.NBM.value,
-    Classifiers.RIPPER.value
+    #Classifiers.AB.value,
+    #Classifiers.NBM.value,
+    #Classifiers.RIPPER.value
 ]
 
 

@@ -1,10 +1,10 @@
 # %% [markdown]
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
-# 
+#
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
-# 
+#
 # # Extreme Gradient Boosting Classifier
-# 
+#
 # We import the libraries and define constants and settings of the notebook:
 
 # %%
@@ -73,7 +73,7 @@ categorical_features = [
 # - colsample_bylevel: is the subsample ratio of columns for each level. Subsampling occurs once for every new depth level reached in a tree. Columns are subsampled from the set of columns chosen for the current tree (default=1).
 # - colsample_bynode: is the subsample ratio of columns for each node (split). Subsampling occurs once every time a new split is evaluated. Columns are subsampled from the set of columns chosen for the current level (default=1).
 # - max_depth: Maximum depth of a tree. Increasing this value will make the model more complex and more likely to overfit. 0 indicates no limit on depth (default=6).
-# 
+#
 # Fixed parameters (many other parameters can be tuned, here we report only the most important one):
 # - eta: Step size shrinkage used in update to prevents overfitting. After each boosting step, we can directly get the weights of new features, and eta shrinks the feature weights to make the boosting process more conservative (default=0.3).
 
