@@ -1,10 +1,13 @@
 # %%
 import pandas as pd
+import numpy as np
 from explanation_utils import *
-
-# %%
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
+DATA_DIR = '../data/classification_results/'
+
+# %% [markdown]
+# We load the test set and the predictions of the classifiers:
 
 # %%
 incidents_test_df = pd.read_csv('../data/clf_indicators_test.csv', index_col=0)
@@ -13,10 +16,8 @@ true_labels_test = true_labels_test_df.values.ravel()
 
 clf_names = [clf.value for clf in Classifiers]
 
-DATA_DIR = '../data/classification_results/'
 preds = get_classifiers_predictions(DATA_DIR)
 
-# %%
 incidents_train_df = pd.read_csv('../data/clf_indicators_train.csv', index_col=0)
 true_labels_train_df = pd.read_csv('../data/clf_y_train.csv', index_col=0)
 
@@ -29,6 +30,9 @@ true_labels_train_df = pd.read_csv('../data/clf_y_train.csv', index_col=0)
     incidents_train_df[(incidents_train_df['suicide']==1) & (true_labels_train_df['death']==1)].shape[0] + 
     incidents_test_df[(incidents_test_df['suicide']==1) & (true_labels_test_df['death']==1)].shape[0]
 )*100
+
+# %%
+100-((incidents_train_df[(incidents_train_df['suicide']==1) & (true_labels_train_df['death']==0)].shape[0])/(incidents_train_df[(incidents_train_df['suicide']==1)].shape[0])*100)
 
 # %%
 selected_records_to_explain = {}
@@ -160,7 +164,7 @@ selected_records_df
 
 # %%
 random_records_to_explain = {}
-random_records_to_explain['positions'] = np.arange(0, 51) # TODO: decidere se prenderli a caso o con un criterio
+random_records_to_explain['positions'] = np.arange(0, 51)
 random_records_to_explain['true labels'] = true_labels_test[0: 51]
 random_records_df = pd.DataFrame(random_records_to_explain)
 random_records_df.to_csv('../data/explanation_results/random_records_to_explain.csv')

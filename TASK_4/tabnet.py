@@ -1,10 +1,10 @@
 # %% [markdown]
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
-# 
+#
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
-# 
+#
 # # TabNet
-# 
+#
 # We import the libraries and define constants and settings of the notebook:
 
 # %%
@@ -62,9 +62,7 @@ tabnet.fit(
   eval_set=[(train_set, train_labels), (val_set, val_labels)],
   eval_name=['train', 'val'],
   eval_metric=['balanced_accuracy', 'logloss'],
-  max_epochs=50,
-  augmentations= ClassificationSMOTE(p=0.2),
-  weights=1,
+  max_epochs=200
 )
 fit_time = time()-fit_start
 
@@ -212,7 +210,7 @@ display_feature_importances(
 
 # %% [markdown]
 # # Local interpretation
-# 
+#
 # ## Attempted Suicide
 
 # %%
@@ -249,8 +247,11 @@ axs.set_xlabel('feature importance (mask 1 + mask 2 + mask 3)')
 sorted_idx = np.argsort(explanation[0])
 sorted_features_names = [features_for_clf[j] for j in sorted_idx]
 sorted_features_imp = [explanation[0][j] for j in sorted_idx]
-plt.barh(y=sorted_features_names, width=sorted_features_imp)
+fig, axs = plt.subplots(1, figsize=(7, 8))
+plt.barh(y=sorted_features_names, width=sorted_features_imp, ax=axs)
 axs.set_xlabel('feature importance (explanation)')
+axs.set_xlabel('feature importance')
+axs.title("TabNet's local explanation for a suicide attempt")
 
 # %% [markdown]
 # ## Mass shooting
@@ -288,8 +289,10 @@ axs.set_xlabel('feature importance (mask 1 + mask 2 + mask 3)')
 sorted_idx = np.argsort(explanation[0])
 sorted_features_names = [features_for_clf[j] for j in sorted_idx]
 sorted_features_imp = [explanation[0][j] for j in sorted_idx]
-plt.barh(y=sorted_features_names, width=sorted_features_imp)
-axs.set_xlabel('feature importance (explanation)')
+fig, axs = plt.subplots(1, figsize=(7, 8))
+plt.barh(y=sorted_features_names, width=sorted_features_imp, ax=axs)
+axs.set_xlabel('feature importance')
+axs.title("TabNet's local explanation for a mass shooting")
 
 # %% [markdown]
 # # Evaluation of explanations

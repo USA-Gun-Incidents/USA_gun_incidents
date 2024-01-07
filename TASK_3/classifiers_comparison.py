@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # %%
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -57,16 +58,16 @@ cv_train_scores[['std_test_score', 'mean_test_score']].style.background_gradient
 
 # %%
 train_scores.style.background_gradient(cmap='Blues', axis=0)
-# train_scores[[
-#     'precision-Non-Fatal',
-#     'recall-Non-Fatal',
-#     'precision-Fatal',
-#     'recall-Fatal',
-#     'f1-score-macro avg',
-#     'accuracy',
-#     'auroc',
-#     'params'
-#     ]].style.background_gradient(cmap='Blues', axis=0).to_latex('./train.tex')
+train_scores[[
+    'precision-Non-Fatal',
+    'recall-Non-Fatal',
+    'precision-Fatal',
+    'recall-Fatal',
+    'f1-score-macro avg',
+    'accuracy',
+    'auroc',
+    'params'
+    ]].style.background_gradient(cmap='Blues', axis=0).to_latex('./train.tex')
 
 # %% [markdown]
 # Test scores comparison:

@@ -1,10 +1,10 @@
 # %% [markdown]
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
-# 
+#
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
-# 
+#
 # # Explainable Boosting Machine (EBM)
-# 
+#
 # We import the libraries and define constants and settings of the notebook:
 
 # %%
@@ -57,9 +57,19 @@ print(features_for_clf)
 print(f'Number of features: {len(features_for_clf)}')
 
 # %%
+feature_types = []
+for feature in features_for_clf:
+    if feature in ['location_imp', 'x', 'y', 'age_range', 'avg_age', 'n_child_prop', 'n_teen_prop', 'n_males_prop', 'n_participants', 'days_from_first_incident', 'poverty_perc']:
+        feature_types.append('continuous')
+    elif feature in ['day', 'day_of_week', 'month', 'year', 'gun_law_rank']:
+        feature_types.append('ordinal')
+    else:
+        feature_types.append('nominal')
+
+# %%
 params = {
     'feature_names' : features_for_clf,
-    'feature_types': None,
+    'feature_types': feature_types,
     'max_bins': 256,
     'max_interaction_bins': 32,
     'interactions': 10,
