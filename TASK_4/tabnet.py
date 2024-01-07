@@ -219,6 +219,7 @@ attempted_suicide_pos = selected_records_to_explain_df[selected_records_to_expla
 
 # %%
 explanation, mask = tabnet.explain(indicators_test_df.iloc[attempted_suicide_pos].values.reshape(1,-1), normalize=False)
+prediction = tabnet.predict(indicators_test_df.iloc[attempted_suicide_pos].values.reshape(1,-1))
 
 # %%
 fig, axs = plt.subplots(1, 3, figsize=(16, 6), sharex=True)
@@ -248,10 +249,10 @@ sorted_idx = np.argsort(explanation[0])
 sorted_features_names = [features_for_clf[j] for j in sorted_idx]
 sorted_features_imp = [explanation[0][j] for j in sorted_idx]
 fig, axs = plt.subplots(1, figsize=(7, 8))
-plt.barh(y=sorted_features_names, width=sorted_features_imp, ax=axs)
+axs.barh(y=sorted_features_names, width=sorted_features_imp)
 axs.set_xlabel('feature importance (explanation)')
 axs.set_xlabel('feature importance')
-axs.title("TabNet's local explanation for a suicide attempt")
+axs.set_title(f"TabNet's local explanation for a suicide attempt (prediction={prediction[0]})")
 
 # %% [markdown]
 # ## Mass shooting
@@ -261,6 +262,7 @@ mass_shooting_pos = selected_records_to_explain_df[selected_records_to_explain_d
 
 # %%
 explanation, mask = tabnet.explain(indicators_test_df.iloc[mass_shooting_pos].values.reshape(1,-1), normalize=False)
+prediction = tabnet.predict(indicators_test_df.iloc[mass_shooting_pos].values.reshape(1,-1))
 
 # %%
 fig, axs = plt.subplots(1, 3, figsize=(16, 6), sharex=True)
@@ -290,9 +292,9 @@ sorted_idx = np.argsort(explanation[0])
 sorted_features_names = [features_for_clf[j] for j in sorted_idx]
 sorted_features_imp = [explanation[0][j] for j in sorted_idx]
 fig, axs = plt.subplots(1, figsize=(7, 8))
-plt.barh(y=sorted_features_names, width=sorted_features_imp, ax=axs)
+axs.barh(y=sorted_features_names, width=sorted_features_imp)
 axs.set_xlabel('feature importance')
-axs.title("TabNet's local explanation for a mass shooting")
+axs.set_title(f"TabNet's local explanation for a mass shooting (prediction={prediction[0]})")
 
 # %% [markdown]
 # # Evaluation of explanations
