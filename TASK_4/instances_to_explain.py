@@ -90,7 +90,7 @@ for clf_name in clf_names:
         pos = preds[clf_name]['probs'].idxmax()
         indeces_max_prob_death.append(pos)
 
-        selected_records_to_explain['indexes'].append(indeces_max_prob_death[-1])
+        selected_records_to_explain['indexes'].append(-1)
         selected_records_to_explain['positions'].append(pos)
         selected_records_to_explain['instance names'].append(f'Fatal with highest confidence by {clf_name}')
         selected_records_to_explain['true labels'].append(true_labels_test[pos])
@@ -122,7 +122,7 @@ for clf_name in clf_names:
         pos = preds[clf_name]['probs'].idxmin()
         indeces_min_prob_death.append(pos)
 
-        selected_records_to_explain['indexes'].append(indeces_min_prob_death[-1])
+        selected_records_to_explain['indexes'].append(-1)
         selected_records_to_explain['positions'].append(pos)
         selected_records_to_explain['instance names'].append(f'Non-Fatal with highest confidence by {clf_name}')
         selected_records_to_explain['true labels'].append(true_labels_test[pos])
