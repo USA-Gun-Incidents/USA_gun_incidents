@@ -1,0 +1,17 @@
+,indexes,positions,instance names,true labels
+0,161087,243,Attempted Suicide,0
+1,15325,22475,Mass shooting,1
+2,24457,24457,Fatal with highest confidence by DecisionTreeClassifier,0
+3,22475,22475,Fatal with highest confidence by NeuralNetworkClassifier,1
+4,19289,19289,Fatal with highest confidence by RandomForestClassifier,1
+5,102,102,Fatal with highest confidence by NaiveBayesMixedClassifier,1
+6,2,2,Fatal with highest confidence by SupportVectorMachineClassifier,1
+7,19609,19609,Fatal with highest confidence by TabNetClassifier,0
+8,39930,39930,Fatal with highest confidence by ExtremeGradientBoostingClassifier,1
+9,45,45,Non-Fatal with highest confidence by DecisionTreeClassifier,0
+10,11801,11801,Non-Fatal with highest confidence by NeuralNetworkClassifier,0
+11,38574,38574,Non-Fatal with highest confidence by RandomForestClassifier,0
+12,35589,35589,Non-Fatal with highest confidence by NaiveBayesMixedClassifier,0
+13,0,0,Non-Fatal with highest confidence by SupportVectorMachineClassifier,0
+14,5237,5237,Non-Fatal with highest confidence by TabNetClassifier,0
+15,2140,2140,Non-Fatal with highest confidence by ExtremeGradientBoostingClassifier,0

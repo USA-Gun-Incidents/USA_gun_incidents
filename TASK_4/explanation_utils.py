@@ -16,17 +16,17 @@ def evaluate_explanation(model, instance, feature_importances, feature_defaults)
 
 class Classifiers(Enum):
     # TODO: aggiungere gli altri
-    DT = 'DecisionTreeClassifier'
-    KNN = 'KNearestNeighborsClassifier'
-    NC = 'NearestCentroidClassifier'
-    NN = 'NeuralNetworkClassifier'
-    RF = 'RandomForestClassifier'
-    AB = 'AdaBoostClassifier'
+    DT = 'DecisionTreeClassifier' # tree
+    KNN = 'KNearestNeighborsClassifier' #kernel explainer
+    NC = 'NearestCentroidClassifier' #kernel explainer
+    NN = 'NeuralNetworkClassifier' #deep explainer / kernel
+    RF = 'RandomForestClassifier' # tree
+    #AB = 'AdaBoostClassifier'
     NBM = 'NaiveBayesMixedClassifier'
-    RIPPER = 'RipperClassifier'
-    SVM = 'SupportVectorMachineClassifier'
+    #RIPPER = 'RipperClassifier'
+    SVM = 'SupportVectorMachineClassifier' #kernel
     TN = 'TabNetClassifier'
-    XGB = 'ExtremeGradientBoostingClassifier'
+    XGB = 'ExtremeGradientBoostingClassifier' # tree
 
 def get_classifiers_objects(load_path, delete_feature_names=True): # TODO: verificarne il funzionamento una volta aggiunti gli altri
     def nn_model(meta, hidden_layer_sizes, dropouts, activation_functions, last_activation_function):
@@ -60,6 +60,7 @@ def get_classifiers_objects(load_path, delete_feature_names=True): # TODO: verif
             classifiers[clf_name] = tn
         else:
             with open(load_path+clf_name+'.pkl', 'rb') as file:
+                print(clf_name)
                 classifiers[clf_name] = pickle.load(file)
         if delete_feature_names:
             if clf_name != Classifiers.XGB.value:

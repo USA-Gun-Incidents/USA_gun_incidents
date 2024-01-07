@@ -1,0 +1,19 @@
+,DecisionTreeClassifier
+Attempted Suicide,0.9724558020538191
+Mass shooting,0.9772527466451938
+Fatal with highest confidence by DecisionTreeClassifier,0.18458038483912514
+Fatal with highest confidence by NeuralNetworkClassifier,0.9772527466451938
+Fatal with highest confidence by RandomForestClassifier,0.9801993661409919
+Fatal with highest confidence by AdaBoostClassifier,0.9791510555490401
+Fatal with highest confidence by NaiveBayesMixedClassifier,0.9787042737103362
+Fatal with highest confidence by SupportVectorMachineClassifier,-0.3491546801251712
+Fatal with highest confidence by TabNetClassifier,0.9772527466451938
+Fatal with highest confidence by ExtremeGradientBoostingClassifier,0.9668606771290985
+Non-Fatal with highest confidence by DecisionTreeClassifier,0.9568729029018525
+Non-Fatal with highest confidence by NeuralNetworkClassifier,0.8321558042875826
+Non-Fatal with highest confidence by RandomForestClassifier,0.8849833089761941
+Non-Fatal with highest confidence by AdaBoostClassifier,0.8851052616032878
+Non-Fatal with highest confidence by NaiveBayesMixedClassifier,0.6396782937761036
+Non-Fatal with highest confidence by SupportVectorMachineClassifier,0.22495500898480728
+Non-Fatal with highest confidence by TabNetClassifier,0.858146397198812
+Non-Fatal with highest confidence by ExtremeGradientBoostingClassifier,0.7597970213705102
