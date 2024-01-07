@@ -85,7 +85,7 @@ classifiers = get_classifiers_objects('../data/classification_results/')
 # - discretize_continuous = True (continuous features are discretized into quartiles)
 # - discretizer = 'quartile'
 # - sample_around_instance = False (sample from a normal centered on the mean of the feature data)
-#
+# 
 # Also to explain instances we will use deault parameters, i.e.:
 # - num_samples = 5000, number of samples to generate
 # - distance_metric = 'euclidean', distance metric to use for weights
@@ -300,6 +300,12 @@ for clf_name in clf_names:
     clf_metrics = {}
     for i in range(instances.shape[0]):
         prediction = classifier.predict(instances[i].reshape(1,-1))[0]
+        if clf_name == Classifiers.SVM.value:
+            prob = classifier.predict_proba(instances[i].reshape(1,-1))[0]
+            if prob[1] >= 0.5:
+                prediction = 1
+            else:
+                prediction = 0
         explanation = explainer.explain_instance(instances[i], classifier.predict_proba, num_features=instances.shape[1], top_labels=1)
         #print(explanation, prediction)
         feature_importances = get_lime_importance_from_explanation(explanation, prediction)
@@ -326,6 +332,12 @@ monotonity_df.to_csv('../data/explanation_results/lime_monotonicity_selected_rec
 metrics_selected_records_df
 
 # %%
+explanation.local_exp[0]
+# feature_importances = np.zeros(len(pred_explanation))
+# for tuple in pred_explanation:
+#     feature_importances[tuple[0]] = tuple[1]
+
+# %%
 random_records_to_explain_df = pd.read_csv('../data/explanation_results/random_records_to_explain.csv', index_col=0)
 positions_to_explain = random_records_to_explain_df['positions'].to_list()
 true_labels_to_explain = random_records_to_explain_df['true labels'].to_list()
@@ -345,6 +357,12 @@ for clf_name in clf_names:
     faithfulness = []
     for i in range(instances.shape[0]):
         prediction = classifier.predict(instances[i].reshape(1,-1))[0]
+        if clf_name == Classifiers.SVM.value:
+            prob = classifier.predict_proba(instances[i].reshape(1,-1))[0]
+            if prob[1] >= 0.5:
+                prediction = 1
+            else:
+                prediction = 0
         explanation = explainer.explain_instance(instances[i], classifier.predict_proba, num_features=instances.shape[1], top_labels=1)
         feature_importances = get_lime_importance_from_explanation(explanation, prediction)
         feature_default = feature_defaults[0] if true_labels_test[i] == 1 else feature_defaults[1]
