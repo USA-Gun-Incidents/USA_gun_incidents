@@ -823,29 +823,41 @@ pd.DataFrame(train_smote_infos, index=['train'])
 # We define a function to compute and save the most frequent values for each feature:
 
 # %%
-def save_default_feature_values(df, path):
+def save_freq_feature_values(df, path):
     # compute the most frequent value for each feature
-    default = df.agg(lambda x: x.value_counts().index[0])
+    freq = df.agg(lambda x: x.value_counts().index[0])
     if 'day_of_week_x' in df.columns: # distance based features
-        default_day_of_week_x, default_day_of_week_y = df.groupby(["day_of_week_x", "day_of_week_y"]).size().sort_values(ascending=False).index[0]
-        default['day_of_week_x'] = default_day_of_week_x
-        default['day_of_week_y'] = default_day_of_week_y
-        default_day_x, default_day_y = df.groupby(["day_x", "day_y"]).size().sort_values(ascending=False).index[0]
-        default['day_x'] = default_day_x
-        default['day_y'] = default_day_y
-        default_month_x, default_month_y = df.groupby(["month_x", "month_y"]).size().sort_values(ascending=False).index[0]
-        default['month_x'] = default_month_x
-        default['month_y'] = default_month_y
-    default.to_frame().T.to_csv(path, index=False)
+        freq_day_of_week_x, freq_day_of_week_y = df.groupby(["day_of_week_x", "day_of_week_y"]).size().sort_values(ascending=False).index[0]
+        freq['day_of_week_x'] = freq_day_of_week_x
+        freq['day_of_week_y'] = freq_day_of_week_y
+        freq_day_x, freq_day_y = df.groupby(["day_x", "day_y"]).size().sort_values(ascending=False).index[0]
+        freq['day_x'] = freq_day_x
+        freq['day_y'] = freq_day_y
+        freq_month_x, freq_month_y = df.groupby(["month_x", "month_y"]).size().sort_values(ascending=False).index[0]
+        freq['month_x'] = freq_month_x
+        freq['month_y'] = freq_month_y
+    freq.to_frame().T.to_csv(path, index=False)
 
 # %% [markdown]
 # We apply that function to compute the most frequent values for each feature in fatal and non-fatal incidents:
 
 # %%
-save_default_feature_values(df=X_train_df[y_train==1][features_rb], path='../data/classification_results/fatal_rb_default_features.csv')
-save_default_feature_values(df=X_train_df[y_train==0][features_rb], path='../data/classification_results/non_fatal_rb_default_features.csv')
-save_default_feature_values(df=X_train_df[y_train==1][features_db], path='../data/classification_results/fatal_db_default_features.csv')
-save_default_feature_values(df=X_train_df[y_train==0][features_db], path='../data/classification_results/non_fatal_db_default_features.csv')
+save_freq_feature_values(df=X_train_df[y_train==1][features_rb], path='../data/classification_results/fatal_rb_default_features.csv')
+save_freq_feature_values(df=X_train_df[y_train==0][features_rb], path='../data/classification_results/non_fatal_rb_default_features.csv')
+save_freq_feature_values(df=X_train_df[y_train==1][features_db], path='../data/classification_results/fatal_db_default_features.csv')
+save_freq_feature_values(df=X_train_df[y_train==0][features_db], path='../data/classification_results/non_fatal_db_default_features.csv')
+
+# %%
+default_db = X_train_df[features_db].median()
+default_db['day_of_week_x'] = 0
+default_db['day_of_week_y'] = 0
+default_db['day_x'] = 0
+default_db['day_y'] = 0
+default_db['month_x'] = 0
+default_db['month_y'] = 0
+default_db.to_frame().T.to_csv('../data/classification_results/db_default_features.csv', index=False)
+default_rb = X_train_df[features_rb].median()
+default_rb.to_frame().T.to_csv('../data/classification_results/rb_default_features.csv', index=False)
 
 # %% [markdown]
 # TODO: compilare una volta definiti
