@@ -1,0 +1,17 @@
+,DecisionTreeClassifier,RandomForestClassifier
+Attempted Suicide,False,False
+Mass shooting,True,False
+Fatal with highest confidence by DecisionTreeClassifier,False,False
+Fatal with highest confidence by NeuralNetworkClassifier,False,False
+Fatal with highest confidence by RandomForestClassifier,True,False
+Fatal with highest confidence by NaiveBayesMixedClassifier,False,False
+Fatal with highest confidence by SupportVectorMachineClassifier,False,False
+Fatal with highest confidence by TabNetClassifier,False,False
+Fatal with highest confidence by ExtremeGradientBoostingClassifier,True,False
+Non-Fatal with highest confidence by DecisionTreeClassifier,True,False
+Non-Fatal with highest confidence by NeuralNetworkClassifier,False,False
+Non-Fatal with highest confidence by RandomForestClassifier,True,False
+Non-Fatal with highest confidence by NaiveBayesMixedClassifier,False,False
+Non-Fatal with highest confidence by SupportVectorMachineClassifier,False,False
+Non-Fatal with highest confidence by TabNetClassifier,False,False
+Non-Fatal with highest confidence by ExtremeGradientBoostingClassifier,True,False

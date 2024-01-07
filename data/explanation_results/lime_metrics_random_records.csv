@@ -1,0 +1,3 @@
+,DecisionTreeClassifier,RandomForestClassifier
+mean faithfulness,0.18116192935145417,0.2292083565696609
+std faithfulness,0.16316355085320908,0.15345348993081148

@@ -2,6 +2,7 @@
 import pandas as pd
 import matplotlib
 import numpy as np
+import math
 import random
 import json
 import shap
@@ -14,7 +15,8 @@ import matplotlib.pyplot
 
 # %%
 RANDOM_STATE = 42
-NSAMPLE = 100
+NSAMPLE = 50
+NBASETRAINISTANCES = 5
 
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
@@ -47,7 +49,8 @@ preds = get_classifiers_predictions('../data/classification_results/')
 classifiers = get_classifiers_objects('../data/classification_results/')
 
 clf_names = [clf.value for clf in Classifiers]
-rb_clf_names = [Classifiers.DT.value, Classifiers.RF.value, Classifiers.NN.value]#, Classifiers.SVM.value]#, Classifiers.RIPPER.value, Classifiers.DT.value, Classifiers.XGB.value, ]
+rb_clf_names = [Classifiers.DT.value, Classifiers.RF.value, Classifiers.XGB.value]
+db_clf_names = [Classifiers.NN.value, Classifiers.SVM.value]
 
 # features to analyze
 features_to_explore = [
@@ -89,6 +92,8 @@ MASS_SHOOTING_OFFSET = -selected_records_to_explain_df.shape[0] + 1
 explainers = {}
 shap_values = {}
 shap_interaction_values = {}
+shap.initjs()
+minmax_scaler = MinMaxScaler().fit(indicators_train_db_df.values) # the explainer remove the feature names
 
 # %% [markdown]
 # ## Decision Tree
@@ -104,10 +109,13 @@ shap.summary_plot(shap_values[Classifiers.DT.value][1], indicators_test_rb_df_sa
 # alto abs(shap) => grande importanza
 
 # %%
-shap.dependence_plot(
-    ("avg_age", "aggression"),
-    shap_values[Classifiers.DT.value][1], indicators_test_rb_df_samples
-)
+'''shap.dependence_plot(
+    ("age_range", "aggression"),
+    shap_interaction_values[Classifiers.DT.value][1], indicators_test_rb_df_samples
+)'''# TODO: capire cosa sono i valori interaction??
+
+# %%
+shap.dependence_plot("age_range", shap_values[Classifiers.DT.value][1], indicators_test_rb_df_samples)
 
 # %%
 shap.dependence_plot("avg_age", shap_values[Classifiers.DT.value][1], indicators_test_rb_df_samples) # Fatal (shap_values_tree[0] is symmetric, only the sign changes)
@@ -118,14 +126,14 @@ shap.dependence_plot("avg_age", shap_values[Classifiers.DT.value][1], indicators
 # quando è nagativo lo stato è democratico => in stati democratici la mortalità in giovani è minore
 
 # %%
-shap.dependence_plot("aggression", shap_values[Classifiers.DT.value][1], indicators_test_rb_df_samples)
+shap.dependence_plot("y", shap_values[Classifiers.DT.value][1], indicators_test_rb_df_samples)
 #da commentare
 
 # %%
 shap_interaction_values[Classifiers.DT.value] = explainers[Classifiers.DT.value].shap_interaction_values(indicators_test_rb_df_samples)
 
 # %%
-shap.summary_plot(shap_interaction_values[Classifiers.DT.value][1], indicators_test_rb_df_samples, max_display=31) # Fatal
+#shap.summary_plot(shap_interaction_values[Classifiers.DT.value][1], indicators_test_rb_df_samples, max_display=31) # Fatal
 # il colore è il valore assunto dalla feature sulle righe (road, school, etc sono per lp più blu sulle righe)
 # la posizione lungo y non ha una scala, mostra solo quanti punti ci sono
 # interaction value negativo => 
@@ -148,7 +156,6 @@ shap.dependence_plot(
 # TODO: cosa significa il valore di interazione? non è una correlazione...
 
 # %%
-shap.initjs()
 force_plot = shap.force_plot(shap.TreeExplainer(classifiers[Classifiers.DT.value]).expected_value[1], shap_values[Classifiers.DT.value][1], indicators_test_rb_df_samples)
 show = show_plot(force_plot)
 # gli esempi sono ordinati su asse x
@@ -207,26 +214,50 @@ force_plot = shap.force_plot(explainers[Classifiers.RF.value].expected_value[1],
 show = show_plot(force_plot)
 
 # %% [markdown]
+# ## Extreme Gradient Boosting
+
+# %%
+explainers[Classifiers.XGB.value] = shap.TreeExplainer(classifiers[Classifiers.XGB.value])
+shap_values[Classifiers.XGB.value] = explainers[Classifiers.XGB.value].shap_values(indicators_test_rb_df_samples)
+
+# %%
+shap.summary_plot(shap_values[Classifiers.XGB.value], indicators_test_rb_df_samples,plot_size=(10,5), plot_type="bar")
+shap.summary_plot(shap_values[Classifiers.XGB.value], indicators_test_rb_df_samples,plot_size=(10,5))
+#shap.summary_plot(shap_values[Classifiers.XGB.value][1], indicators_test_rb_df_samples,plot_size=(10,5))
+# in classificazione binaria le altezze delle barre sono uguali
+# alto abs(shap) => grande importanza
+
+# %%
+shap.dependence_plot("illegal_holding", shap_values[Classifiers.XGB.value], indicators_test_rb_df_samples)
+# ancora una volta avg_age influenza molto il risultato con una divisione quasi netta intorno ad x=30
+# in più notiamo come drug_alcohol se è positivo, tende a diminuire il peso di avg_age nella decisione finale
+
+# %%
+force_plot = shap.force_plot(explainers[Classifiers.XGB.value].expected_value, shap_values[Classifiers.XGB.value], indicators_test_rb_df_samples)
+show = show_plot(force_plot)
+
+# %%
+shap.decision_plot(explainers[Classifiers.XGB.value].expected_value, 
+                shap_values[Classifiers.XGB.value], 
+                indicators_test_rb_df_samples.columns)
+
+# %% [markdown]
 # ## Feed Forward Neural Network
 
 # %%
-minmax_scaler = MinMaxScaler().fit(indicators_train_db_df.values) # the explainer remove the feature names
 def f_nn(X):
     X = minmax_scaler.transform(X)
     X = K.constant(X)
-    #print(X)
-    #pred = classifiers[Classifiers.NN.value].model.predict(X).flatten()
-    #pred = np.array([round(x) for x in pred])
-    return classifiers[Classifiers.NN.value].model.predict(X).flatten()
-
+    return classifiers[Classifiers.NN.value].predict(X).flatten()
 
 # %%
 #np.seterr(divide = 'ignore') # ignore the log10 divizion for 0 warning
-explainers[Classifiers.NN.value] = shap.KernelExplainer(f_nn , indicators_train_db_df_samples.sample(10, random_state=RANDOM_STATE), seed=RANDOM_STATE)
+explainers[Classifiers.NN.value] = shap.KernelExplainer(f_nn , indicators_train_db_df_samples.sample(NBASETRAINISTANCES, random_state=RANDOM_STATE), seed=RANDOM_STATE)
 shap_values[Classifiers.NN.value] = explainers[Classifiers.NN.value].shap_values(indicators_test_db_df_samples)
 #np.seterr(divide = 'warn') 
 
 # %%
+shap.summary_plot(shap_values[Classifiers.NN.value], indicators_test_db_df_samples ,plot_size=(10,5), plot_type='bar')
 shap.summary_plot(shap_values[Classifiers.NN.value], indicators_test_db_df_samples ,plot_size=(10,5))
 # in classificazione binaria le altezze delle barre sono uguali
 # alto abs(shap) => grande importanza
@@ -250,55 +281,59 @@ show = show_plot(force_plot)
 # ## Support Vector Machine
 
 # %%
-#f_NC = lambda x: classifiers[Classifiers.NC.value].predict(x)[:,1]
-#minmax_scaler = MinMaxScaler().fit(indicators_train_db_df.values) # the explainer remove the feature names
 def f_svm(X):
     X = minmax_scaler.transform(X)
-    #X = K.constant(X)
-    #print(X)
-    #pred = classifiers[Classifiers.NN.value].model.predict(X).flatten()
-    #pred = np.array([round(x) for x in pred])
-    return classifiers[Classifiers.SVM.value].predict(X).flatten()
+    return np.array([x[1] for x in classifiers[Classifiers.SVM.value].predict_proba(X)])
 
 # %%
-f_svm(indicators_test_db_df_samples.values)
+explainers[Classifiers.SVM.value] = shap.KernelExplainer(f_svm , 
+                                                         indicators_train_db_df_samples.sample(math.ceil(NBASETRAINISTANCES/5), random_state=RANDOM_STATE), 
+                                                         seed=RANDOM_STATE)
+#explainers[Classifiers.SVM.value] = shap.KernelExplainer(f_svm , indicators_train_db_df_samples.sample(4, random_state=RANDOM_STATE), seed=RANDOM_STATE)
+shap_values[Classifiers.SVM.value] = explainers[Classifiers.SVM.value].shap_values(indicators_test_db_df_samples[ATTEMPTED_SUICIDE_OFFSET:])
 
 # %%
-#np.seterr(divide = 'ignore') # ignore the log10 divizion for 0 warning
-explainers[Classifiers.SVM.value] = shap.KernelExplainer(classifiers[Classifiers.SVM.value] , indicators_train_db_df_samples, seed=RANDOM_STATE)
-shap_values[Classifiers.NN.value] = explainers[Classifiers.NN.value].shap_values(indicators_test_db_df_samples)
-#np.seterr(divide = 'warn') 
-
-# %% [markdown]
-# ## Nearest Centroid
-
-# %%
-#f_NC = lambda x: classifiers[Classifiers.NC.value].predict(x)[:,1]
-#minmax_scaler = MinMaxScaler().fit(indicators_train_db_df.values) # the explainer remove the feature names
-def f_nc(X):
-    X = minmax_scaler.transform(X)
-    #X = K.constant(X)
-    #pred = classifiers[Classifiers.NN.value].model.predict(X).flatten()
-    #pred = np.array([round(x) for x in pred])
-    return classifiers[Classifiers.NC.value].predict(X).flatten()
-
-# %%
-#np.seterr(divide = 'ignore') # ignore the log10 divizion for 0 warning
-explainers[Classifiers.NC.value] = shap.KernelExplainer(f_nc , indicators_train_db_df_samples, seed=RANDOM_STATE) #indicators_train_db_df_samples.sample(10, random_state=RANDOM_STATE), seed=RANDOM_STATE)
-shap_values[Classifiers.NC.value] = explainers[Classifiers.NC.value].shap_values(indicators_test_db_df_samples)
-#np.seterr(divide = 'warn') 
-
-# %%
-shap.summary_plot(shap_values[Classifiers.NC.value], indicators_test_db_df_samples ,plot_size=(10,5))
+shap.summary_plot(shap_values[Classifiers.SVM.value], indicators_test_db_df_samples[ATTEMPTED_SUICIDE_OFFSET:] ,plot_size=(10,5), plot_type='bar')
+shap.summary_plot(shap_values[Classifiers.SVM.value], indicators_test_db_df_samples[ATTEMPTED_SUICIDE_OFFSET:] ,plot_size=(10,5))
 # in classificazione binaria le altezze delle barre sono uguali
 # alto abs(shap) => grande importanza
 
 # %%
-shap.dependence_plot("gun_law_rank", shap_values[Classifiers.NC.value], indicators_test_db_df_samples)
+#shap.initjs()
+force_plot = shap.force_plot(explainers[Classifiers.SVM.value].expected_value, shap_values[Classifiers.SVM.value], indicators_test_db_df_samples[ATTEMPTED_SUICIDE_OFFSET:])
+show = show_plot(force_plot)
+
+# %% [markdown]
+# ## K Nearest Neighbors
+
+# %%
+#f_NC = lambda x: classifiers[Classifiers.NC.value].predict(x)[:,1]
+#minmax_scaler = MinMaxScaler().fit(indicators_train_db_df.values) # the explainer remove the feature names
+def f_knn(X):
+    X = minmax_scaler.transform(X)
+    #X = K.constant(X)
+    #pred = classifiers[Classifiers.NN.value].model.predict(X).flatten()
+    #pred = np.array([round(x) for x in pred])
+    return classifiers[Classifiers.KNN.value].predict(X).flatten()
+
+# %%
+#np.seterr(divide = 'ignore') # ignore the log10 divizion for 0 warning
+explainers[Classifiers.KNN.value] = shap.KernelExplainer(f_knn , indicators_train_db_df_samples.sample(NBASETRAINISTANCES, random_state=RANDOM_STATE), seed=RANDOM_STATE) #indicators_train_db_df_samples.sample(10, random_state=RANDOM_STATE), seed=RANDOM_STATE)
+shap_values[Classifiers.KNN.value] = explainers[Classifiers.KNN.value].shap_values(indicators_test_db_df_samples)
+#np.seterr(divide = 'warn') 
+
+# %%
+shap.summary_plot(shap_values[Classifiers.KNN.value], indicators_test_db_df_samples ,plot_size=(10,5), plot_type='bar')
+shap.summary_plot(shap_values[Classifiers.KNN.value], indicators_test_db_df_samples ,plot_size=(10,5))
+# in classificazione binaria le altezze delle barre sono uguali
+# alto abs(shap) => grande importanza
+
+# %%
+shap.dependence_plot("gun_law_rank", shap_values[Classifiers.KNN.value], indicators_test_db_df_samples)
 
 # %%
 #shap.initjs()
-force_plot = shap.force_plot(explainers[Classifiers.NC.value].expected_value, shap_values[Classifiers.NC.value], indicators_test_db_df_samples)
+force_plot = shap.force_plot(explainers[Classifiers.KNN.value].expected_value, shap_values[Classifiers.KNN.value], indicators_test_db_df_samples)
 show = show_plot(force_plot)
 
 # %% [markdown]
@@ -306,6 +341,9 @@ show = show_plot(force_plot)
 
 # %% [markdown]
 # # Attempted suicide
+
+# %%
+indicators_test_rb_df[attempted_suicide_index]
 
 # %%
 attempted_suicide_index = selected_records_to_explain_df[selected_records_to_explain_df['instance names']=='Attempted Suicide']['indexes'].values[0]
@@ -344,6 +382,22 @@ shap.force_plot(explainers[Classifiers.RF.value].expected_value[1],
 # %%
 shap.decision_plot(explainers[Classifiers.RF.value].expected_value[1], 
                 shap_values[Classifiers.RF.value][1][ATTEMPTED_SUICIDE_OFFSET], 
+                attempted_suicide_rb_sample)
+
+# %% [markdown]
+# ## Extreme Gradient Boosting
+
+# %%
+print('calculated probability and label: ', preds[Classifiers.XGB.value]['labels'][selected_records_to_explain_df[selected_records_to_explain_df['instance names']=='Attempted Suicide']['positions'].values[0]], '/', preds[Classifiers.DT.value]['probs'][selected_records_to_explain_df[selected_records_to_explain_df['instance names']=='Attempted Suicide']['positions'].values[0]])
+shap.force_plot(explainers[Classifiers.XGB.value].expected_value, 
+                shap_values[Classifiers.XGB.value][ATTEMPTED_SUICIDE_OFFSET], 
+                attempted_suicide_rb_sample, 
+                matplotlib=matplotlib)
+
+# %%
+print('calculated probability and label: ', preds[Classifiers.XGB.value]['labels'][selected_records_to_explain_df[selected_records_to_explain_df['instance names']=='Attempted Suicide']['positions'].values[0]], '/', preds[Classifiers.DT.value]['probs'][selected_records_to_explain_df[selected_records_to_explain_df['instance names']=='Attempted Suicide']['positions'].values[0]])
+shap.decision_plot(explainers[Classifiers.XGB.value].expected_value, 
+                shap_values[Classifiers.XGB.value][ATTEMPTED_SUICIDE_OFFSET], 
                 attempted_suicide_rb_sample)
 
 # %% [markdown]
@@ -388,28 +442,22 @@ shap.decision_plot(explainers[Classifiers.NN.value].expected_value,
 # ## K Nearest Neighbors
 
 # %%
-if classifiers[Classifiers.KNN.value].get_params()['n_neighbors'] < 3:
-    n_neighbors = 3
-else:
-    n_neighbors = classifiers[Classifiers.KNN.value].get_params()['n_neighbors']
-distances, indeces = classifiers[Classifiers.KNN.value].kneighbors(
-    X=indicators_test_db_df.iloc[attempted_suicide_pos].values.reshape(-1,len(features_db)),
-    n_neighbors=n_neighbors,
-    return_distance=True
+print('calculated label: ', 
+preds[Classifiers.KNN.value]['labels'][selected_records_to_explain_df[selected_records_to_explain_df['instance names'] == 'Attempted Suicide']['positions'].values[0]], 
 )
 
-# %%
-neighbors_df = incidents_train_df.iloc[indeces[0]].copy()
-neighbors_df['distance'] = distances[0]
-# put distance column first
-neighbors_df = neighbors_df[['distance'] + [col for col in neighbors_df.columns if col != 'distance']]
-neighbors_df.style.background_gradient(cmap='Blues', subset='distance')
-
-# %% [markdown]
-# ## Support Vector Machine
+shap.force_plot(explainers[Classifiers.KNN.value].expected_value, 
+                shap_values[Classifiers.KNN.value][ATTEMPTED_SUICIDE_OFFSET], 
+                attempted_suicide_db_sample, 
+                matplotlib=matplotlib)
 
 # %%
-hyperplane_dists = classifiers[Classifiers.SVM.value].decision_function(
+shap.decision_plot(explainers[Classifiers.KNN.value].expected_value, 
+                shap_values[Classifiers.KNN.value][ATTEMPTED_SUICIDE_OFFSET], 
+                attempted_suicide_db_sample)
+
+# %%
+'''hyperplane_dists = classifiers[Classifiers.SVM.value].decision_function(
     X=pd.concat([
         indicators_test_db_df.iloc[attempted_suicide_pos].to_frame().T.reset_index(),
         indicators_train_db_df.iloc[indeces[0]].reset_index() # neighbors (could be both mortal or not)
@@ -425,7 +473,7 @@ dist_probs = {
     'distance_from_hyperplane': hyperplane_dists,
     'fatal_probability': probas[:,1]
 }
-pd.DataFrame(dist_probs)
+pd.DataFrame(dist_probs)'''
 
 # %% [markdown]
 # # Mass Shooting
@@ -476,6 +524,26 @@ shap.decision_plot(explainers[Classifiers.RF.value].expected_value[1],
                 attempted_suicide_rb_sample)
 
 # %% [markdown]
+# ## Extreme Gradient Boosting
+
+# %%
+print('calculated probability and label: ', 
+      preds[Classifiers.XGB.value]['labels'][selected_records_to_explain_df[selected_records_to_explain_df['instance names']=='Mass shooting']['positions'].values[0]], 
+      '/', 
+      preds[Classifiers.XGB.value]['probs'][selected_records_to_explain_df[selected_records_to_explain_df['instance names']=='Mass shooting']['positions'].values[0]],
+      )
+
+shap.force_plot(explainers[Classifiers.XGB.value].expected_value, 
+                shap_values[Classifiers.XGB.value][MASS_SHOOTING_OFFSET], 
+                mass_shooting_rb_sample, 
+                matplotlib=matplotlib)
+
+# %%
+shap.decision_plot(explainers[Classifiers.XGB.value].expected_value, 
+                shap_values[Classifiers.XGB.value][MASS_SHOOTING_OFFSET], 
+                attempted_suicide_rb_sample)
+
+# %% [markdown]
 # ## Feed Forward Neural Network
 
 # %%
@@ -496,26 +564,119 @@ shap.decision_plot(explainers[Classifiers.NN.value].expected_value,
                 mass_shooting_db_sample)
 
 # %% [markdown]
+# ## K Nearest Neighbors
+
+# %%
+print('calculated label: ', 
+preds[Classifiers.NN.value]['labels'][selected_records_to_explain_df[selected_records_to_explain_df['instance names'] == 'Mass shooting']['positions'].values[0]], 
+)
+
+shap.force_plot(explainers[Classifiers.KNN.value].expected_value, 
+                shap_values[Classifiers.KNN.value][MASS_SHOOTING_OFFSET], 
+                mass_shooting_db_sample, 
+                matplotlib=matplotlib)
+
+# %%
+shap.decision_plot(explainers[Classifiers.KNN.value].expected_value, 
+                shap_values[Classifiers.KNN.value][MASS_SHOOTING_OFFSET], 
+                mass_shooting_db_sample)
+
+# %% [markdown]
 # ## Evaluation
 
 # %%
 # load the already computed default values for features
-non_fatal_db_default = pd.read_csv('../data/classification_results/non_fatal_db_default_features.csv').to_numpy()[0]
-fatal_db_default = pd.read_csv('../data/classification_results/fatal_db_default_features.csv').to_numpy()[0]
-features_db_defaults = [non_fatal_db_default, fatal_db_default]
-non_fatal_rb_default = pd.read_csv('../data/classification_results/non_fatal_rb_default_features.csv').to_numpy()[0]
-fatal_rb_default = pd.read_csv('../data/classification_results/fatal_rb_default_features.csv').to_numpy()[0]
-features_rb_default = [non_fatal_rb_default, fatal_rb_default]
+feature_default_db = pd.read_csv('../data/classification_results/db_default_features.csv').to_numpy()[0]
+feature_default_rb = pd.read_csv('../data/classification_results/rb_default_features.csv').to_numpy()[0]
 
 # %%
-# TODO: assicurarsi di accedere a quelli giusti!
-clf_names = [Classifiers.DT.value, Classifiers.RF.value, ] # TODO: da togliere quando li abbiamo tutti
+clf_names = [Classifiers.DT.value, Classifiers.RF.value, Classifiers.SVM.value, Classifiers.XGB.value, Classifiers.NN.value]
 
 # %%
 positions_to_explain = selected_records_to_explain_df['positions'].to_list()
 instance_names_to_explain = selected_records_to_explain_df['instance names'].to_list()
 true_labels_to_explain = selected_records_to_explain_df['true labels'].to_list()
 
+# %%
+metrics_selected_records = []
+for clf_name in clf_names:
+    classifier = classifiers[clf_name]
+    if clf_name in rb_clf_names:
+        feature_defaults = features_rb_default
+        instances = indicators_test_rb_df.iloc[positions_to_explain].values
+    else:
+        feature_defaults = features_db_default
+        instances = indicators_test_db_df.iloc[positions_to_explain].values
+
+    clf_metrics = {}
+    for i in range(instances.shape[0]):
+        prediction = preds[clf_name]['probs'].iloc[positions_to_explain] #classifier.predict(instances[i].reshape(1,-1))[0]
+
+        if clf_name == Classifiers.DT.value or clf_name == Classifiers.RF.value:
+            feature_importances = shap_values[clf_name][1][ATTEMPTED_SUICIDE_OFFSET + i]
+        else:
+            feature_importances = shap_values[clf_name][ATTEMPTED_SUICIDE_OFFSET + i]
+
+        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_defaults)
+        clf_metrics[instance_names_to_explain[i]] = sample_metric
+
+    clf_metrics_df = pd.DataFrame(clf_metrics).T
+    clf_metrics_df.columns = pd.MultiIndex.from_product([clf_metrics_df.columns, [clf_name]])
+    metrics_selected_records.append(clf_metrics_df)
+
+metrics_selected_records_df = metrics_selected_records[0].join(metrics_selected_records[1:]).sort_index(level=0, axis=1)
+metrics_selected_records_df['True Label'] = true_labels_to_explain
+
+# save faithfulness
+faithfulness_df = metrics_selected_records_df[['faithfulness']]
+faithfulness_df.columns = faithfulness_df.columns.droplevel()
+faithfulness_df.to_csv('../data/explanation_results/shap_faithfulness_selected_records.csv')
+
+# save monotonity
+monotonity_df = metrics_selected_records_df[['monotonicity']]
+monotonity_df.columns = monotonity_df.columns.droplevel()
+monotonity_df.to_csv('../data/explanation_results/shap_monotonicity_selected_records.csv')
+
+metrics_selected_records_df
+
+# %%
+
+
+# %%
+
+
+# %%
+# load the already computed default values for features
+non_fatal_db_default = pd.read_csv('../data/classification_results/non_fatal_db_default_features.csv').to_numpy()[0]
+fatal_db_default = pd.read_csv('../data/classification_results/fatal_db_default_features.csv').to_numpy()[0]
+features_db_default = [non_fatal_db_default, fatal_db_default]
+non_fatal_rb_default = pd.read_csv('../data/classification_results/non_fatal_rb_default_features.csv').to_numpy()[0]
+fatal_rb_default = pd.read_csv('../data/classification_results/fatal_rb_default_features.csv').to_numpy()[0]
+features_rb_default = [non_fatal_rb_default, fatal_rb_default]
+
+# %%
+# TODO: assicurarsi di accedere a quelli giusti!
+clf_names = rb_clf_names + db_clf_names
+clf_names
+
+# %%
+positions_to_explain = selected_records_to_explain_df['positions'].to_list()
+indices_to_explain = indicators_test_db_df_samples.iloc[-ATTEMPTED_SUICIDE_OFFSET:].index
+instance_names_to_explain = selected_records_to_explain_df['instance names'].to_list()
+true_labels_to_explain = selected_records_to_explain_df['true labels'].to_list()
+
+# %%
+'''def dummy_f(X):
+    return np.array([[1-x[0], x[0]] for x in classifiers[Classifiers.NN.value].predict(X)])
+classifiers[Classifiers.NN.value].predict_proba = dummy_f'''
+
+# %%
+classifiers[Classifiers.RF.value].predict(indicators_test_rb_df_samples)
+
+# %%
+classifiers[Classifiers.NN.value].predict_proba(minmax_scaler.transform(indicators_test_db_df_samples.values))
+
+# %%
 metrics_random_records = []
 for clf_name in clf_names:
     classifier = classifiers[clf_name]
@@ -528,8 +689,13 @@ for clf_name in clf_names:
 
     clf_metrics = {}
     for i in range(instances.shape[0]):
-        prediction = classifier.predict(instances[i].reshape(1,-1))[0]
-        feature_importances = shap_values[clf_name][prediction][positions_to_explain[i]] # TODO: diversi shap values
+        prediction = preds[clf_name]['probs'].iloc[positions_to_explain] #classifier.predict(instances[i].reshape(1,-1))[0]
+
+        if clf_name == Classifiers.DT.value or clf_name == Classifiers.RF.value:
+            feature_importances = shap_values[clf_name][1][ATTEMPTED_SUICIDE_OFFSET + i]
+        else:
+            feature_importances = shap_values[clf_name][ATTEMPTED_SUICIDE_OFFSET + i]
+
         sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_defaults[true_labels_to_explain[i]])
         clf_metrics[instance_names_to_explain[i]] = sample_metric
 
@@ -569,8 +735,14 @@ for clf_name in clf_names:
 
     faithfulness = []
     for i in range(instances.shape[0]):
-        prediction = classifier.predict(instances[i].reshape(1,-1))[0]
-        feature_importances = shap_values[clf_name][prediction][positions_to_explain[i]]
+        #prediction = classifier.predict(instances[i].reshape(1,-1))[0]
+        prediction = preds[clf_name]['probs'].iloc[positions_to_explain]
+        
+        if clf_name == Classifiers.DT.value or clf_name == Classifiers.RF.value:
+            feature_importances = shap_values[clf_name][1][ATTEMPTED_SUICIDE_OFFSET + i]
+        else:
+            feature_importances = shap_values[clf_name][ATTEMPTED_SUICIDE_OFFSET + i]
+        #feature_importances = shap_values[clf_name][prediction][positions_to_explain[i]]
         sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_defaults[true_labels_to_explain[i]])
         faithfulness.append(sample_metric['faithfulness'])
     

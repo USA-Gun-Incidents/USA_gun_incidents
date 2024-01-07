@@ -14,7 +14,7 @@ import seaborn as sns
 import json
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
-%matplotlib inline
+# %matplotlib inline
 from classification_utils import *
 from enum import Enum
 import pyproj
@@ -865,7 +865,7 @@ default_db.to_frame().T.to_csv('../data/classification_results/db_default_featur
 
 # %% [markdown]
 # TODO: compilare una volta definiti
-# 
+#
 # # Final Indicators semantics
 # | Name | Description | Present in the original dataset |
 # | :--: | :---------: | :-----------------------------: |

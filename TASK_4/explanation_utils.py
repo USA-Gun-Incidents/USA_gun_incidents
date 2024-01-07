@@ -61,6 +61,10 @@ def get_classifiers_objects(load_path, delete_feature_names=True): # TODO: verif
     for clf_name in clf_names:
         if clf_name == Classifiers.NN.value:
             nn = load_model(load_path+clf_name+'.h5')
+            def dummy_f(X):
+                return np.array([[1-x[0], x[0]] for x in nn.predict(X)])
+            nn.predict_proba = dummy_f
+            
             '''KerasClassifier(
                 model=get_clf,
                 loss=tf.keras.losses.BinaryCrossentropy(from_logits=False), # because there is a sigmoid layer

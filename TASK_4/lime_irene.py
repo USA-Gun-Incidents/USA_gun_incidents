@@ -34,6 +34,7 @@ true_labels_train_df = pd.read_csv('../data/clf_y_train.csv', index_col=0)
 true_labels_train = true_labels_train_df.values.ravel()
 
 incidents_test_df = pd.read_csv('../data/clf_indicators_test.csv', index_col=0)
+incidents_scaled_test_df = pd.read_csv('../data/clf_scaled_indicators_test.csv', index_col=0)
 true_labels_test_df = pd.read_csv('../data/clf_y_test.csv', index_col=0)
 true_labels_test = true_labels_test_df.values.ravel()
 
@@ -58,7 +59,7 @@ categorical_features_rb = [ 'day', 'day_of_week', 'month', 'year', # ?
 # project on the used features
 indicators_train_db_df = incidents_train_df[features_db]
 indicators_train_rb_df = incidents_train_df[features_rb]
-indicators_test_db_df = incidents_test_df[features_db]
+indicators_test_db_df = incidents_scaled_test_df[features_db]
 indicators_test_rb_df = incidents_test_df[features_rb]
 
 # data scaling
@@ -70,9 +71,6 @@ rb_clf_names = [
     Classifiers.DT.value,
     Classifiers.RF.value,
     Classifiers.XGB.value,
-    #Classifiers.AB.value,
-    #Classifiers.NBM.value,
-    #Classifiers.RIPPER.value
 ]
 
 
@@ -87,7 +85,7 @@ classifiers = get_classifiers_objects('../data/classification_results/')
 # - discretize_continuous = True (continuous features are discretized into quartiles)
 # - discretizer = 'quartile'
 # - sample_around_instance = False (sample from a normal centered on the mean of the feature data)
-# 
+#
 # Also to explain instances we will use deault parameters, i.e.:
 # - num_samples = 5000, number of samples to generate
 # - distance_metric = 'euclidean', distance metric to use for weights
@@ -276,14 +274,19 @@ feature_default_rb = pd.read_csv('../data/classification_results/rb_default_feat
 clf_names = [Classifiers.DT.value, Classifiers.RF.value, Classifiers.SVM.value, Classifiers.XGB.value, Classifiers.NN.value]
 
 # %%
+classifiers[Classifiers.NN.value].predict_proba(indicators_test_db_df[:10])
+
+# %%
+classifiers[Classifiers.RF.value].predict_proba(indicators_test_rb_df[:10])
+
+# %%
 positions_to_explain = selected_records_to_explain_df['positions'].to_list()
 instance_names_to_explain = selected_records_to_explain_df['instance names'].to_list()
 true_labels_to_explain = selected_records_to_explain_df['true labels'].to_list()
 
 metrics_selected_records = []
 for clf_name in clf_names:
-    if clf_name == Classifiers.NC.value or clf_name == Classifiers.NN.value:
-        continue
+    print(clf_name)
     classifier = classifiers[clf_name]
     if clf_name in rb_clf_names:
         explainer = explainer_rb
@@ -298,6 +301,7 @@ for clf_name in clf_names:
     for i in range(instances.shape[0]):
         prediction = classifier.predict(instances[i].reshape(1,-1))[0]
         explanation = explainer.explain_instance(instances[i], classifier.predict_proba, num_features=instances.shape[1], top_labels=1)
+        #print(explanation, prediction)
         feature_importances = get_lime_importance_from_explanation(explanation, prediction)
         sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_defaults)
         clf_metrics[instance_names_to_explain[i]] = sample_metric
