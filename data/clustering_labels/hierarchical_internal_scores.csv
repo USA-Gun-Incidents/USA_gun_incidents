@@ -1,8 +1,2 @@
-,hierarchical
-BBS,
-SSE,
-calinski_harabasz_score,
-davies_bouldin_score,
-model,
-n_iter,
-silhouette_score,0.36810559341760785
+,BBS,SSE,calinski_harabasz_score,davies_bouldin_score,model,n_iter,silhouette_score
+0,,,,,ward,,0.36810559341760785
