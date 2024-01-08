@@ -86,9 +86,9 @@ plt.ylabel('Validation Accuracy');
 # %%
 # get the predictions on the training data
 train_score_start = time()
-pred_labels_train = tabnet.predict(indicators_train_df.values)
+pred_labels_train = tabnet.predict(indicators_train_scaled)
 train_score_time = time()-train_score_start
-pred_probas_train = tabnet.predict_proba(indicators_train_df.values)
+pred_probas_train = tabnet.predict_proba(indicators_train_scaled)
 
 # get the predictions on the test data
 test_score_start = time()

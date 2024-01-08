@@ -169,7 +169,7 @@ explain_matrix, masks = tn.explain(indicators_train_scaled)
 # TODO: provare a farle su altri sotto-esempi
 
 # %%
-fig, axs = plt.subplots(1, 3, figsize=(20,10), sharey=True)
+fig, axs = plt.subplots(1, 3, figsize=(20,30), sharey=True)
 for i in range(3):
     axs[i].imshow(masks[i][:50].T)
     axs[i].set_title(f"mask {i}")

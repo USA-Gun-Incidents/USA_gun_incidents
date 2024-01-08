@@ -1,10 +1,10 @@
 # %% [markdown]
 # **Data mining Project - University of Pisa, acedemic year 2023/24**
-# 
+#
 # **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
-# 
+#
 # # Random Forest Classifier
-# 
+#
 # We import the libraries and define constants and settings of the notebook:
 
 # %%
@@ -74,7 +74,7 @@ categorical_features = [
 # - max_samples: The number of samples to draw from the trainin set to train each base estimator. We will try both using all the samples and using half of the samples.
 # - min_samples_split: The minimum number of samples required to split an internal node. We will try 2 (the minimum possible) and different fractions of the training set.
 # - min_samples_leaf: The minimum number of samples required to be at a leaf node. We will try 1 (the minimum possible) and different fractions of the training set.
-# 
+#
 # Fixed parameters:
 # - bootstrap: We will bootstrap samples when building trees.
 # - class_weight: Weights associated with classes. We will use 'balanced' as it performed better in the previous experiments with the Decision Tree Classifier.
@@ -235,7 +235,7 @@ compute_clf_scores(
 )
 
 # %%
-compute_clf_scores(
+test_scores = compute_clf_scores(
     y_true=true_labels_test,
     y_pred=pred_labels_test,
     train_time=fit_time,
@@ -245,6 +245,115 @@ compute_clf_scores(
     clf_name=clf_name,
     path=f'{RESULTS_DIR}/{clf_name}_test_scores.csv'
 )
+test_scores
+
+# %% [markdown]
+# We load the dataset randomly oversampled:
+
+# %%
+indicators_over_train_df = pd.read_csv('../data/clf_indicators_train_over.csv', index_col=0)
+indicators_over_train_df = indicators_over_train_df[features_for_clf]
+true_labels_over_train = pd.read_csv('../data/clf_y_train_over.csv', index_col=0).values.ravel()
+
+# %% [markdown]
+# We fit and test the best model on the oversampled dataset:
+
+# %%
+# fit the model on all the training data
+best_model_over = RandomForestClassifier(**best_model_params)
+fit_start = time()
+best_model_over.fit(indicators_over_train_df, true_labels_over_train)
+fit_over_time = time()-fit_start
+
+# get the predictions on the training data
+train_score_start = time()
+pred_labels_over_train = best_model_over.predict(indicators_over_train_df)
+train_score_over_time = time()-train_score_start
+pred_probas_over_train = best_model_over.predict_proba(indicators_over_train_df)
+
+# get the predictions on the test data
+test_score_start = time()
+pred_labels_over_test = best_model_over.predict(indicators_test_df)
+test_score_over_time = time()-test_score_start
+pred_probas_over_test = best_model_over.predict_proba(indicators_test_df)
+
+# save the predictions
+pd.DataFrame(
+    {'labels': pred_labels_over_test, 'probs': pred_probas_over_test[:,1]}
+).to_csv(f'{RESULTS_DIR}/{clf_name}_oversample_preds.csv')
+
+# save the model
+file = open(f'{RESULTS_DIR}/{clf_name}_oversample.pkl', 'wb')
+pickle.dump(obj=best_model_over, file=file)
+file.close()
+
+# %% [markdown]
+# We load the dataset oversampled with SMOTE:
+
+# %%
+indicators_smote_train_df = pd.read_csv('../data/clf_indicators_train_smote.csv', index_col=0)
+indicators_smote_train_df = indicators_smote_train_df[features_for_clf]
+true_labels_smote_train = pd.read_csv('../data/clf_y_train_smote.csv', index_col=0).values.ravel()
+
+# %% [markdown]
+# We train and test the best model on the SMOTE dataset:
+
+# %%
+# fit the model on all the training data
+best_model_smote = RandomForestClassifier(**best_model_params)
+fit_start = time()
+best_model_smote.fit(indicators_smote_train_df, true_labels_smote_train)
+fit_smote_time = time()-fit_start
+
+# get the predictions on the training data
+train_score_start = time()
+pred_labels_smote_train = best_model_smote.predict(indicators_smote_train_df)
+train_score_smote_time = time()-train_score_start
+pred_probas_smote_train = best_model_smote.predict_proba(indicators_smote_train_df)
+
+# get the predictions on the test data
+test_score_start = time()
+pred_labels_smote_test = best_model_smote.predict(indicators_test_df)
+test_score_smote_time = time()-test_score_start
+pred_probas_smote_test = best_model_smote.predict_proba(indicators_test_df)
+
+# save the predictions
+pd.DataFrame(
+    {'labels': pred_labels_smote_test, 'probs': pred_probas_smote_test[:,1]}
+).to_csv(f'{RESULTS_DIR}/{clf_name}_smote_preds.csv')
+
+# save the model
+file = open(f'{RESULTS_DIR}/{clf_name}_smote.pkl', 'wb')
+pickle.dump(obj=best_model_smote, file=file)
+file.close()
+
+# %% [markdown]
+# We compare the performance of the best model on the three datasets:
+
+# %%
+test_over_scores = compute_clf_scores(
+    y_true=true_labels_test,
+    y_pred=pred_labels_over_test,
+    train_time=fit_over_time,
+    score_time=test_score_over_time,
+    params=best_model_params,
+    prob_pred=pred_probas_over_test,
+    clf_name=clf_name+' over',
+    path=f'{RESULTS_DIR}/{clf_name}_over_test_scores.csv'
+)
+
+test_smote_scores = compute_clf_scores(
+    y_true=true_labels_test,
+    y_pred=pred_labels_smote_test,
+    train_time=fit_smote_time,
+    score_time=test_score_smote_time,
+    params=best_model_params,
+    prob_pred=pred_probas_smote_test,
+    clf_name=clf_name+' SMOTE',
+    path=f'{RESULTS_DIR}/{clf_name}_smote_test_scores.csv'
+)
+
+pd.concat([test_scores, test_over_scores, test_smote_scores])
 
 # %% [markdown]
 # Display the first tree:
