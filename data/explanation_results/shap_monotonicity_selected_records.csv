@@ -5,9 +5,9 @@ Fatal with highest confidence by DecisionTreeClassifier,False,False,False,False,
 Fatal with highest confidence by NeuralNetworkClassifier,True,False,False,False,False
 Fatal with highest confidence by RandomForestClassifier,True,False,True,False,False
 Fatal with highest confidence by NaiveBayesMixedClassifier,False,False,True,False,False
-Fatal with highest confidence by SupportVectorMachineClassifier,False,False,True,False,False
+Fatal with highest confidence by SupportVectorMachineClassifier,False,False,False,False,False
 Fatal with highest confidence by TabNetClassifier,False,False,False,False,False
-Fatal with highest confidence by ExtremeGradientBoostingClassifier,True,False,False,False,False
+Fatal with highest confidence by ExtremeGradientBoostingClassifier,True,False,True,False,False
 Non-Fatal with highest confidence by DecisionTreeClassifier,True,False,False,False,False
 Non-Fatal with highest confidence by NeuralNetworkClassifier,False,False,False,False,False
 Non-Fatal with highest confidence by RandomForestClassifier,True,False,False,False,False
