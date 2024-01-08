@@ -1,4 +1,9 @@
 # %% [markdown]
+# **Data mining Project - University of Pisa, acedemic year 2023/24**
+#  
+# **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
+
+# %% [markdown]
 # # Nearest Centroid
 
 # %% [markdown]
@@ -47,12 +52,6 @@ indicators_test_df = incidents_test_df[features_for_clf]
 # %%
 print(features_for_clf)
 print(f'Number of features: {len(features_for_clf)}')
-
-# %%
-# TODO: dire che con feature categoriche non è indicato
-# (comunque anche se il centroide assume valori in [0,1] il ragionamento utilizzato per classificare ha senso,
-# i.e. se in una classe la metà degli esempi ha una feature a 0 e l'altra metà a 1,
-# il centroide sta nel mezzo => la feature non è rilevante)
 
 # %% [markdown]
 # We make a 5-fold cross validation in which we check which of the two distance metrics (euclidean and manhattan) has better performance. <br>
@@ -302,12 +301,12 @@ plot_confusion_matrix(
 )
 
 # %% [markdown]
-# We plot the classification labels in the bidimensional feature spaces obtained pairing 3 features: **aggression**, **drug_alcohol** and **organized**.
+# We plot the classification labels in the bidimensional feature spaces obtained pairing 4 features: **aggression**, **drug_alcohol**, **gun_law_rank** and **n_males**.
 
 # %%
 plot_predictions_in_features_space(
     df=incidents_test_df,
-    features=['aggression', 'drug_alcohol', 'gun_law_rank', 'n_males'], # TODO: farlo con features significativve
+    features=['aggression', 'drug_alcohol', 'gun_law_rank', 'n_males'],
     true_labels=true_labels_test,
     pred_labels=pred_labels_oversampled_test,
     figsize=(30, 30)
@@ -323,7 +322,7 @@ plot_predictions_in_features_space(
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_PCA_decision_boundary(
   train_set=indicators_oversampled_train_scaled,
-  features=indicators_train_df.columns, # TODO: eventualmente usare solo le numeriche
+  features=indicators_train_df.columns,
   train_label=true_oversampled_labels_train,
   classifier=best_model_oversampled,
   classifier_name=clf_name,
