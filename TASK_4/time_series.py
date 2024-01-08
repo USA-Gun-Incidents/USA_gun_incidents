@@ -34,6 +34,8 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sktime.classification.kernel_based import RocketClassifier
 from tslearn.shapelets import LearningShapelets
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.neighbors import KNeighborsClassifier
 
 # %%
 incidents_df = pd.read_csv(
@@ -1024,7 +1026,7 @@ cluster_df['cluster_hierarchical6_killed'] = hier.labels_
 sankey_plot(
     [cluster_df['cluster_hierarchical6'], cluster_df['cluster_hierarchical6_killed']],
     labels_titles=['n_participants', 'n_killed'],
-    title='Clusterings comparison HierarchicalClustering'
+    title='Clusterings comparison Hierarchical Clustering on Compressed Time Series'
 )
 
 # %% [markdown]
@@ -1287,7 +1289,7 @@ for i, feature in enumerate(cities_categorical_features_list):
 plt.tight_layout();
 
 # %%
-plt.figure(figsize=(10, 7))
+#plt.figure(figsize=(1, 7))
 plt.plot(kmeans.cluster_centers_.T, '.-')
 plt.title('Centroids of clusters')
 plt.xticks(range(len(time_series_features_list[0])), list(calculate_features(X[0]).keys())[:-2], rotation=90)
@@ -1619,12 +1621,20 @@ motifs_idx, distance  = motifs.motifs(chicago_ts, (mp, mpi), max_motifs=5)
 
 # %%
 plt.figure(figsize=(20, 3))
-plt.plot(chicago_ts)
+plt.plot(chicago_ts, label='Time series')
 colors = ['r', 'g', 'k', 'b', 'y'][:len(motifs_idx)]
+n = 1
 for idx, dist, color in zip(motifs_idx, distance, colors):
+    label = True
     for i in idx:
         m_shape = chicago_ts[i:i+window]
-        plt.plot(range(i,i+window), m_shape, color=color, lw=3)
+        if label:
+            plt.plot(range(i,i+window), m_shape, color=color, lw=3, label=f'Motif {n}')
+        else:
+            plt.plot(range(i,i+window), m_shape, color=color, lw=3)
+        label = False
+    n += 1
+plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
 plt.title('Motifs in Chicago time series');
 
 # %%
@@ -1667,6 +1677,7 @@ for idx, dist, color in zip(motifs_idx, distance, colors):
     for i in idx:
         m_shape = san_bernardino_ts[i:i+window]
         plt.plot(range(i,i+window), m_shape, color=color, lw=3)
+plt.legend(['Time series', 'Motif 1'], loc='upper left', bbox_to_anchor=(1, 1))
 plt.title('Motifs in San Bernardino time series');
 
 # %%
@@ -1674,7 +1685,7 @@ plt.figure(figsize=(20, 3))
 for idx, dist, color in zip(motifs_idx, distance, colors):
     for i in idx:
         m_shape = san_bernardino_ts[i:i+window]
-        plt.plot(range(i,i+window), m_shape, color=color, lw=3)
+        plt.plot(range(i,i+window), m_shape, color=color)
 plt.title('Motifs in San Bernardino time series')
 plt.tight_layout();
 
@@ -1691,6 +1702,38 @@ for idx, dist in zip(motifs_idx, distance):
             columns=['motif number', 'week start', 'week end', 'date start', 'date end'])])
     n += 1
 san_bernardino_motifs_df
+
+# %%
+start_week_incident = 27
+week_end_incident = 27
+date_start = week_to_date(start_week_incident)
+end_date = week_to_date(week_end_incident) + 6*datetime.timedelta(days=1)
+incidents_df[(incidents_df['city'] == 'San Bernardino') & (incidents_df['state'] == 'CALIFORNIA') & 
+    (incidents_df['date'] >= date_start) & (incidents_df['date'] <= end_date)][['date', 'n_participants', 'n_killed',
+    'n_injured', 'n_arrested', 'n_unharmed', 'avg_age_participants', 'incident_characteristics1', 'incident_characteristics2']]
+
+# %%
+san_bernardino_ts = incidents_by_city_df[(incidents_by_city_df.index == ('San Bernardino', 'CALIFORNIA'))].values[0]
+window = 8
+mp, mpi = matrixProfile.stomp(san_bernardino_ts, window)
+motifs_idx, distance  = motifs.motifs(san_bernardino_ts, (mp, mpi), max_motifs=5)
+
+plt.figure(figsize=(20, 3))
+plt.plot(san_bernardino_ts, label='Time series')
+colors = ['r', 'b', 'y', 'm', 'g'][:len(motifs_idx)]
+n = 1
+for idx, dist, color in zip(motifs_idx, distance, colors):
+    label = True
+    for i in idx:
+        m_shape = san_bernardino_ts[i:i+window]
+        if label:
+            plt.plot(range(i,i+window), m_shape, color=color, lw=3, label=f'Motif {n}')
+        else:
+            plt.plot(range(i,i+window), m_shape, color=color, lw=3)
+        label = False
+    n += 1
+plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+plt.title('Motifs in San Bernardino time series');
 
 # %% [markdown]
 # #### Motifs extraction for clusters
@@ -1755,10 +1798,9 @@ anoms = discords(mp, ex_zone=10, k=10)
 # %%
 plt.figure(figsize=(20, 3))
 plt.plot(chicago_ts)
-colors = ['r', 'g', 'k', 'b', 'y'][:len(motifs_idx)]
-for a, color in zip(anoms, colors):
+for a in anoms:
     a_shape = chicago_ts[a:a+window]
-    plt.plot(range(a, a+window), a_shape, color=color)
+    plt.plot(range(a, a+window), a_shape, lw=3)
 plt.title('Anomalies in Chicago time series');
 
 # %%
@@ -1780,9 +1822,25 @@ anomalies_df = anomalies_df.append({
     'max': np.max(chicago_ts)}, ignore_index=True)
 
 # %%
+10217/209*11
+
+# %%
 for anomaly in anoms:
-    print('week: ', anomaly+window, '\t value: ', chicago_ts[anomaly])
+    print('From week', anomaly, 'to', anomaly+window) #,'\nvalues: ', chicago_ts[anomaly:anomaly+window])
+    date_start = week_to_date(int(anomaly))
+    end_date = week_to_date(int(anomaly+window)) + 6*datetime.timedelta(days=1)
+    print('Number of incidents: ', incidents_df[(incidents_df['city'] == 'Chicago') & (incidents_df['state'] == 'ILLINOIS') & 
+        (incidents_df['date'] >= date_start) & (incidents_df['date'] <= end_date)].shape[0])
 anomalies_df
+
+# %%
+start_week_incident = 123
+week_end_incident = 134
+date_start = week_to_date(start_week_incident)
+end_date = week_to_date(int(week_end_incident+window)) + 6*datetime.timedelta(days=1)
+incidents_df[(incidents_df['city'] == 'Chicago') & (incidents_df['state'] == 'ILLINOIS') & 
+    (incidents_df['date'] >= date_start) & (incidents_df['date'] <= end_date)][['date', 'n_participants', 'n_killed',
+    'n_injured', 'n_arrested', 'n_unharmed', 'avg_age_participants', 'incident_characteristics1', 'incident_characteristics2']]
 
 # %%
 window = highest_autocorrelation(san_bernardino_ts)
@@ -1852,10 +1910,13 @@ print('Number of cities with n_killed in first or second quantile: ', len(is_kil
 
 # %%
 X = incidents_by_city_df.values
+y_sh = cluster_df['cluster_kmeans_features'].values
+y_sh[y_sh==9] = 4
+y_sh[y_sh==8] = 6
 y = is_killed
 
 # %%
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=True, stratify=y, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=True, stratify=y_sh, random_state=42)
 
 # %% [markdown]
 # #### ShapeletModel Classifier
@@ -1909,6 +1970,7 @@ cv_results_df.sort_values(
 
 # %%
 best_model_params = cv_results_df.loc[gs.best_index_]['params']
+best_model_params['random_state'] = 13
 shp_clf = ShapeletModel(**best_model_params)
 
 # %%
@@ -1918,12 +1980,10 @@ shp_clf.fit(X_train, y_train)
 predicted_labels = shp_clf.predict(X_test)
 print("Correct classification rate:", accuracy_score(y_test, predicted_labels))
 predicted_locations = shp_clf.locate(X_train)
+print(classification_report(y_test, predicted_labels, digits=3))
 
 # %%
-print(classification_report(y_test, predicted_labels))
-
-# %%
-ts_id = 0
+ts_id = 94 # chicago
 plt.figure(figsize=(20, 3))
 n_shapelets = sum(shapelet_sizes.values())
 plt.title(f"Example locations of shapelet matches ({n_shapelets} shapelets extracted)")
@@ -1932,6 +1992,19 @@ plt.plot(X[ts_id].ravel())
 for idx_shp, shp in enumerate(shp_clf.shapelets_):
     t0 = predicted_locations[ts_id, idx_shp]
     plt.plot(np.arange(t0, t0 + len(shp)), shp, linewidth=2)
+
+# %%
+n_shapelet_sizes = len(shapelet_sizes.keys())
+max_shapelet_size = max(shapelet_sizes.keys())
+
+plt.figure(figsize=(20, 3))
+for i, sz in enumerate(shapelet_sizes.keys()):
+    plt.subplot(n_shapelet_sizes, 1, i + 1)
+    plt.title("Shaplet learned, %d shapelets of size 30" % (shapelet_sizes[sz]))
+    for sh_idx in range(shapelet_sizes[sz]):
+        plt.plot(shp_clf.shapelets_as_time_series_[sh_idx + sum(list(shapelet_sizes.values())[:i])].ravel())
+        plt.tight_layout()
+        plt.ylabel('Value')
 
 # %%
 ConfusionMatrixDisplay(confusion_matrix(y_test, predicted_labels)).plot(cmap=plt.cm.Blues);
@@ -1946,17 +2019,43 @@ ConfusionMatrixDisplay(confusion_matrix(y_test, predicted_labels)).plot(cmap=plt
 
 # %%
 X = incidents_by_city_df.values
-#y_sh = cluster_df['cluster_kmeans_features'].values
+y_sh = cluster_df['cluster_kmeans_features'].values
+y_sh[y_sh==9] = 4
+y_sh[y_sh==8] = 6
 y = is_killed.values
 
 # split data into train and test sets, considering the stratification for classes with 1 data point
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=True, stratify=y, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=True, stratify=y_sh, random_state=42)
+
+# %%
+# pie for % y_train true and false values for train set divided by cluster
+plt.figure(figsize=(12, 4))
+for i in range(best_k):
+    plt.subplot(2, 6, i+1)
+    if i !=8 and i !=9:
+        plt.pie(np.unique(y[cluster_df['cluster_kmeans_features'].values==i], return_counts=True)[1], 
+            labels=['False', 'True'], autopct='%1.1f%%');
+    else:
+        # pie with 1 data point
+        labels = y[kmeans.labels_==i]
+        lab = [False if labels[0] == 1 else True]
+        colors = ['tab:blue', 'tab:orange'] if labels[0] == 1 else ['tab:orange', 'tab:blue']
+        plt.pie(np.unique(labels, return_counts=True)[1], labels=lab, autopct='%1.1f%%', colors=colors);
+    plt.title('Cluster '+str(i));
+
+# %%
+print('Number of true values in train set: ', np.sum(y_train), '(%.2f%%)' % (np.sum(y_train)/len(y_train)*100))
+print('Number of false values in train set: ', len(y_train) - np.sum(y_train), '(%.2f%%)' % (
+    (len(y_train) - np.sum(y_train))/len(y_train)*100))
+print('Number of true values in test set: ', np.sum(y_test), '(%.2f%%)' % (np.sum(y_test)/len(y_test)*100))
+print('Number of false values in test set: ', len(y_test) - np.sum(y_test), '(%.2f%%)' % (
+    (len(y_test) - np.sum(y_test))/len(y_test)*100))
 
 # %%
 n_ts, ts_sz = X_train.shape[0], X_train.shape[1]
 n_classes = len(set(y))
 
-shapelet_sizes = grabocka_params_to_shapelet_size_dict(n_ts=n_ts, ts_sz=ts_sz, n_classes=n_classes, l=0.15, r=1)
+shapelet_sizes = grabocka_params_to_shapelet_size_dict(n_ts=n_ts, ts_sz=ts_sz, n_classes=n_classes, l=0.15, r=2)
 print('n_ts', n_ts)
 print('ts_sz', ts_sz)
 print('n_classes', n_classes)
@@ -2033,6 +2132,7 @@ cv_results_df.sort_values(
 # %%
 best_index = gs.best_index_
 best_model_params = cv_results_df.loc[best_index]['params']
+best_model_params['random_state'] = 156
 dt = DecisionTreeClassifier(**best_model_params)
 
 # %%
@@ -2042,7 +2142,7 @@ dt.fit(X_sh_train, y_train)
 predicted_labels_dt = dt.predict(X_sh_test)
 print("Correct classification rate:", accuracy_score(y_test, predicted_labels_dt))
 
-print(classification_report(y_test, predicted_labels_dt))
+print(classification_report(y_test, predicted_labels_dt, digits=3))
 
 # %%
 # complementarity of the two models
@@ -2051,12 +2151,23 @@ print('Complementarity of the two models:', accuracy_score(predicted_labels_shap
 complementary_predicted_labels_dt = [1 if x==0 else 0 for x in predicted_labels_dt]
 print('Correct classification rate:', accuracy_score(y_test, complementary_predicted_labels_dt))
 
-# %% [markdown]
-# ### DecisionTreeClassifier on shapelet
+# %%
+# print shaplet number and dimension
+shaplet_number = 1
+shapelet_sizes = learn_sh_clf.n_shapelets_per_size
+for i, sz in enumerate(shapelet_sizes.keys()):
+    for sh_idx in range(shapelet_sizes[sz]):
+        print('Shaplet number: ', shaplet_number, 'Dimension: ', sz)
+        shaplet_number += 1
 
 # %%
-from sklearn.pipeline import Pipeline
-from sklearn.neighbors import KNeighborsClassifier
+plt.figure(figsize=(20, 3))
+plt.barh(y=range(len(dt.feature_importances_)), width=dt.feature_importances_)
+plt.yticks(range(len(dt.feature_importances_)), ['Shapelet '+str(i+1) for i in range(len(dt.feature_importances_))])
+plt.title('Feature importances');
+
+# %% [markdown]
+# ### KNeighborsClassifier on shapelet
 
 # %%
 knn = KNeighborsClassifier()
@@ -2103,7 +2214,7 @@ knn.fit(X_sh_train, y_train)
 predicted_labels_knn = knn.predict(X_sh_test)
 print("Correct classification rate:", accuracy_score(y_test, predicted_labels_knn))
 
-print(classification_report(y_test, predicted_labels_knn))
+print(classification_report(y_test, predicted_labels_knn, digits=3))
 
 # %% [markdown]
 # ### Rocket Classifier on time series
@@ -2122,9 +2233,26 @@ predicted_labels_rocket = rocket.predict(X_test)
 print("Correct classification rate:", accuracy_score(y_test, predicted_labels_rocket))
 
 # %%
-print(classification_report(y_test, predicted_labels_rocket))
+print(classification_report(y_test, predicted_labels_rocket, digits=3))
 
 # %%
-ConfusionMatrixDisplay(confusion_matrix(y_test, predicted_labels_rocket)).plot(cmap=plt.cm.Blues);
+labels = [predicted_labels, predicted_labels_dt, predicted_labels_knn, predicted_labels_rocket]
+labels_names = ['ShapeletModel', 'DecisionTree', 'KNN', 'Rocket']
+# confusion matrix for each model comparison
+for i in range(len(labels)):
+    for j in np.arange(i+1, len(labels)):
+        ConfusionMatrixDisplay(confusion_matrix(labels[i], labels[j]), 
+        display_labels=[True, False]).plot(cmap=plt.cm.Blues,)
+        plt.title(labels_names[i]+' vs '+labels_names[j])
+        plt.ylabel(labels_names[i])
+        plt.xlabel(labels_names[j]);
+
+# %%
+from sklearn.metrics import f1_score
+for i in range(len(labels)):
+    for j in np.arange(i+1, len(labels)):
+        print(labels_names[i], 'vs', labels_names[j], ', macro f1 average:', 
+        f1_score(y_true=labels[i], y_pred=labels[j]))
+
 
 
