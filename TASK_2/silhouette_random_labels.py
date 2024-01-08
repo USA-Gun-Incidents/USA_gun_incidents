@@ -1,3 +1,8 @@
+# %% [markdown]
+# **Data mining Project - University of Pisa, acedemic year 2023/24**
+#
+# **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
+
 # %%
 import json
 import pandas as pd
@@ -29,7 +34,7 @@ silhouette = {}
 for n_cluster in n_clusters:
     print(f'Trying {n_cluster} clusters')
     silhouette_values = []
-    for i in range(10): # TODO: aumentare? con 10 iterazioni per una size ci mette  15 min
+    for i in range(10):
         print(f'Iteration {i}')
         labels = np.random.randint(0, n_cluster, len(indicators_df))
         silhouette_values.append(silhouette_score(X, labels))

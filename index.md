@@ -1,6 +1,3 @@
-TODO:
-- fare il rendering dei notebook e linkarli qui
-
 ## Data visualization
 This repository hosts also interactive data visualizations. You can access and interact with the plots by clicking the links below.
 
