@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 # %% [markdown]
+# **Data mining Project - University of Pisa, acedemic year 2023/24**
+#
+# **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
+
+# %% [markdown]
 # # KMeans clustering of Principal Components
 
 # %% [markdown]
@@ -30,6 +35,7 @@ import sys
 sys.path.append(os.path.abspath('..'))
 from plot_utils import *
 from clustering_utils import *
+
 # %matplotlib inline
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
@@ -673,7 +679,7 @@ plot_bars_by_cluster(df=incidents_df, feature='firearm', cluster_column='cluster
 # %%
 dummy_df = incidents_df[
     (incidents_df['firearm']==False)]['cluster'].value_counts().to_frame()
-dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
+dummy_df['percentage'] = dummy_df['count']/sum(dummy_df['count'])
 dummy_df
 
 
@@ -704,7 +710,7 @@ plot_bars_by_cluster(df=incidents_df, feature='suicide', cluster_column='cluster
 # %%
 dummy_df = incidents_df[
     (incidents_df['suicide']==True)]['cluster'].value_counts().to_frame()
-dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
+dummy_df['percentage'] = dummy_df['count']/sum(dummy_df['count'])
 dummy_df
 
 # %% [markdown]
@@ -715,8 +721,8 @@ plot_bars_by_cluster(df=incidents_df, feature='injuries', cluster_column='cluste
 
 # %%
 dummy_df = incidents_df[
-    (incidents_df['injuries']==False)]['cluster'].value_counts().to_frame()
-dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
+    (incidents_df['suicide']==True)]['cluster'].value_counts().to_frame()
+dummy_df['percentage'] = dummy_df['count']/sum(dummy_df['count'])
 dummy_df
 
 # %% [markdown]
@@ -727,8 +733,8 @@ plot_bars_by_cluster(df=incidents_df, feature='death', cluster_column='cluster')
 
 # %%
 dummy_df = incidents_df[
-    (incidents_df['death']==False)]['cluster'].value_counts().to_frame()
-dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
+    (incidents_df['suicide']==True)]['cluster'].value_counts().to_frame()
+dummy_df['percentage'] = dummy_df['count']/sum(dummy_df['count'])
 dummy_df
 
 # %% [markdown]
@@ -739,8 +745,8 @@ plot_bars_by_cluster(df=incidents_df, feature='illegal_holding', cluster_column=
 
 # %%
 dummy_df = incidents_df[
-    (incidents_df['illegal_holding']==True)]['cluster'].value_counts().to_frame()
-dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
+    (incidents_df['suicide']==True)]['cluster'].value_counts().to_frame()
+dummy_df['percentage'] = dummy_df['count']/sum(dummy_df['count'])
 dummy_df
 
 # %% [markdown]
@@ -751,8 +757,8 @@ plot_bars_by_cluster(df=incidents_df, feature='house', cluster_column='cluster')
 
 # %%
 dummy_df = incidents_df[
-    (incidents_df['house']==True)]['cluster'].value_counts().to_frame()
-dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
+    (incidents_df['suicide']==True)]['cluster'].value_counts().to_frame()
+dummy_df['percentage'] = dummy_df['count']/sum(dummy_df['count'])
 dummy_df
 
 # %%
@@ -760,8 +766,8 @@ plot_bars_by_cluster(df=incidents_df, feature='school', cluster_column='cluster'
 
 # %%
 dummy_df = incidents_df[
-    (incidents_df['school']==True)]['cluster'].value_counts().to_frame()
-dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
+    (incidents_df['suicide']==True)]['cluster'].value_counts().to_frame()
+dummy_df['percentage'] = dummy_df['count']/sum(dummy_df['count'])
 dummy_df
 
 # %% [markdown]
@@ -773,8 +779,8 @@ plot_bars_by_cluster(df=incidents_df, feature='drugs', cluster_column='cluster')
 
 # %%
 dummy_df = incidents_df[
-    (incidents_df['drugs']==True)]['cluster'].value_counts().to_frame()
-dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
+    (incidents_df['suicide']==True)]['cluster'].value_counts().to_frame()
+dummy_df['percentage'] = dummy_df['count']/sum(dummy_df['count'])
 dummy_df
 
 # %% [markdown]
@@ -797,8 +803,8 @@ plot_bars_by_cluster(df=incidents_df, feature='defensive', cluster_column='clust
 
 # %%
 dummy_df = incidents_df[
-    (incidents_df['defensive']==True)]['cluster'].value_counts().to_frame()
-dummy_df['percentage'] = dummy_df['cluster']/sum(dummy_df['cluster'])
+    (incidents_df['suicide']==True)]['cluster'].value_counts().to_frame()
+dummy_df['percentage'] = dummy_df['count']/sum(dummy_df['count'])
 dummy_df
 
 # %% [markdown]
