@@ -1,5 +1,9 @@
 ## Data visualization
-This repository hosts also interactive data visualizations. You can access and interact with the plots by clicking the links below.
+This website hosts interactive data visualizations. 
+You can access and interact with the plots by clicking the links below.
+
+[Data understanding notebook](html/incidents_understanding_preparation.html)
+
 
 ### Plots
 
