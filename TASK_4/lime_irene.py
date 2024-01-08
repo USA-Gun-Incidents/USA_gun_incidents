@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# %%
-# TODO: spiegare che lo LIME facciamo per tutti essendo agnostic
-# (anche per quelli già explainable, magari per esse confrontare queste spiegazioni con le originali)
-
 # %%
 import pandas as pd
 import numpy as np
@@ -10,8 +5,9 @@ import json
 import lime
 import lime.lime_tabular
 from IPython.display import HTML, Image
+from sklearn.preprocessing import MinMaxScaler
 import pydotplus
-from sklearn.tree import export_graphviz
+from sklearn.tree import export_graphviz    
 from explanation_utils import *
 
 # %%
@@ -38,6 +34,7 @@ true_labels_train_df = pd.read_csv('../data/clf_y_train.csv', index_col=0)
 true_labels_train = true_labels_train_df.values.ravel()
 
 incidents_test_df = pd.read_csv('../data/clf_indicators_test.csv', index_col=0)
+incidents_scaled_test_df = pd.read_csv('../data/clf_scaled_indicators_test.csv', index_col=0)
 true_labels_test_df = pd.read_csv('../data/clf_y_test.csv', index_col=0)
 true_labels_test = true_labels_test_df.values.ravel()
 
@@ -62,25 +59,23 @@ categorical_features_rb = [ 'day', 'day_of_week', 'month', 'year', # ?
 # project on the used features
 indicators_train_db_df = incidents_train_df[features_db]
 indicators_train_rb_df = incidents_train_df[features_rb]
-indicators_test_db_df = incidents_test_df[features_db]
+indicators_test_db_df = incidents_scaled_test_df[features_db]
 indicators_test_rb_df = incidents_test_df[features_rb]
+
+# data scaling
+scaler = MinMaxScaler()
+X_db = scaler.fit_transform(indicators_train_db_df.values)
 
 clf_names = [clf.value for clf in Classifiers]
 rb_clf_names = [
     Classifiers.DT.value,
     Classifiers.RF.value,
     Classifiers.XGB.value,
-    Classifiers.AB.value,
-    Classifiers.NBM.value,
-    Classifiers.RIPPER.value
 ]
 
 
 preds = get_classifiers_predictions('../data/classification_results/')
 classifiers = get_classifiers_objects('../data/classification_results/')
-
-# %%
-# TODO: cambiare i parametri sotto??
 
 # %% [markdown]
 # We will use default parameters for LIME, i.e.:
@@ -98,7 +93,7 @@ classifiers = get_classifiers_objects('../data/classification_results/')
 
 # %%
 explainer_db = lime.lime_tabular.LimeTabularExplainer(
-    indicators_train_db_df.values,
+    X_db,
     feature_names=features_db,
     categorical_features=[features_db.index(cat_feature) for cat_feature in categorical_features_db],
     random_state=RANDOM_STATE
@@ -131,21 +126,9 @@ explanation = explainer_rb.explain_instance(
     num_features=len(features_rb),
     num_samples=NUM_SAMPLES,
     distance_metric=DISTANCE_METRIC,
-    model_regressor=REGRESSOR,
-    #sampling_method='gaussian' # TODO: dalla documentazione sembra si possa sceglierne anche un altro ma non funziona
+    model_regressor=REGRESSOR
 )
 show_explanation(explanation)
-
-# %%
-dot_data = export_graphviz(
-    classifiers[Classifiers.DT.value],
-    out_file=None, 
-    feature_names=list(indicators_train_rb_df.columns),
-    filled=True,
-    rounded=True
-)
-graph = pydotplus.graph_from_dot_data(dot_data)
-Image(graph.create_png())
 
 # %% [markdown]
 # ## Random Forest
@@ -176,71 +159,11 @@ explanation = explainer_rb.explain_instance(
 show_explanation(explanation)
 
 # %% [markdown]
-# ## AdaBoost
-
-# %%
-explanation = explainer_rb.explain_instance(
-    indicators_test_rb_df.iloc[attempted_suicide_pos].values,
-    classifiers[Classifiers.AB.value].predict_proba,
-    num_features=len(features_rb),
-    num_samples=NUM_SAMPLES,
-    distance_metric=DISTANCE_METRIC,
-    model_regressor=REGRESSOR,
-)
-show_explanation(explanation)
-
-# %% [markdown]
-# ## Naive Bayes for mixed data
-
-# %%
-# explanation = explainer_rb.explain_instance(
-#     indicators_test_rb_df.iloc[attempted_suicide_pos].values,
-#     classifiers[Classifiers.NBM.value].predict_proba, # TODO: bisogna fare one hot encoding
-#     num_features=len(features_rb),
-#     num_samples=NUM_SAMPLES,
-#     distance_metric=DISTANCE_METRIC,
-#     model_regressor=REGRESSOR,
-# )
-# show_explanation(explanation)
-
-# %% [markdown]
-# ## K Nearest Neighbors
-
-# %%
-explanation = explainer_db.explain_instance(
-    indicators_test_db_df.iloc[attempted_suicide_pos].values,
-    classifiers[Classifiers.KNN.value].predict_proba,
-    num_features=len(features_db),
-    num_samples=NUM_SAMPLES,
-    distance_metric=DISTANCE_METRIC,
-    model_regressor=REGRESSOR,
-)
-show_explanation(explanation)
-
-# %%
-if classifiers[Classifiers.KNN.value].get_params()['n_neighbors'] < 3:
-    n_neighbors = 3
-else:
-    n_neighbors = classifiers[Classifiers.KNN.value].get_params()['n_neighbors']
-distances, indeces = classifiers[Classifiers.KNN.value].kneighbors(
-    X=indicators_test_db_df.iloc[attempted_suicide_pos].values.reshape(-1,len(features_db)),
-    n_neighbors=n_neighbors,
-    return_distance=True
-)
-
-# %%
-neighbors_df = incidents_train_df.iloc[indeces[0]].copy()
-neighbors_df['distance'] = distances[0]
-# put distance column first
-neighbors_df = neighbors_df[['distance'] + [col for col in neighbors_df.columns if col != 'distance']]
-neighbors_df.style.background_gradient(cmap='Blues', subset='distance')
-
-# %% [markdown]
 # ## Support Vector Machine
 
 # %%
 explanation = explainer_db.explain_instance(
-    indicators_test_db_df.iloc[attempted_suicide_pos].values,
+    X_db[attempted_suicide_pos],
     classifiers[Classifiers.SVM.value].predict_proba,
     num_features=len(features_db),
     num_samples=NUM_SAMPLES,
@@ -249,46 +172,13 @@ explanation = explainer_db.explain_instance(
 )
 show_explanation(explanation)
 
-# %%
-hyperplane_dists = classifiers[Classifiers.SVM.value].decision_function(
-    X=pd.concat([
-        indicators_test_db_df.iloc[attempted_suicide_pos].to_frame().T.reset_index(),
-        indicators_train_db_df.iloc[indeces[0]].reset_index() # neighbors (could be both mortal or not)
-    ]).drop(columns=['index'])
-)
-probas = classifiers[Classifiers.SVM.value].predict_proba(
-    X=pd.concat([
-        indicators_test_db_df.iloc[attempted_suicide_pos].to_frame().T.reset_index(),
-        indicators_train_db_df.iloc[indeces[0]].reset_index() # neighbors (could be both mortal or not)
-    ]).drop(columns=['index'])
-)
-dist_probs = {
-    'distance_from_hyperplane': hyperplane_dists,
-    'fatal_probability': probas[:,1]
-}
-pd.DataFrame(dist_probs)
-
 # %% [markdown]
 # ## Feed Forward Neural Networks
 
 # %%
-# explanation = explainer_db.explain_instance(
-#     indicators_test_db_df.iloc[attempted_suicide_pos].values,
-#     classifiers[NN].predict_proba,
-#     num_features=len(features_db),
-#     num_samples=NUM_SAMPLES,
-#     distance_metric=DISTANCE_METRIC,
-#     model_regressor=REGRESSOR,
-# )
-# show_explanation(explanation)
-
-# %% [markdown]
-# ## TabNet
-
-# %%
 explanation = explainer_db.explain_instance(
-    indicators_test_db_df.iloc[attempted_suicide_pos].values,
-    classifiers[Classifiers.TN.value].predict_proba,
+    X_db[attempted_suicide_pos],
+    classifiers[Classifiers.NN.value].predict_proba,
     num_features=len(features_db),
     num_samples=NUM_SAMPLES,
     distance_metric=DISTANCE_METRIC,
@@ -345,71 +235,11 @@ explanation = explainer_rb.explain_instance(
 show_explanation(explanation)
 
 # %% [markdown]
-# ## AdaBoost
-
-# %%
-explanation = explainer_rb.explain_instance(
-    indicators_test_rb_df.iloc[mass_shooting_pos].values,
-    classifiers[Classifiers.AB.value].predict_proba,
-    num_features=len(features_rb),
-    num_samples=NUM_SAMPLES,
-    distance_metric=DISTANCE_METRIC,
-    model_regressor=REGRESSOR,
-)
-show_explanation(explanation)
-
-# %% [markdown]
-# ## Naive Bayes for mixed data
-
-# %%
-# explanation = explainer_rb.explain_instance(
-#     indicators_test_rb_df.iloc[mass_shooting_pos].values,
-#     classifiers[Classifiers.NBM.value].predict_proba, # TODO: bisogna fare one hot encoding
-#     num_features=len(features_rb),
-#     num_samples=NUM_SAMPLES,
-#     distance_metric=DISTANCE_METRIC,
-#     model_regressor=REGRESSOR,
-# )
-# show_explanation(explanation)
-
-# %% [markdown]
-# ## K Nearest Neighbors
-
-# %%
-explanation = explainer_db.explain_instance(
-    indicators_test_db_df.iloc[mass_shooting_pos].values,
-    classifiers[Classifiers.KNN.value].predict_proba,
-    num_features=len(features_db),
-    num_samples=NUM_SAMPLES,
-    distance_metric=DISTANCE_METRIC,
-    model_regressor=REGRESSOR,
-)
-show_explanation(explanation)
-
-# %%
-if classifiers[Classifiers.KNN.value].get_params()['n_neighbors'] < 3:
-    n_neighbors = 3
-else:
-    n_neighbors = classifiers[Classifiers.KNN.value].get_params()['n_neighbors']
-distances, indeces = classifiers[Classifiers.KNN.value].kneighbors(
-    X=indicators_test_db_df.iloc[mass_shooting_pos].values.reshape(-1,len(features_db)),
-    n_neighbors=n_neighbors,
-    return_distance=True
-)
-
-# %%
-neighbors_df = incidents_train_df.iloc[indeces[0]].copy()
-neighbors_df['distance'] = distances[0]
-# put distance column first
-neighbors_df = neighbors_df[['distance'] + [col for col in neighbors_df.columns if col != 'distance']]
-neighbors_df.style.background_gradient(cmap='Blues', subset='distance')
-
-# %% [markdown]
 # ## Support Vector Machine
 
 # %%
 explanation = explainer_db.explain_instance(
-    indicators_test_db_df.iloc[mass_shooting_pos].values,
+    X_db[mass_shooting_pos],
     classifiers[Classifiers.SVM.value].predict_proba,
     num_features=len(features_db),
     num_samples=NUM_SAMPLES,
@@ -418,46 +248,13 @@ explanation = explainer_db.explain_instance(
 )
 show_explanation(explanation)
 
-# %%
-hyperplane_dists = classifiers[Classifiers.SVM.value].decision_function(
-    X=pd.concat([
-        indicators_test_db_df.iloc[mass_shooting_pos].to_frame().T.reset_index(),
-        indicators_train_db_df.iloc[indeces[0]].reset_index() # neighbors (could be both mortal or not)
-    ]).drop(columns=['index'])
-)
-probas = classifiers[Classifiers.SVM.value].predict_proba(
-    X=pd.concat([
-        indicators_test_db_df.iloc[mass_shooting_pos].to_frame().T.reset_index(),
-        indicators_train_db_df.iloc[indeces[0]].reset_index() # neighbors (could be both mortal or not)
-    ]).drop(columns=['index'])
-)
-dist_probs = {
-    'distance_from_hyperplane': hyperplane_dists,
-    'fatal_probability': probas[:,1]
-}
-pd.DataFrame(dist_probs)
-
 # %% [markdown]
 # ## Feed Forward Neural Network
 
 # %%
-# explanation = explainer_db.explain_instance(
-#     indicators_test_db_df.iloc[mass_shooting_pos].values,
-#     classifiers[NN].predict_proba,
-#     num_features=len(features_db),
-#     num_samples=NUM_SAMPLES,
-#     distance_metric=DISTANCE_METRIC,
-#     model_regressor=REGRESSOR,
-# )
-# show_explanation(explanation)
-
-# %% [markdown]
-# ## TabNet
-
-# %%
 explanation = explainer_db.explain_instance(
-    indicators_test_db_df.iloc[mass_shooting_pos].values,
-    classifiers[Classifiers.TN.value].predict_proba,
+    X_db[mass_shooting_pos],
+    classifiers[Classifiers.NN.value].predict_proba,
     num_features=len(features_db),
     num_samples=NUM_SAMPLES,
     distance_metric=DISTANCE_METRIC,
@@ -470,15 +267,11 @@ show_explanation(explanation)
 
 # %%
 # load the already computed default values for features
-non_fatal_db_default = pd.read_csv('../data/classification_results/non_fatal_db_default_features.csv').to_numpy()[0]
-fatal_db_default = pd.read_csv('../data/classification_results/fatal_db_default_features.csv').to_numpy()[0]
-features_db_defaults = [non_fatal_db_default, fatal_db_default]
-non_fatal_rb_default = pd.read_csv('../data/classification_results/non_fatal_rb_default_features.csv').to_numpy()[0]
-fatal_rb_default = pd.read_csv('../data/classification_results/fatal_rb_default_features.csv').to_numpy()[0]
-features_rb_default = [non_fatal_rb_default, fatal_rb_default]
+feature_default_db = pd.read_csv('../data/classification_results/db_default_features.csv').to_numpy()[0]
+feature_default_rb = pd.read_csv('../data/classification_results/rb_default_features.csv').to_numpy()[0]
 
 # %%
-clf_names = [Classifiers.DT.value, Classifiers.RF.value] # TODO: da togliere quando li abbiamo tutti
+clf_names = [Classifiers.DT.value, Classifiers.RF.value, Classifiers.SVM.value, Classifiers.XGB.value, Classifiers.NN.value]
 
 # %%
 positions_to_explain = selected_records_to_explain_df['positions'].to_list()
@@ -487,23 +280,30 @@ true_labels_to_explain = selected_records_to_explain_df['true labels'].to_list()
 
 metrics_selected_records = []
 for clf_name in clf_names:
+    print(clf_name)
     classifier = classifiers[clf_name]
     if clf_name in rb_clf_names:
         explainer = explainer_rb
-        feature_defaults = features_rb_default
+        feature_defaults = feature_default_rb
         instances = indicators_test_rb_df.iloc[positions_to_explain].values
     else:
         explainer = explainer_db
-        feature_defaults = features_db_defaults
+        feature_defaults = feature_default_db
         instances = indicators_test_db_df.iloc[positions_to_explain].values
 
     clf_metrics = {}
     for i in range(instances.shape[0]):
         prediction = classifier.predict(instances[i].reshape(1,-1))[0]
+        if clf_name == Classifiers.SVM.value or clf_name == Classifiers.NN.value:
+            prob = classifier.predict_proba(instances[i].reshape(1,-1))[0]
+            if prob[1] >= 0.5:
+                prediction = 1
+            else:
+                prediction = 0
         explanation = explainer.explain_instance(instances[i], classifier.predict_proba, num_features=instances.shape[1], top_labels=1)
+        #print(explanation, prediction)
         feature_importances = get_lime_importance_from_explanation(explanation, prediction)
-        feature_default = feature_defaults[0] if true_labels_test[i] == 1 else feature_defaults[1]
-        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_default)
+        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_defaults)
         clf_metrics[instance_names_to_explain[i]] = sample_metric
 
     clf_metrics_df = pd.DataFrame(clf_metrics).T
@@ -535,20 +335,26 @@ for clf_name in clf_names:
     classifier = classifiers[clf_name]
     if clf_name in rb_clf_names:
         explainer = explainer_rb
-        feature_defaults = features_rb_default
+        feature_defaults = feature_default_rb
         instances = indicators_test_rb_df.iloc[positions_to_explain].values
     else:
         explainer = explainer_db
-        feature_defaults = features_db_defaults
+        feature_defaults = feature_default_db
         instances = indicators_test_db_df.iloc[positions_to_explain].values
 
     faithfulness = []
     for i in range(instances.shape[0]):
         prediction = classifier.predict(instances[i].reshape(1,-1))[0]
+        if clf_name == Classifiers.SVM.value or clf_name == Classifiers.NN.value:
+            prob = classifier.predict_proba(instances[i].reshape(1,-1))[0]
+            if prob[1] >= 0.5:
+                prediction = 1
+            else:
+                prediction = 0
         explanation = explainer.explain_instance(instances[i], classifier.predict_proba, num_features=instances.shape[1], top_labels=1)
         feature_importances = get_lime_importance_from_explanation(explanation, prediction)
         feature_default = feature_defaults[0] if true_labels_test[i] == 1 else feature_defaults[1]
-        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_default)
+        sample_metric = evaluate_explanation(classifier, instances[i], feature_importances, feature_defaults)
         faithfulness.append(sample_metric['faithfulness'])
     
     metrics_random_records[clf_name] = {}

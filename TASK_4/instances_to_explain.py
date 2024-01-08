@@ -1,10 +1,13 @@
 # %%
 import pandas as pd
+import numpy as np
 from explanation_utils import *
-
-# %%
 pd.set_option('display.max_columns', None)
 pd.set_option('max_colwidth', None)
+DATA_DIR = '../data/classification_results/'
+
+# %% [markdown]
+# We load the test set and the predictions of the classifiers:
 
 # %%
 incidents_test_df = pd.read_csv('../data/clf_indicators_test.csv', index_col=0)
@@ -13,10 +16,8 @@ true_labels_test = true_labels_test_df.values.ravel()
 
 clf_names = [clf.value for clf in Classifiers]
 
-DATA_DIR = '../data/classification_results/'
 preds = get_classifiers_predictions(DATA_DIR)
 
-# %%
 incidents_train_df = pd.read_csv('../data/clf_indicators_train.csv', index_col=0)
 true_labels_train_df = pd.read_csv('../data/clf_y_train.csv', index_col=0)
 
@@ -31,7 +32,11 @@ true_labels_train_df = pd.read_csv('../data/clf_y_train.csv', index_col=0)
 )*100
 
 # %%
+100-((incidents_train_df[(incidents_train_df['suicide']==1) & (true_labels_train_df['death']==0)].shape[0])/(incidents_train_df[(incidents_train_df['suicide']==1)].shape[0])*100)
+
+# %%
 selected_records_to_explain = {}
+selected_records_to_explain['indexes'] = []
 selected_records_to_explain['positions'] = []
 selected_records_to_explain['instance names'] = []
 selected_records_to_explain['true labels'] = []
@@ -50,6 +55,8 @@ attempted_suicides
 # %%
 attempted_suicide_index = attempted_suicides.index[0]
 attempted_suicide_pos = incidents_test_df.index.get_loc(attempted_suicide_index)
+
+selected_records_to_explain['indexes'].append(attempted_suicide_index)
 selected_records_to_explain['positions'].append(attempted_suicide_pos)
 selected_records_to_explain['instance names'].append('Attempted Suicide')
 selected_records_to_explain['true labels'].append(true_labels_test[attempted_suicide_pos])
@@ -65,9 +72,17 @@ mass_shooting
 # %%
 mass_shooting_index = mass_shooting.index[0]
 mass_shooting_pos = incidents_test_df.index.get_loc(mass_shooting_index)
+
+selected_records_to_explain['indexes'].append(mass_shooting_index)
 selected_records_to_explain['positions'].append(mass_shooting_pos)
 selected_records_to_explain['instance names'].append('Mass shooting')
 selected_records_to_explain['true labels'].append(true_labels_test[mass_shooting_pos])
+
+# %%
+mass_shooting_pos
+
+# %%
+mass_shooting_index
 
 # %% [markdown]
 # ## Incidents predicted as Fatal with highest probability
@@ -78,6 +93,8 @@ for clf_name in clf_names:
     if clf_name != Classifiers.NC.value and clf_name != Classifiers.KNN.value:
         pos = preds[clf_name]['probs'].idxmax()
         indeces_max_prob_death.append(pos)
+
+        selected_records_to_explain['indexes'].append(-1)
         selected_records_to_explain['positions'].append(pos)
         selected_records_to_explain['instance names'].append(f'Fatal with highest confidence by {clf_name}')
         selected_records_to_explain['true labels'].append(true_labels_test[pos])
@@ -108,6 +125,8 @@ for clf_name in clf_names:
     if clf_name != Classifiers.NC.value and clf_name != Classifiers.KNN.value:
         pos = preds[clf_name]['probs'].idxmin()
         indeces_min_prob_death.append(pos)
+
+        selected_records_to_explain['indexes'].append(-1)
         selected_records_to_explain['positions'].append(pos)
         selected_records_to_explain['instance names'].append(f'Non-Fatal with highest confidence by {clf_name}')
         selected_records_to_explain['true labels'].append(true_labels_test[pos])
@@ -160,7 +179,7 @@ selected_records_df
 
 # %%
 random_records_to_explain = {}
-random_records_to_explain['positions'] = np.arange(0, 51) # TODO: decidere se prenderli a caso o con un criterio
+random_records_to_explain['positions'] = np.arange(0, 51)
 random_records_to_explain['true labels'] = true_labels_test[0: 51]
 random_records_df = pd.DataFrame(random_records_to_explain)
 random_records_df.to_csv('../data/explanation_results/random_records_to_explain.csv')

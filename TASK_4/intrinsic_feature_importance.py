@@ -19,7 +19,8 @@ from IPython.display import Image
 data_dir = '../data/classification_results/'
 DT = 'DecisionTreeClassifier'
 RF = 'RandomForestClassifier'
-XGB = 'XGBClassifier'
+XGB = 'ExtremeGradientBoostingClassifier'
+AB = 'AdaBoostClassifier'
 NC = 'NearestCentroidClassifier'
 KNN = 'KNearestNeighborsClassifier'
 SVM = 'SupportVectorMachineClassifier'
@@ -27,6 +28,7 @@ NN = 'NeuralNetworkClassifier'
 TN = 'TabNetClassifier'
 RIPPER = 'RipperClassifier'
 EBM = 'ExplainableBoostingMachineClassifier'
+NB = 'NaiveBayesMixedClassifier'
 # load the data
 incidents_train_df = pd.read_csv('../data/clf_indicators_train.csv', index_col=0)
 true_labels_train_df = pd.read_csv('../data/clf_y_train.csv', index_col=0)
@@ -46,7 +48,7 @@ indicators_test_db_df = incidents_test_df[features_db]
 indicators_test_rb_df = incidents_test_df[features_rb]
 
 # %%
-clf_names = [DT, RF, XGB, SVM, TN, EBM] # NN, NC, KNN
+clf_names = [DT, RF, XGB, AB, TN, EBM] # NB, NN, NC, KNN, SVM
 feature_imp = {}
 for clf in clf_names:
     feature_imp[clf] = {}
@@ -61,12 +63,14 @@ nplots = len(clf_names)
 nrows = int(nplots/ncols)
 if nplots % ncols != 0:
     nrows += 1
-f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(20,15), squeeze=False)
+f, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(20,20), squeeze=False)
 for i, clf in enumerate(clf_names):
-    axs[int(i/ncols)][i%ncols].bar(
-        x=feature_imp[clf]['features_names'],
-        height=feature_imp[clf]['features_importance'],
+    sorted_idx = np.argsort(feature_imp[clf]['features_importance'])
+    axs[int(i/ncols)][i%ncols].barh(
+        y=np.array(feature_imp[clf]['features_names'])[sorted_idx],
+        width=np.array(feature_imp[clf]['features_importance'])[sorted_idx],
     )
+
     axs[int(i/ncols)][i%ncols].set_title(clf)
     axs[int(i/ncols)][i%ncols].set_xlabel('Features')
     axs[int(i/ncols)][i%ncols].set_ylabel('Importance')
@@ -75,24 +79,31 @@ for i, clf in enumerate(clf_names):
 plt.tight_layout()
 
 # %%
-feature_ranks = {}
-for clf in clf_names:
-    feature_ranks[clf] = {}
-    if clf in [DT, RF, XGB]:
-        features = features_rb
-    else: # SVM, TN
-        features = features_db
+features = features_db.copy()
+for feature in features_rb:
+    if feature not in features:
+        features.append(feature)
+importances = {}
+for i, clf in enumerate(clf_names):
+    importances[clf] = []
+    clf_features = feature_imp[clf]['features_names'].to_list()
     for feature in features:
-        clf_features = feature_imp[clf]['features_names'].tolist()
         if feature in clf_features:
-            feature_pos = clf_features.index(feature)
-            feature_ranks[clf][feature] = feature_imp[clf]['features_rank'].tolist()[feature_pos]
+            importances[clf].append(feature_imp[clf]['features_importance'][clf_features.index(feature)])
         else:
-            feature_ranks[clf][feature] = np.nan
+            importances[clf].append(np.nan)
 
-feature_imp_df = pd.DataFrame(feature_ranks)
-feature_imp_df['mean_rank'] = feature_imp_df.mean(axis=1)
-feature_imp_df.style.background_gradient(cmap='Blues', axis=0) # TODO: change axis?
+# %%
+importances_df = pd.DataFrame(importances, index=features)
+importances_df.style.background_gradient(cmap='Blues', axis=1)
+
+# %%
+importances_df.sum(axis=0)
+
+# %%
+importances_df = importances_df.loc[importances_df.mean(axis=1).sort_values(ascending=True).index]
+importances_df.plot.barh(figsize=(8, 20))
+plt.title('Feature importance')
 
 # %% [markdown]
 # ## Nearest Centroid
@@ -102,12 +113,16 @@ with open(data_dir+NC+'.pkl', 'rb') as file:
     nc = pickle.load(file)
 
 # %%
+len(features_db)
+
+# %%
 pd.DataFrame(nc.centroids_, columns=features_db).T.plot(
     kind='line',
     title='Centroids',
     xlabel='Features',
     rot=90,
     xticks=range(len(features_db)),
+    figsize=(20, 10)
 )
 
 # %% [markdown]
@@ -154,7 +169,7 @@ explain_matrix, masks = tn.explain(indicators_train_scaled)
 # TODO: provare a farle su altri sotto-esempi
 
 # %%
-fig, axs = plt.subplots(1, 3, figsize=(20,10), sharey=True)
+fig, axs = plt.subplots(1, 3, figsize=(20,30), sharey=True)
 for i in range(3):
     axs[i].imshow(masks[i][:50].T)
     axs[i].set_title(f"mask {i}")

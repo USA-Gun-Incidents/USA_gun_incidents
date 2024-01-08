@@ -1,0 +1,2 @@
+,precision-Non-Fatal,recall-Non-Fatal,f1-score-Non-Fatal,precision-Fatal,recall-Fatal,f1-score-Fatal,precision-macro avg,recall-macro avg,f1-score-macro avg,precision-weighted avg,recall-weighted avg,f1-score-weighted avg,accuracy,auroc,train_time,score_time,params
+KNearestNeighborsClassifier,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,,0.03200078010559082,65.0320053100586,"{'algorithm': 'brute', 'metric': 'minkowski', 'n_neighbors': 1, 'p': 2, 'weights': 'uniform'}"

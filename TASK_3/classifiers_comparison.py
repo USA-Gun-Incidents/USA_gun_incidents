@@ -17,12 +17,13 @@ pd.set_option('max_colwidth', None)
 # %%
 RESULTS_DIR = '../data/classification_results/'
 clf_names = [
-    'DecisionTreeClassifier', 'RandomForestClassifier', 'AdaBoostClassifier', 'ExtremeGradientBoostingClassifier',
-    'KNearestNeighborsClassifier', 'NaiveBayesMixedClassifier', 'NearestCentroidClassifier', 'RipperClassifier', 'SupportVectorMachineClassifier'
+    'RipperClassifier', 'DecisionTreeClassifier', 'RandomForestClassifier', 'AdaBoostClassifier', 'ExtremeGradientBoostingClassifier',
+    'KNearestNeighborsClassifier', 'NearestCentroidClassifier', 'SupportVectorMachineClassifier',
+    'NeuralNetworkClassifier', 'NaiveBayesMixedClassifier',
+    'ExplainableBoostingMachineClassifier', 'TabNetClassifier'
 ]
 clf_names_abbr = [
-    'DT', 'RF', 'AB', 'XGB', 'KNN', 'NB', 'NC', 'RIPPER', 'SVM']
-# FIXME: NN
+     'RIPPER', 'DT', 'RF', 'AB', 'XGB', 'KNN', 'NC', 'SVM', 'NN', 'NB', 'EBM', 'TN']
 
 test_true_labels = pd.read_csv('../data/clf_y_test.csv')
 test_data = pd.read_csv('../data/clf_indicators_test.csv', index_col=0)
@@ -32,7 +33,7 @@ train_scores = pd.DataFrame()
 test_scores = pd.DataFrame()
 test_preds = {}
 for clf in clf_names:
-    if clf not in ['NearestCentroidClassifier', 'NaiveBayesMixedClassifier', 'RipperClassifier']:
+    if clf not in ['NaiveBayesMixedClassifier', 'TabNetClassifier']:
         clf_cv_train_scores = pd.read_csv(RESULTS_DIR+clf+'_train_cv_scores.csv', index_col=0)
         cv_train_scores = pd.concat([cv_train_scores, clf_cv_train_scores], axis=0)
     clf_train_scores = pd.read_csv(RESULTS_DIR+clf+'_train_scores.csv', index_col=0)
@@ -44,10 +45,6 @@ for clf in clf_names:
     test_preds[clf]['labels'] = clf_test_preds['labels']
     if clf not in ['NearestCentroidClassifier']:
         test_preds[clf]['probs'] = clf_test_preds['probs']
-    if clf not in ['KNearestNeighborsClassifier', 'NearestCentroidClassifier', 'NaiveBayesMixedClassifier', 'RipperClassifier']:
-        clf_feature_imp = pd.read_csv(RESULTS_DIR+clf+'_feature_importances.csv')
-        test_preds[clf]['features_ranked'] = clf_feature_imp['features']
-        test_preds[clf]['features_importance'] = clf_feature_imp['importances']
 
 # %%
 # TODO: ricordare di commentare che i tempi sono influenzati anche dal fatto che con alcuni classificatori
@@ -61,16 +58,16 @@ cv_train_scores[['std_test_score', 'mean_test_score']].style.background_gradient
 
 # %%
 train_scores.style.background_gradient(cmap='Blues', axis=0)
-# train_scores[[
-#     'precision-Non-Fatal',
-#     'recall-Non-Fatal',
-#     'precision-Fatal',
-#     'recall-Fatal',
-#     'f1-score-macro avg',
-#     'accuracy',
-#     'auroc',
-#     'params'
-#     ]].style.background_gradient(cmap='Blues', axis=0).to_latex('./train.tex')
+train_scores[[
+    'precision-Non-Fatal',
+    'recall-Non-Fatal',
+    'precision-Fatal',
+    'recall-Fatal',
+    'f1-score-macro avg',
+    'accuracy',
+    'auroc',
+    'params'
+    ]].style.background_gradient(cmap='Blues', axis=0).to_latex('./train.tex')
 
 # %% [markdown]
 # Test scores comparison:
@@ -117,6 +114,7 @@ train_metric = train_scores[metric].reset_index().rename(columns={'index': 'clf'
 test_metric = test_scores[metric].reset_index().rename(columns={'index': 'clf', metric: 'test '+metric})
 metrics = pd.merge(train_metric, test_metric, on='clf')
 metrics.plot.bar(x='clf', figsize=(10, 5), title=metric)
+plt.xticks(range(len(clf_names)), clf_names_abbr)
 plt.xlabel('Classifier')
 plt.ylabel(metric)
 
@@ -124,23 +122,24 @@ plt.ylabel(metric)
 # AUROC comparison:
 
 # %%
-fig, axs = plt.subplots(1, 2, figsize=(20, 5)) # FIXME: fix
+fig, axs = plt.subplots(1, 2, figsize=(20, 5))
 
-y_probs = [test_preds[clf]['probs'] for clf in clf_names if clf not in ['NearestCentroidClassifier', 'RipperClassifier']]
-clf_names_prob = [clf for clf in clf_names if clf not in ['NearestCentroidClassifier', 'RipperClassifier']] # FIXME: togliere RIPPER
+y_probs = [test_preds[clf]['probs'] for clf in clf_names if clf not in ['NearestCentroidClassifier']]
+clf_names_prob = [clf for clf in clf_names if clf not in ['NearestCentroidClassifier']]
+clf_names_abbr_prob = [clf for clf in clf_names_abbr if clf not in ['NC']]
 
-plot_roc(test_true_labels['death'], y_probs, clf_names_prob, axs[0])
+plot_roc(test_true_labels['death'], y_probs, clf_names_abbr_prob, axs[0])
 for i in range(len(clf_names_prob)):
-    CalibrationDisplay.from_predictions(test_true_labels['death'], y_probs[i], name=clf_names_prob[i], ax=axs[1])
+    CalibrationDisplay.from_predictions(test_true_labels['death'], y_probs[i], name=clf_names_abbr_prob[i], ax=axs[1])
 axs[1].set_title('Calibration curves')
 
 # %% [markdown]
 # Confusion matrix comparison:
 
 # %%
-clf_names_mtx = [clf for clf in clf_names if clf not in ['RipperClassifier']] # FIXME: togliere RIPPER
+clf_names_mtx = clf_names
 ncols = 2
-nplots = len(clf_names_mtx)-1 # FIXME: togliere -1
+nplots = len(clf_names_mtx)
 nrows = int(nplots / ncols)
 if nplots % ncols != 0:
     nrows += 1
@@ -167,13 +166,22 @@ for i, clf in enumerate(clf_names_mtx):
 # Missclassification comparison:
 
 # %%
-labels = [test_preds[clf]['labels'] for clf in clf_names] # FIXME: ordinare
+sorted_clf_names = [
+    'NearestCentroidClassifier', 'RipperClassifier', 'SupportVectorMachineClassifier',
+    'NaiveBayesMixedClassifier', 'ExplainableBoostingMachineClassifier', 'TabNetClassifier',
+    'NeuralNetworkClassifier', 'KNearestNeighborsClassifier', 'AdaBoostClassifier',
+    'ExtremeGradientBoostingClassifier', 'RandomForestClassifier', 'DecisionTreeClassifier'
+]
+clf_names_abbr = [
+     'NC', 'RIPPER', 'SVM', 'NB', 'EBM', 'TN', 'NN', 'KNN', 'AB', 'XGB', 'RF', 'DT']
+labels = [test_preds[clf]['labels'] for clf in sorted_clf_names] # FIXME: ordinare (mettere true lables in mezzo!)
 labels.append(test_true_labels['death'])
 sankey_plot(
     labels=labels,
     labels_titles=clf_names_abbr+['True labels'],
     title='Classication comparison'
-)
+) # NC, RIPPER, SVM, EBM, TN, NB, NN, KNN, AB, XGB, RF, DT
+
 
 # %% [markdown]
 # Rules comparison:
@@ -188,28 +196,5 @@ for clf in rule_based_clf_names:
     print("Incidents predicted as 'Non-Fatal' with highest confidence")
     nonfatal_idx = test_preds[clf]['probs'][test_preds[clf]['labels']==0].sort_values(ascending=True).head(5).index.values
     display(test_data.iloc[nonfatal_idx])
-
-# %% [markdown]
-# All the incidents displayed above are correctly classified by the models.
-#
-# - The incidents classified as 'Fatal' with highest confidence by the Decision Tree model are all murder-suicides.
-# - The incidents classifies as 'Non-Fatal' with highest confidence by the Decision Tree model are non-shooting incidents involving a male in which the tag 'illegal_holding' or the tag 'drug_alchool' is True.
-# - The incidents classified as 'Fatal' with highest confidence by the Random Forest model are all murder-suicides (notes are not available but we know they are suicides and the number of killed people is grater than 1)
-# - The incidents classified as 'Non-Fatal' with highest confidence by the Random Forest model are incidents involving a male in which the tag 'illegal_holding' or the tag 'drug_alchool' is True.
-
-# %%
-# TODO: estrai regole e confrontale anche con RIPPER?
-with open(RESULTS_DIR+'DecisionTreeClassifier.pkl', 'rb') as file:
-    dt = pickle.load(file)
-with open(RESULTS_DIR+'RandomForestClassifier.pkl', 'rb') as file:
-    rf = pickle.load(file)
-
-incidents_test_df = pd.read_csv('../data/clf_indicators_test.csv', index_col=0)
-features_for_clf = json.loads(open('../data/clf_indicators_subset.json').read())
-indicators_test_df = incidents_test_df[features_for_clf]
-
-# https://scikit-learn.org/stable/auto_examples/tree/plot_unveil_tree_structure.html
-
-# TODO: confrontare regole che usano
 
 
