@@ -1,4 +1,9 @@
 # %% [markdown]
+# **Data mining Project - University of Pisa, acedemic year 2023/24**
+#  
+# **Authors**: Giacomo Aru, Giulia Ghisolfi, Luca Marini, Irene Testa
+
+# %% [markdown]
 # # K-Nearest Neighbors
 # 
 # KNN is a distance based algorithm useful for classification tasks. IT work by calculating the centroids of the samples belonging to the same class; the label is predicted by looking at wich is the most common class of the K points nearest to the one we want to classify.
@@ -58,13 +63,6 @@ knn = KNeighborsClassifier()
 pipe = Pipeline(steps=[('scaler', scaler), ('knn', knn)])
 
 param_grid = [
-    #{
-    #    'knn__n_neighbors': [251, 265, 287, 303, 321, 335], # odd values to avoid ties
-    #    'knn__weights': ['uniform', 'distance'],
-    #    'knn__algorithm': ['brute'],
-    #    'knn__metric': ['minkowski'],
-    #    'knn__p': [1, 2]
-    #}
     {
         'knn__n_neighbors': [1, 3, 5, 9, 15], # odd values to avoid ties
         'knn__weights': ['uniform', 'distance'],
@@ -124,9 +122,6 @@ cv_results_df.sort_values(
 
 # %%
 # minority oversampling
-#oversampler = RandomOverSampler(sampling_strategy=0.67, random_state=SEED) # num_minority (40%) / num_majority (60%) = 0.67
-#indicators_oversampled_train_df, true_oversampled_labels_train = oversampler.fit_resample(indicators_train_df, true_labels_train)
-
 indicators_oversampled_train_df = pd.read_csv('../data/clf_indicators_train_over.csv', index_col=0)
 indicators_oversampled_train_df = indicators_oversampled_train_df[features_for_clf]
 true_oversampled_labels_train = pd.read_csv('../data/clf_y_train_over.csv', index_col=0).values.ravel()
@@ -338,19 +333,19 @@ plot_confusion_matrix(
 # We can see we have similar situation in terms of precision and recall, both for fatal and non fatal incidents.
 
 # %% [markdown]
-# We plot the classification labels in the bidimensional feature spaces obtained pairing 3 features: **aggression**, **drug_alcohol** and **organized**.
+# We plot the classification labels in the bidimensional feature spaces obtained pairing 4 features: **aggression**, **drug_alcohol**, **gun_law_rank** and **n_males**.
 
 # %%
 plot_predictions_in_features_space(
     df=incidents_test_df,
-    features=['aggression', 'drug_alcohol', 'gun_law_rank', 'n_males'], # TODO: farlo con features significativve
+    features=['aggression', 'drug_alcohol', 'gun_law_rank', 'n_males'],
     true_labels=true_labels_test,
     pred_labels=pred_labels_smote_test,
     figsize=(30, 30)
 )
 
 # %% [markdown]
-# Given the plot, although we can't deduce anything on the separation of clusters, we can notice that when **aggression** and **drug_alcohol** are set to 1, the incidents are not fatal, but the model makes few mistakes with them.
+# Given the plot, although we can't deduce anything on the separation of clusters, we can notice that when **aggression** and **drug_alcohol** are set to 1, the incidents are generally not fatal, but the model makes few mistakes with them.
 
 # %% [markdown]
 # We plot the ROC curve of the model basing on its prediction on test set.
@@ -365,7 +360,7 @@ plot_roc(y_true=true_labels_test, y_probs=[pred_probas_smote_test[:,1]], names=[
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 plot_PCA_decision_boundary(
   train_set=indicators_smote_train_scaled,
-  features=indicators_train_df.columns, # TODO: eventualmente usare solo le numeriche
+  features=indicators_train_df.columns,
   train_label=true_labels_smote_train,
   classifier=best_model_smote,
   classifier_name=clf_name,
